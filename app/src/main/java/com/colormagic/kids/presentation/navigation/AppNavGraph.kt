@@ -6,21 +6,20 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.colormagic.kids.presentation.screens.home.HomeScreen
+import com.colormagic.kids.presentation.screens.settings.SettingsScreen
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
-    isTablet: Boolean,
     modifier: Modifier = Modifier
 ) {
     NavHost(
         navController = navController,
-        startDestination = Screen.Home.route,
+        startDestination = TopLevelDestination.START_DESTINATION.route,
         modifier = modifier
     ) {
-        composable(Screen.Home.route) {
-            HomeScreen(isTablet = isTablet)
-        }
-        // Add new composable destinations here as features are defined.
+        composable(TopLevelDestination.HOME.route) { HomeScreen() }
+        composable(TopLevelDestination.SETTINGS.route) { SettingsScreen() }
+        // Add nested feature routes here as they are defined.
     }
 }
