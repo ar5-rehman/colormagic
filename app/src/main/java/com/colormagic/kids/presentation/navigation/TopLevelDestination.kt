@@ -2,9 +2,11 @@ package com.colormagic.kids.presentation.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.ui.graphics.vector.ImageVector
 
 // Items shown in the NavigationSuiteScaffold (BottomBar / NavRail / NavDrawer).
@@ -21,11 +23,17 @@ enum class TopLevelDestination(
         unselectedIcon = Icons.Outlined.Home,
         label = "Home"
     ),
-    SETTINGS(
-        route = "settings",
-        selectedIcon = Icons.Filled.Settings,
-        unselectedIcon = Icons.Outlined.Settings,
-        label = "Settings"
+    GALLERY(
+        route = "gallery",
+        selectedIcon = Icons.Filled.PhotoLibrary,
+        unselectedIcon = Icons.Outlined.PhotoLibrary,
+        label = "Gallery"
+    ),
+    PARENTS(
+        route = "parents",
+        selectedIcon = Icons.Filled.Shield,
+        unselectedIcon = Icons.Outlined.Shield,
+        label = "Parents"
     );
 
     companion object {
