@@ -71,6 +71,9 @@ dependencies {
     // Window (foldable / posture)
     implementation(libs.androidx.window)
 
+    // Biometric (parent gate)
+    implementation(libs.androidx.biometric)
+
     // Navigation
     implementation(libs.androidx.navigation.compose)
 

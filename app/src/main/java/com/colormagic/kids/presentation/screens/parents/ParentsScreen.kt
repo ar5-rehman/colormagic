@@ -1,64 +1,42 @@
 package com.colormagic.kids.presentation.screens.parents
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import com.colormagic.kids.presentation.parent.ParentSessionState
+import com.colormagic.kids.presentation.screens.parentgate.ParentGateScreen
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
+// Bottom-nav Parents entry. The gate is ALWAYS required when entering this
+// tab — there is no opt-out, no toggle, no first-time bypass. The kid has to
+// pass biometric / device-credential authentication via [ParentGateScreen]
+// before the [ParentAreaScreen] is rendered.
+//
+// Auth state lives in [ParentSessionState], a process-scoped singleton — it
+// survives bottom-nav tab switches and screen rotations but resets on cold
+// start, so each new app launch re-prompts.
 @Composable
-fun ParentsScreen() {
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Shield,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(64.dp)
-                )
-                Text(
-                    text = "Parent Area",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Controls, safety settings and subscription live here.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
+fun ParentsScreen(
+    onManageSubscription: () -> Unit,
+    onLeaveTab: () -> Unit,
+    router: ParentsRouterViewModel = hiltViewModel()
+) {
+    val isAuthenticated by router.sessionState.isAuthenticated.collectAsState()
+
+    if (!isAuthenticated) {
+        ParentGateScreen(
+            onUnlocked = { /* sessionState now true → recomposes into the area */ },
+            onCancel = onLeaveTab
+        )
+    } else {
+        ParentAreaScreen(onManageSubscription = onManageSubscription)
     }
 }
 
-@Preview(name = "Parents – phone", showBackground = true, widthDp = 360, heightDp = 780)
-@Composable
-private fun ParentsPreviewPhone() {
-    ColorMagicKidsTheme { ParentsScreen() }
-}
+@HiltViewModel
+class ParentsRouterViewModel @Inject constructor(
+    val sessionState: ParentSessionState
+) : ViewModel()

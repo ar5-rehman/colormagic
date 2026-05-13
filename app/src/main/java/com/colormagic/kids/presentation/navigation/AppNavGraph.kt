@@ -5,15 +5,22 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.colormagic.kids.presentation.screens.coloring.ColoringScreen
 import com.colormagic.kids.presentation.screens.createsketch.CreateSketchScreen
 import com.colormagic.kids.presentation.screens.gallery.GalleryScreen
 import com.colormagic.kids.presentation.screens.home.HomeScreen
 import com.colormagic.kids.presentation.screens.loading.LoadingScreen
 import com.colormagic.kids.presentation.screens.parents.ParentsScreen
+import com.colormagic.kids.presentation.screens.savesuccess.SaveSuccessScreen
+import com.colormagic.kids.presentation.screens.sketchpreview.SketchPreviewScreen
+import com.colormagic.kids.presentation.screens.subscription.SubscriptionScreen
 
-// Inner navigation graph rendered inside MainScaffold (which provides the
-// brand bottom bar / nav rail). Each top-level entry matches a [TopLevelDestination];
-// nested feature routes (Screen.*) live below.
+// Inner navigation graph rendered inside MainScaffold.
+//
+// Flow for the "create a coloring page" feature:
+//   Home → CreateSketch → Loading → SketchPreview → Coloring → SaveSuccess
+// `popUpTo` is used to evict intermediate screens that shouldn't be returned
+// to via the back button (Loading, SaveSuccess kills Coloring).
 @Composable
 fun AppNavGraph(
     navController: NavHostController,
@@ -32,7 +39,18 @@ fun AppNavGraph(
             )
         }
         composable(TopLevelDestination.GALLERY.route) { GalleryScreen() }
-        composable(TopLevelDestination.PARENTS.route) { ParentsScreen() }
+        composable(TopLevelDestination.PARENTS.route) {
+            ParentsScreen(
+                onManageSubscription = { navController.navigate(Screen.Subscription.route) },
+                onLeaveTab = { navController.navigateToTopLevel(TopLevelDestination.HOME) }
+            )
+        }
+
+        composable(Screen.Subscription.route) {
+            SubscriptionScreen(
+                onBack = { navController.popBackStack() }
+            )
+        }
 
         composable(Screen.CreateSketch.route) {
             CreateSketchScreen(
@@ -41,17 +59,63 @@ fun AppNavGraph(
                 }
             )
         }
+
         composable(Screen.Loading.route) {
             LoadingScreen(
                 onComplete = {
-                    // TODO: route to the result/canvas screen when it lands.
-                    // For now: pop back to Home so the user sees the brand shell.
-                    navController.popBackStack(
-                        TopLevelDestination.HOME.route,
-                        inclusive = false
-                    )
+                    // Replace Loading with SketchPreview so back goes to CreateSketch.
+                    navController.navigate(Screen.SketchPreview.route) {
+                        popUpTo(Screen.Loading.route) { inclusive = true }
+                    }
                 },
                 onCancel = { navController.popBackStack() }
+            )
+        }
+
+        composable(Screen.SketchPreview.route) {
+            SketchPreviewScreen(
+                onBack = { navController.popBackStack() },
+                onColorThis = {
+                    navController.navigate(Screen.Coloring.route)
+                },
+                onTryAnother = {
+                    // Go back to CreateSketch so the kid can edit the prompt.
+                    navController.popBackStack(
+                        Screen.CreateSketch.route,
+                        inclusive = false
+                    )
+                }
+            )
+        }
+
+        composable(Screen.Coloring.route) {
+            ColoringScreen(
+                onBack = { navController.popBackStack() },
+                onSaved = {
+                    // After Save we kill Coloring so back from SaveSuccess
+                    // doesn't bounce the kid back into the editor.
+                    navController.navigate(Screen.SaveSuccess.route) {
+                        popUpTo(Screen.Coloring.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.SaveSuccess.route) {
+            SaveSuccessScreen(
+                onGoToGallery = {
+                    // Jump to the Gallery tab and clear the create-flow stack.
+                    navController.navigate(TopLevelDestination.GALLERY.route) {
+                        popUpTo(TopLevelDestination.HOME.route) { inclusive = false }
+                        launchSingleTop = true
+                    }
+                },
+                onCreateAnother = {
+                    // Start a fresh prompt, leaving Home as the only thing under it.
+                    navController.navigate(Screen.CreateSketch.route) {
+                        popUpTo(TopLevelDestination.HOME.route) { inclusive = false }
+                    }
+                }
             )
         }
     }

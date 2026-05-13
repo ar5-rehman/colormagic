@@ -1,18 +1,21 @@
 package com.colormagic.kids
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.fragment.app.FragmentActivity
 import com.colormagic.kids.presentation.AppRoot
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 import dagger.hilt.android.AndroidEntryPoint
 
+// FragmentActivity (not ComponentActivity) so BiometricPrompt works for the
+// Parent Gate flow. FragmentActivity already extends ComponentActivity so
+// enableEdgeToEdge / setContent / Hilt all still apply.
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

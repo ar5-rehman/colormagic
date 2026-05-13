@@ -5,4 +5,8 @@ package com.colormagic.kids.presentation.navigation
 sealed class Screen(val route: String) {
     data object CreateSketch : Screen("create-sketch")
     data object Loading : Screen("loading")
+    data object SketchPreview : Screen("sketch-preview")
+    data object Coloring : Screen("coloring")
+    data object SaveSuccess : Screen("save-success")
+    data object Subscription : Screen("subscription")
 }
