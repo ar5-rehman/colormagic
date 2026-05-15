@@ -23,12 +23,15 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.Spring
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.PlayArrow
@@ -42,8 +45,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.platform.LocalContext
+import androidx.fragment.app.FragmentActivity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -61,29 +70,44 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 fun SubscriptionScreen(
     onBack: () -> Unit,
     onPurchaseSuccessful: () -> Unit = onBack,
+    dismissAsClose: Boolean = false,
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
+    val context = LocalContext.current
+
+    // The Continue button does double duty: signs in if needed, then bills.
+    // We pass the activity through so AuthRepository can show its prompt.
     val onContinue: () -> Unit = {
-        viewModel.onContinue()
-        // For now we simulate a successful Play Billing handoff by routing
-        // straight to the success screen. Real billing wiring goes in the VM.
-        onPurchaseSuccessful()
+        (context as? FragmentActivity)?.let { activity ->
+            viewModel.attemptSubscribe(activity, onCompleted = onPurchaseSuccessful)
+        }
     }
+
+    val dismissIcon = if (dismissAsClose) Icons.Filled.Close else Icons.AutoMirrored.Filled.ArrowBack
+    val dismissLabel = if (dismissAsClose) "Close" else "Back"
+
     if (info.isCompactWidth) {
         SubscriptionContent(
             state = state,
+            currentUser = currentUser,
             onBack = onBack,
             onPlanSelected = viewModel::onPlanSelected,
-            onContinue = onContinue
+            onContinue = onContinue,
+            dismissIcon = dismissIcon,
+            dismissLabel = dismissLabel
         )
     } else {
         SubscriptionTabletContent(
             state = state,
+            currentUser = currentUser,
             onBack = onBack,
             onPlanSelected = viewModel::onPlanSelected,
-            onContinue = onContinue
+            onContinue = onContinue,
+            dismissIcon = dismissIcon,
+            dismissLabel = dismissLabel
         )
     }
 }
@@ -91,9 +115,12 @@ fun SubscriptionScreen(
 @Composable
 private fun SubscriptionTabletContent(
     state: SubscriptionUiState,
+    currentUser: com.colormagic.kids.domain.model.UserProfile?,
     onBack: () -> Unit,
     onPlanSelected: (PlanTier) -> Unit,
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    dismissIcon: ImageVector,
+    dismissLabel: String
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -106,7 +133,11 @@ private fun SubscriptionTabletContent(
                 .padding(horizontal = 28.dp, vertical = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ParentBrandHeader(onBack = onBack)
+            ParentBrandHeader(
+                onBack = onBack,
+                backIcon = dismissIcon,
+                backContentDescription = dismissLabel
+            )
             Spacer(Modifier.height(12.dp))
             ForParentsOnlyPill()
             Spacer(Modifier.height(14.dp))
@@ -135,10 +166,21 @@ private fun SubscriptionTabletContent(
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(20.dp))
+
+            AuthStatusHint(
+                currentUser = currentUser,
+                modifier = Modifier.fillMaxWidth(fraction = 0.6f)
+            )
+
+            Spacer(Modifier.height(12.dp))
 
             Box(modifier = Modifier.fillMaxWidth(fraction = 0.5f)) {
-                ContinueWithGooglePlayButton(onClick = onContinue)
+                ContinueWithGooglePlayButton(
+                    label = continueLabel(currentUser, state.isProcessing),
+                    isProcessing = state.isProcessing,
+                    onClick = onContinue
+                )
             }
             Spacer(Modifier.height(10.dp))
             Text(
@@ -149,6 +191,16 @@ private fun SubscriptionTabletContent(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(fraction = 0.6f)
             )
+            if (state.errorMessage != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = state.errorMessage,
+                    fontSize = 12.sp,
+                    color = Color(0xFFC62828),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(fraction = 0.6f)
+                )
+            }
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -157,9 +209,12 @@ private fun SubscriptionTabletContent(
 @Composable
 private fun SubscriptionContent(
     state: SubscriptionUiState,
+    currentUser: com.colormagic.kids.domain.model.UserProfile?,
     onBack: () -> Unit,
     onPlanSelected: (PlanTier) -> Unit,
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    dismissIcon: ImageVector,
+    dismissLabel: String
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
 
@@ -175,7 +230,13 @@ private fun SubscriptionContent(
             ),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            item { ParentBrandHeader(onBack = onBack) }
+            item {
+                ParentBrandHeader(
+                    onBack = onBack,
+                    backIcon = dismissIcon,
+                    backContentDescription = dismissLabel
+                )
+            }
 
             item {
                 Column(
@@ -216,7 +277,18 @@ private fun SubscriptionContent(
             item { Spacer(Modifier.height(8.dp)) }
 
             item {
+                AuthStatusHint(
+                    currentUser = currentUser,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp)
+                )
+            }
+
+            item {
                 ContinueWithGooglePlayButton(
+                    label = continueLabel(currentUser, state.isProcessing),
+                    isProcessing = state.isProcessing,
                     onClick = onContinue,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
@@ -233,8 +305,81 @@ private fun SubscriptionContent(
                         .padding(horizontal = 32.dp)
                 )
             }
+            if (state.errorMessage != null) {
+                item {
+                    Text(
+                        text = state.errorMessage,
+                        fontSize = 12.sp,
+                        color = Color(0xFFC62828),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp)
+                    )
+                }
+            }
         }
     }
+}
+
+/**
+ * Inline status pill above the Continue button — tells the parent exactly
+ * what tapping Continue will do depending on their auth state.
+ */
+@Composable
+private fun AuthStatusHint(
+    currentUser: com.colormagic.kids.domain.model.UserProfile?,
+    modifier: Modifier = Modifier
+) {
+    val (container, ink, message) = if (currentUser == null) {
+        Triple(
+            BrandTokens.SubtleSurface,
+            BrandTokens.MutedInk,
+            "You'll sign in with Google first to start your subscription."
+        )
+    } else {
+        Triple(
+            MaterialTheme.colorScheme.tertiaryContainer,
+            Color(0xFF1B3A1F),
+            "Signed in as ${currentUser.email}. Ready to continue."
+        )
+    }
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = container,
+        modifier = modifier
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = if (currentUser == null) Icons.Filled.Info else Icons.Filled.Check,
+                contentDescription = null,
+                tint = ink,
+                modifier = Modifier.size(14.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = message,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ink,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+private fun continueLabel(
+    currentUser: com.colormagic.kids.domain.model.UserProfile?,
+    isProcessing: Boolean
+): String = when {
+    isProcessing -> "Please wait…"
+    currentUser == null -> "Sign in & Continue"
+    else -> "Continue with Google Play"
 }
 
 @Composable
@@ -314,96 +459,176 @@ private fun PlanCard(
     modifier: Modifier = Modifier
 ) {
     val palette = paletteFor(plan, selected)
-    val borderColor = if (selected && plan.id != PlanTier.Starter) palette.accent
-    else BrandTokens.SubtleOutline
+    val isSelectable = !plan.isCurrent
+
+    // Animated visual feedback for selection — border thickens, card lifts
+    // and scales up a hair, shadow gets tinted with the accent colour.
+    val borderWidth by animateDpAsState(
+        targetValue = if (selected && isSelectable) 3.dp else 1.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "borderWidth"
+    )
+    val elevation by animateDpAsState(
+        targetValue = if (selected && isSelectable) 14.dp else 0.dp,
+        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+        label = "elevation"
+    )
+    val scale by animateFloatAsState(
+        targetValue = if (selected && isSelectable) 1.02f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessMediumLow
+        ),
+        label = "scale"
+    )
+
+    val borderColor = when {
+        plan.isCurrent -> BrandTokens.SubtleOutline
+        selected -> palette.accent
+        else -> BrandTokens.SubtleOutline
+    }
+    val shadowTint = if (selected && isSelectable) palette.accent else Color.Transparent
 
     Surface(
         onClick = onSelect,
         shape = RoundedCornerShape(22.dp),
         color = palette.container,
-        border = BorderStroke(if (selected) 2.dp else 1.dp, borderColor),
-        modifier = modifier.fillMaxWidth()
+        border = BorderStroke(borderWidth, borderColor),
+        modifier = modifier
+            .fillMaxWidth()
+            .scale(scale)
+            .shadow(
+                elevation = elevation,
+                shape = RoundedCornerShape(22.dp),
+                ambientColor = shadowTint,
+                spotColor = shadowTint
+            )
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.Top) {
-                PlanIcon(plan = plan)
-                Spacer(Modifier.weight(1f))
-                if (plan.isBestValue) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = Color(0xFF3F6147)
-                    ) {
-                        Text(
-                            text = "Best Value",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                        )
-                    }
-                }
+        Box {
+            // The "SELECTED" corner badge appears only on the currently-active card.
+            // Animated alpha keeps the swap from being abrupt.
+            val badgeAlpha by animateFloatAsState(
+                targetValue = if (selected && isSelectable) 1f else 0f,
+                label = "badgeAlpha"
+            )
+            if (badgeAlpha > 0f) {
+                SelectedCornerBadge(
+                    accent = palette.accent,
+                    onAccent = palette.container,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                        .scale(badgeAlpha)
+                )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.Top) {
+                    PlanIcon(plan = plan)
+                    Spacer(Modifier.weight(1f))
+                    if (plan.isBestValue && !selected) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFF3F6147)
+                        ) {
+                            Text(
+                                text = "Best Value",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                            )
+                        }
+                    } else if (selected && isSelectable) {
+                        // Reserve the slot so the corner badge has room to render.
+                        Spacer(Modifier.size(28.dp))
+                    }
+                }
 
-            Text(
-                text = plan.name,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = palette.titleInk
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = plan.tagline,
-                fontSize = 14.sp,
-                color = palette.bodyInk
-            )
+                Spacer(Modifier.height(14.dp))
 
-            Spacer(Modifier.height(14.dp))
-
-            Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = plan.price,
-                    fontSize = 38.sp,
-                    lineHeight = 42.sp,
+                    text = plan.name,
+                    fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = palette.titleInk
                 )
-                if (plan.priceSuffix != null) {
-                    Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = plan.tagline,
+                    fontSize = 14.sp,
+                    color = palette.bodyInk
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = plan.priceSuffix,
-                        fontSize = 16.sp,
-                        color = palette.bodyInk,
-                        modifier = Modifier.padding(bottom = 6.dp)
+                        text = plan.price,
+                        fontSize = 38.sp,
+                        lineHeight = 42.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = palette.titleInk
+                    )
+                    if (plan.priceSuffix != null) {
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = plan.priceSuffix,
+                            fontSize = 16.sp,
+                            color = palette.bodyInk,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                plan.features.forEach { feature ->
+                    FeatureLine(
+                        text = feature,
+                        checkBg = palette.featureCheckBg,
+                        checkTint = palette.featureCheckTint,
+                        inkColor = palette.featureInk
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                when {
+                    plan.isCurrent -> CurrentPlanChip()
+                    else -> SelectionPill(
+                        selected = selected,
+                        label = if (plan.id == PlanTier.Refill) "Select Pack" else "Select Plan",
+                        accent = palette.accent,
+                        onAccent = palette.container,
+                        inactiveInk = palette.titleInk
                     )
                 }
             }
-
-            Spacer(Modifier.height(16.dp))
-
-            plan.features.forEach { feature ->
-                FeatureLine(
-                    text = feature,
-                    checkBg = palette.featureCheckBg,
-                    checkTint = palette.featureCheckTint,
-                    inkColor = palette.featureInk
-                )
-                Spacer(Modifier.height(6.dp))
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            when {
-                plan.isCurrent -> CurrentPlanChip()
-                else -> SelectPlanIndicator(
-                    selected = selected,
-                    label = if (plan.id == PlanTier.Refill) "Select Pack" else "Select Plan",
-                    accent = palette.accent,
-                    inkColor = palette.titleInk
-                )
-            }
         }
+    }
+}
+
+@Composable
+private fun SelectedCornerBadge(
+    accent: Color,
+    onAccent: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .background(accent),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Check,
+            contentDescription = "Selected",
+            tint = onAccent,
+            modifier = Modifier.size(18.dp)
+        )
     }
 }
 
@@ -482,51 +707,56 @@ private fun CurrentPlanChip() {
 }
 
 @Composable
-private fun SelectPlanIndicator(
+private fun SelectionPill(
     selected: Boolean,
     label: String,
     accent: Color,
-    inkColor: Color
+    onAccent: Color,
+    inactiveInk: Color
 ) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        if (selected) {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(Color(0xFF3F6147)),
-                contentAlignment = Alignment.Center
-            ) {
+    // Selected: filled pill in the plan accent — reads as "this is locked in".
+    // Not selected: outlined hollow pill — reads as "tap me to choose".
+    val container = if (selected) accent else Color.Transparent
+    val ink = if (selected) onAccent else inactiveInk.copy(alpha = 0.85f)
+    val border = if (selected) BorderStroke(0.dp, Color.Transparent)
+    else BorderStroke(1.5.dp, inactiveInk.copy(alpha = 0.35f))
+
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = container,
+        border = border,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(46.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            if (selected) {
                 Icon(
-                    imageVector = Icons.Filled.Circle,
+                    imageVector = Icons.Filled.Check,
                     contentDescription = null,
-                    tint = Color(0xFFB7E1B9),
-                    modifier = Modifier.size(10.dp)
+                    tint = ink,
+                    modifier = Modifier.size(18.dp)
                 )
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .size(22.dp)
-                    .clip(CircleShape)
-                    .background(Color.Transparent)
-                    .padding(2.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.CheckCircle,
-                    contentDescription = null,
-                    tint = accent.copy(alpha = 0.4f),
-                    modifier = Modifier.fillMaxSize()
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = "Selected",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ink
+                )
+            } else {
+                Text(
+                    text = label,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ink
                 )
             }
         }
-        Spacer(Modifier.width(10.dp))
-        Text(
-            text = label,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = inkColor
-        )
     }
 }
 
@@ -534,13 +764,16 @@ private fun SelectPlanIndicator(
 
 @Composable
 private fun ContinueWithGooglePlayButton(
+    label: String,
+    isProcessing: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
+        enabled = !isProcessing,
         shape = RoundedCornerShape(50),
-        color = Color(0xFF1A1B25),
+        color = if (isProcessing) Color(0xFF1A1B25).copy(alpha = 0.7f) else Color(0xFF1A1B25),
         modifier = modifier
             .fillMaxWidth()
             .height(60.dp)
@@ -550,15 +783,23 @@ private fun ContinueWithGooglePlayButton(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = Icons.Filled.PlayArrow,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(22.dp)
-            )
+            if (isProcessing) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    color = Color.White,
+                    strokeWidth = 2.5.dp,
+                    modifier = Modifier.size(18.dp)
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
             Spacer(Modifier.width(10.dp))
             Text(
-                text = "Continue with Google Play",
+                text = label,
                 fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
@@ -573,9 +814,12 @@ private fun SubscriptionPreviewPhone() {
     ColorMagicKidsTheme {
         SubscriptionContent(
             state = SubscriptionUiState(),
+            currentUser = null,
             onBack = {},
             onPlanSelected = {},
-            onContinue = {}
+            onContinue = {},
+            dismissIcon = Icons.AutoMirrored.Filled.ArrowBack,
+            dismissLabel = "Back"
         )
     }
 }

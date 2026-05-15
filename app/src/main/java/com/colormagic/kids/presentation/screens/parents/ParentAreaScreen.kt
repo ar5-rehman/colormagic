@@ -47,9 +47,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.auth.AuthViewModel
+import com.colormagic.kids.presentation.components.AccountCard
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandTokens
@@ -59,10 +63,29 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 @Composable
 fun ParentAreaScreen(
     onManageSubscription: () -> Unit,
-    viewModel: ParentAreaViewModel = hiltViewModel()
+    viewModel: ParentAreaViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
+    val context = LocalContext.current
+    val user by authViewModel.currentUser.collectAsStateWithLifecycle()
+    val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
+
+    val onSignIn: () -> Unit = {
+        (context as? FragmentActivity)?.let { authViewModel.signInWithGoogle(it) }
+    }
+
+    val accountCard: @Composable (Modifier) -> Unit = { modifier ->
+        AccountCard(
+            user = user,
+            isLoading = authUiState.isLoading,
+            onSignIn = onSignIn,
+            onSignOut = authViewModel::signOut,
+            modifier = modifier
+        )
+    }
+
     if (info.isCompactWidth) {
         ParentAreaContent(
             state = state,
@@ -70,7 +93,8 @@ fun ParentAreaScreen(
             onBuyMore = onManageSubscription,
             onSketchLimitChanged = viewModel::onSketchLimitChanged,
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
-            onClearArtwork = viewModel::onClearArtwork
+            onClearArtwork = viewModel::onClearArtwork,
+            accountCard = accountCard
         )
     } else {
         ParentAreaTabletContent(
@@ -79,7 +103,8 @@ fun ParentAreaScreen(
             onBuyMore = onManageSubscription,
             onSketchLimitChanged = viewModel::onSketchLimitChanged,
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
-            onClearArtwork = viewModel::onClearArtwork
+            onClearArtwork = viewModel::onClearArtwork,
+            accountCard = accountCard
         )
     }
 }
@@ -91,7 +116,8 @@ private fun ParentAreaTabletContent(
     onBuyMore: () -> Unit,
     onSketchLimitChanged: (SketchLimit) -> Unit,
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
-    onClearArtwork: () -> Unit
+    onClearArtwork: () -> Unit,
+    accountCard: @Composable (Modifier) -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -128,6 +154,7 @@ private fun ParentAreaTabletContent(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
+                    accountCard(Modifier)
                     CurrentPlanCard(planName = state.planName, onManage = onManageSubscription)
                     SparkleCreditsCard(credits = state.sparkleCredits, onBuyMore = onBuyMore)
                     PrivacyCard()
@@ -156,7 +183,8 @@ private fun ParentAreaContent(
     onBuyMore: () -> Unit,
     onSketchLimitChanged: (SketchLimit) -> Unit,
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
-    onClearArtwork: () -> Unit
+    onClearArtwork: () -> Unit,
+    accountCard: @Composable (Modifier) -> Unit
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
 
@@ -173,6 +201,8 @@ private fun ParentAreaContent(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item { ParentBrandHeader() }
+
+            item { accountCard(Modifier.padding(horizontal = 16.dp)) }
 
             item {
                 CurrentPlanCard(
@@ -611,7 +641,16 @@ private fun ParentAreaPreviewPhone() {
             onBuyMore = {},
             onSketchLimitChanged = {},
             onAllowFreeTextPromptsChanged = {},
-            onClearArtwork = {}
+            onClearArtwork = {},
+            accountCard = { modifier ->
+                AccountCard(
+                    user = null,
+                    isLoading = false,
+                    onSignIn = {},
+                    onSignOut = {},
+                    modifier = modifier
+                )
+            }
         )
     }
 }

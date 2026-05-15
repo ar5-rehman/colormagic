@@ -29,7 +29,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -187,6 +186,14 @@ private fun SparkleDecor(
 @Preview(name = "Purchase Success – tablet", showBackground = true, widthDp = 1000, heightDp = 700)
 @Composable
 private fun PurchaseSuccessPreviewTablet() {
+    ColorMagicKidsTheme {
+        PurchaseSuccessContent(onBackToHome = {}, onCreateSketch = {})
+    }
+}
+
+@Preview(name = "Onboarding – phone", showBackground = true, widthDp = 360, heightDp = 800)
+@Composable
+private fun PurchaseSuccessPreviewPhone() {
     ColorMagicKidsTheme {
         PurchaseSuccessContent(onBackToHome = {}, onCreateSketch = {})
     }

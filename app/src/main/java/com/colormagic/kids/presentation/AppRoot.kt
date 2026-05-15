@@ -24,6 +24,7 @@ import com.colormagic.kids.presentation.navigation.TopLevelDestination
 import com.colormagic.kids.presentation.navigation.navigateToTopLevel
 import com.colormagic.kids.presentation.screens.onboarding.OnboardingScreen
 import com.colormagic.kids.presentation.screens.splash.SplashScreen
+import com.colormagic.kids.presentation.screens.subscription.SubscriptionScreen
 
 // Two-tier navigation:
 //   Outer NavHost owns the pre-app flow (Splash → Onboarding → Main shell).
@@ -51,10 +52,26 @@ fun AppRoot() {
         composable(RootDestination.ONBOARDING) {
             OnboardingScreen(
                 onStartCreating = {
-                    rootNavController.navigate(RootDestination.MAIN) {
+                    rootNavController.navigate(RootDestination.PAYWALL) {
                         popUpTo(RootDestination.ONBOARDING) { inclusive = true }
                     }
                 }
+            )
+        }
+        composable(RootDestination.PAYWALL) {
+            // Launch paywall. Dismissible via X — kid lands in Main on the
+            // free tier. Subscribe also lands in Main (PurchaseSuccess is
+            // shown by the inner graph when "Manage Subscription" is used,
+            // but on cold-start we keep the path short).
+            val enterMain = {
+                rootNavController.navigate(RootDestination.MAIN) {
+                    popUpTo(RootDestination.PAYWALL) { inclusive = true }
+                }
+            }
+            SubscriptionScreen(
+                onBack = enterMain,
+                onPurchaseSuccessful = enterMain,
+                dismissAsClose = true
             )
         }
         composable(RootDestination.MAIN) { MainScaffold() }

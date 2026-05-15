@@ -5,5 +5,6 @@ package com.colormagic.kids.presentation.navigation
 object RootDestination {
     const val SPLASH = "splash"
     const val ONBOARDING = "onboarding"
+    const val PAYWALL = "paywall"
     const val MAIN = "main"
 }

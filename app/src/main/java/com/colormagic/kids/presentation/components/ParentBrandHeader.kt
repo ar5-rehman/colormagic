@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,7 +33,9 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun ParentBrandHeader(
     modifier: Modifier = Modifier,
-    onBack: (() -> Unit)? = null
+    onBack: (() -> Unit)? = null,
+    backIcon: ImageVector = Icons.AutoMirrored.Filled.ArrowBack,
+    backContentDescription: String = "Back"
 ) {
     Row(
         modifier = modifier
@@ -42,8 +45,8 @@ fun ParentBrandHeader(
     ) {
         if (onBack != null) {
             CircleIconButton(
-                icon = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back",
+                icon = backIcon,
+                contentDescription = backContentDescription,
                 onClick = onBack
             )
             Spacer(Modifier.width(10.dp))
@@ -82,7 +85,7 @@ fun ParentBrandHeader(
 
 @Composable
 private fun CircleIconButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit
 ) {
