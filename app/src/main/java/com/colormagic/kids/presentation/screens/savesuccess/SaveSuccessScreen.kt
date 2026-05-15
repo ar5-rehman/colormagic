@@ -20,10 +20,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Brush
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -31,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -38,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.domain.model.SavedPicture
+import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandTertiaryButton
@@ -51,11 +57,123 @@ fun SaveSuccessScreen(
     viewModel: SaveSuccessViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    SaveSuccessContent(
-        picture = state.picture,
-        onGoToGallery = onGoToGallery,
-        onCreateAnother = onCreateAnother
-    )
+    val info = currentWindowAdaptiveInfo()
+    if (info.isCompactWidth) {
+        SaveSuccessContent(
+            picture = state.picture,
+            onGoToGallery = onGoToGallery,
+            onCreateAnother = onCreateAnother
+        )
+    } else {
+        SaveSuccessTabletContent(
+            picture = state.picture,
+            onGoToGallery = onGoToGallery,
+            onCreateAnother = onCreateAnother
+        )
+    }
+}
+
+@Composable
+private fun SaveSuccessTabletContent(
+    picture: SavedPicture,
+    onGoToGallery: () -> Unit,
+    onCreateAnother: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            // Confetti accents scattered around the centered card.
+            ConfettiDot(MaterialTheme.colorScheme.primaryContainer, 44.dp, 80.dp, 90.dp, Alignment.TopStart)
+            ConfettiDot(MaterialTheme.colorScheme.tertiaryContainer, 60.dp, (-60).dp, 120.dp, Alignment.TopEnd)
+            ConfettiDot(MaterialTheme.colorScheme.secondaryContainer, 50.dp, 120.dp, (-50).dp, Alignment.BottomStart)
+            ConfettiDot(MaterialTheme.colorScheme.primaryContainer, 36.dp, (-100).dp, (-80).dp, Alignment.BottomEnd)
+            ConfettiDot(MaterialTheme.colorScheme.tertiaryContainer, 40.dp, 180.dp, 220.dp, Alignment.TopStart)
+            ConfettiDot(MaterialTheme.colorScheme.secondaryContainer, 30.dp, (-200).dp, 60.dp, Alignment.TopEnd)
+
+            Box(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 60.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(36.dp),
+                    color = Color.White,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(
+                            elevation = 16.dp,
+                            shape = RoundedCornerShape(36.dp),
+                            ambientColor = Color(0x14000000),
+                            spotColor = Color(0x14000000)
+                        )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(32.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(36.dp)
+                    ) {
+                        // Picture preview — square, on the left.
+                        Box(
+                            modifier = Modifier
+                                .weight(0.5f)
+                                .aspectRatio(1f)
+                                .clip(RoundedCornerShape(22.dp))
+                                .background(Color(picture.placeholderTint)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "🎨", fontSize = 96.sp)
+                        }
+
+                        // Right column — heading, subtitle, buttons.
+                        Column(
+                            modifier = Modifier.weight(0.5f),
+                            horizontalAlignment = Alignment.Start
+                        ) {
+                            BrandHeading(
+                                text = "Beautiful\npicture saved!",
+                                fontSize = 36.sp,
+                                lineHeight = 44.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(Modifier.height(14.dp))
+                            Text(
+                                text = "Your masterpiece is safe and sound.",
+                                fontSize = 16.sp,
+                                color = BrandTokens.MutedInk
+                            )
+                            Spacer(Modifier.height(24.dp))
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Box(modifier = Modifier.weight(1f)) {
+                                    BrandTertiaryButton(
+                                        label = "Go to Gallery",
+                                        onClick = onGoToGallery,
+                                        leadingIcon = Icons.Filled.Palette,
+                                        height = 52.dp,
+                                        edgeThickness = 5.dp
+                                    )
+                                }
+                                Box(modifier = Modifier.weight(1f)) {
+                                    BrandPrimaryButton(
+                                        label = "Create Another",
+                                        onClick = onCreateAnother,
+                                        leadingIcon = Icons.Filled.Brush,
+                                        height = 52.dp,
+                                        edgeThickness = 5.dp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

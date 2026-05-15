@@ -1,6 +1,6 @@
 package com.colormagic.kids.presentation
 
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -17,8 +17,9 @@ import androidx.navigation.compose.rememberNavController
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.navigation.AppNavGraph
 import com.colormagic.kids.presentation.navigation.BrandBottomBar
-import com.colormagic.kids.presentation.navigation.BrandNavRail
+import com.colormagic.kids.presentation.navigation.BrandTopNavBar
 import com.colormagic.kids.presentation.navigation.RootDestination
+import com.colormagic.kids.presentation.navigation.Screen
 import com.colormagic.kids.presentation.navigation.TopLevelDestination
 import com.colormagic.kids.presentation.navigation.navigateToTopLevel
 import com.colormagic.kids.presentation.screens.onboarding.OnboardingScreen
@@ -26,8 +27,10 @@ import com.colormagic.kids.presentation.screens.splash.SplashScreen
 
 // Two-tier navigation:
 //   Outer NavHost owns the pre-app flow (Splash → Onboarding → Main shell).
-//   MainScaffold renders a custom brand-styled bottom bar (compact) or rail
-//   (medium / expanded) wrapping the inner AppNavGraph.
+//   MainScaffold renders the form-factor-appropriate nav chrome:
+//     • Compact width  → bottom bar
+//     • Medium/Expanded → top nav bar (shown only on top-level destinations)
+//   Nested screens render their own back-affordance inside their content.
 @Composable
 fun AppRoot() {
     val rootNavController = rememberNavController()
@@ -80,12 +83,21 @@ private fun MainScaffold() {
             )
         }
     } else {
-        Row(modifier = Modifier.fillMaxSize()) {
-            BrandNavRail(
-                selected = currentTopLevel,
-                onSelect = { navController.navigateToTopLevel(it) }
+        // Tablet / expanded: the top nav bar is only shown when on a
+        // top-level destination. Nested screens (CreateSketch, Coloring,
+        // SaveSuccess, …) supply their own header so the layout breathes.
+        Column(modifier = Modifier.fillMaxSize()) {
+            if (currentTopLevel != null) {
+                BrandTopNavBar(
+                    selected = currentTopLevel,
+                    onSelect = { navController.navigateToTopLevel(it) },
+                    onSettings = { navController.navigate(Screen.Settings.route) }
+                )
+            }
+            AppNavGraph(
+                navController = navController,
+                modifier = Modifier.fillMaxSize()
             )
-            AppNavGraph(navController = navController)
         }
     }
 }

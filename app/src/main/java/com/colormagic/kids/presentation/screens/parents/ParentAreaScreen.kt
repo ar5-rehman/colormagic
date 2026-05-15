@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -33,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -46,6 +49,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.ParentBrandHeader
@@ -57,14 +62,91 @@ fun ParentAreaScreen(
     viewModel: ParentAreaViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ParentAreaContent(
-        state = state,
-        onManageSubscription = onManageSubscription,
-        onBuyMore = onManageSubscription,
-        onSketchLimitChanged = viewModel::onSketchLimitChanged,
-        onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
-        onClearArtwork = viewModel::onClearArtwork
-    )
+    val info = currentWindowAdaptiveInfo()
+    if (info.isCompactWidth) {
+        ParentAreaContent(
+            state = state,
+            onManageSubscription = onManageSubscription,
+            onBuyMore = onManageSubscription,
+            onSketchLimitChanged = viewModel::onSketchLimitChanged,
+            onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
+            onClearArtwork = viewModel::onClearArtwork
+        )
+    } else {
+        ParentAreaTabletContent(
+            state = state,
+            onManageSubscription = onManageSubscription,
+            onBuyMore = onManageSubscription,
+            onSketchLimitChanged = viewModel::onSketchLimitChanged,
+            onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
+            onClearArtwork = viewModel::onClearArtwork
+        )
+    }
+}
+
+@Composable
+private fun ParentAreaTabletContent(
+    state: ParentAreaUiState,
+    onManageSubscription: () -> Unit,
+    onBuyMore: () -> Unit,
+    onSketchLimitChanged: (SketchLimit) -> Unit,
+    onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
+    onClearArtwork: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 28.dp, vertical = 24.dp)
+        ) {
+            // Welcome heading
+            BrandHeading(
+                text = "Welcome to the Parent Area",
+                fontSize = 30.sp,
+                lineHeight = 36.sp
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Manage your child's magical creative journey here.",
+                fontSize = 15.sp,
+                color = BrandTokens.MutedInk
+            )
+
+            Spacer(Modifier.height(20.dp))
+
+            // Two columns of cards
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    CurrentPlanCard(planName = state.planName, onManage = onManageSubscription)
+                    SparkleCreditsCard(credits = state.sparkleCredits, onBuyMore = onBuyMore)
+                    PrivacyCard()
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    ChildSafetyCard(
+                        sketchLimit = state.sketchLimit,
+                        onSketchLimitChanged = onSketchLimitChanged,
+                        allowFreeTextPrompts = state.allowFreeTextPrompts,
+                        onAllowFreeTextPromptsChanged = onAllowFreeTextPromptsChanged
+                    )
+                    ClearArtworkCard(onDelete = onClearArtwork)
+                }
+            }
+        }
+    }
 }
 
 @Composable

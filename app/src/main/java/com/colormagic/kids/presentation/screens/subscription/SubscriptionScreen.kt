@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
@@ -34,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -48,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.ParentBrandHeader
@@ -56,18 +60,98 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 @Composable
 fun SubscriptionScreen(
     onBack: () -> Unit,
+    onPurchaseSuccessful: () -> Unit = onBack,
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    SubscriptionContent(
-        state = state,
-        onBack = onBack,
-        onPlanSelected = viewModel::onPlanSelected,
-        onContinue = {
-            viewModel.onContinue()
-            onBack()
+    val info = currentWindowAdaptiveInfo()
+    val onContinue: () -> Unit = {
+        viewModel.onContinue()
+        // For now we simulate a successful Play Billing handoff by routing
+        // straight to the success screen. Real billing wiring goes in the VM.
+        onPurchaseSuccessful()
+    }
+    if (info.isCompactWidth) {
+        SubscriptionContent(
+            state = state,
+            onBack = onBack,
+            onPlanSelected = viewModel::onPlanSelected,
+            onContinue = onContinue
+        )
+    } else {
+        SubscriptionTabletContent(
+            state = state,
+            onBack = onBack,
+            onPlanSelected = viewModel::onPlanSelected,
+            onContinue = onContinue
+        )
+    }
+}
+
+@Composable
+private fun SubscriptionTabletContent(
+    state: SubscriptionUiState,
+    onBack: () -> Unit,
+    onPlanSelected: (PlanTier) -> Unit,
+    onContinue: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp, vertical = 20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            ParentBrandHeader(onBack = onBack)
+            Spacer(Modifier.height(12.dp))
+            ForParentsOnlyPill()
+            Spacer(Modifier.height(14.dp))
+            BrandHeading(
+                text = "Choose Your Magic",
+                fontSize = 38.sp,
+                lineHeight = 46.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(28.dp))
+
+            // Three plans side by side
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(18.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                state.plans.forEach { plan ->
+                    Box(modifier = Modifier.weight(1f)) {
+                        PlanCard(
+                            plan = plan,
+                            selected = plan.id == state.selectedPlanId,
+                            onSelect = { onPlanSelected(plan.id) }
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(28.dp))
+
+            Box(modifier = Modifier.fillMaxWidth(fraction = 0.5f)) {
+                ContinueWithGooglePlayButton(onClick = onContinue)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Payment will be charged to your Google Play account at confirmation of purchase.",
+                fontSize = 12.sp,
+                lineHeight = 18.sp,
+                color = BrandTokens.MutedInk,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(fraction = 0.6f)
+            )
+            Spacer(Modifier.height(20.dp))
         }
-    )
+    }
 }
 
 @Composable

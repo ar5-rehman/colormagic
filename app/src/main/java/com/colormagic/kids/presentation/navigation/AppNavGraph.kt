@@ -11,7 +11,9 @@ import com.colormagic.kids.presentation.screens.gallery.GalleryScreen
 import com.colormagic.kids.presentation.screens.home.HomeScreen
 import com.colormagic.kids.presentation.screens.loading.LoadingScreen
 import com.colormagic.kids.presentation.screens.parents.ParentsScreen
+import com.colormagic.kids.presentation.screens.purchasesuccess.PurchaseSuccessScreen
 import com.colormagic.kids.presentation.screens.savesuccess.SaveSuccessScreen
+import com.colormagic.kids.presentation.screens.settings.SettingsScreen
 import com.colormagic.kids.presentation.screens.sketchpreview.SketchPreviewScreen
 import com.colormagic.kids.presentation.screens.subscription.SubscriptionScreen
 
@@ -38,7 +40,11 @@ fun AppNavGraph(
                 onOpenParentArea = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) }
             )
         }
-        composable(TopLevelDestination.GALLERY.route) { GalleryScreen() }
+        composable(TopLevelDestination.GALLERY.route) {
+            GalleryScreen(
+                onStartNewArt = { navController.navigate(Screen.CreateSketch.route) }
+            )
+        }
         composable(TopLevelDestination.PARENTS.route) {
             ParentsScreen(
                 onManageSubscription = { navController.navigate(Screen.Subscription.route) },
@@ -48,7 +54,36 @@ fun AppNavGraph(
 
         composable(Screen.Subscription.route) {
             SubscriptionScreen(
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onPurchaseSuccessful = {
+                    navController.navigate(Screen.PurchaseSuccess.route) {
+                        popUpTo(Screen.Subscription.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.PurchaseSuccess.route) {
+            PurchaseSuccessScreen(
+                onBackToHome = {
+                    navController.popBackStack(
+                        TopLevelDestination.HOME.route,
+                        inclusive = false
+                    )
+                },
+                onCreateSketch = {
+                    navController.navigate(Screen.CreateSketch.route) {
+                        popUpTo(TopLevelDestination.HOME.route) { inclusive = false }
+                    }
+                }
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onManageSubscription = { navController.navigate(Screen.Subscription.route) },
+                onDeleteAllArtwork = { /* TODO: wire to repository deleteAll */ }
             )
         }
 

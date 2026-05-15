@@ -27,10 +27,14 @@ import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.outlined.AutoFixOff
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -48,6 +52,7 @@ import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColoringTool
 import com.colormagic.kids.domain.model.PaintColor
 import com.colormagic.kids.domain.model.Sketch
+import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.BrandTopBar
 import com.colormagic.kids.presentation.components.BrushSizeDot
@@ -63,19 +68,278 @@ fun ColoringScreen(
     viewModel: ColoringViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    ColoringContent(
-        state = state,
-        onBack = onBack,
-        onColorSelected = viewModel::onColorSelected,
-        onToolSelected = viewModel::onToolSelected,
-        onBrushSizeSelected = viewModel::onBrushSizeSelected,
-        onUndo = viewModel::onUndo,
-        onClear = viewModel::onClear,
-        onSave = {
-            viewModel.onSave()
-            onSaved()
+    val info = currentWindowAdaptiveInfo()
+    val onSave = {
+        viewModel.onSave()
+        onSaved()
+    }
+    if (info.isCompactWidth) {
+        ColoringContent(
+            state = state,
+            onBack = onBack,
+            onColorSelected = viewModel::onColorSelected,
+            onToolSelected = viewModel::onToolSelected,
+            onBrushSizeSelected = viewModel::onBrushSizeSelected,
+            onUndo = viewModel::onUndo,
+            onClear = viewModel::onClear,
+            onSave = onSave
+        )
+    } else {
+        ColoringTabletContent(
+            state = state,
+            onBack = onBack,
+            onColorSelected = viewModel::onColorSelected,
+            onToolSelected = viewModel::onToolSelected,
+            onBrushSizeSelected = viewModel::onBrushSizeSelected,
+            onUndo = viewModel::onUndo,
+            onClear = viewModel::onClear,
+            onSave = onSave
+        )
+    }
+}
+
+@Composable
+private fun ColoringTabletContent(
+    state: ColoringUiState,
+    onBack: () -> Unit,
+    onColorSelected: (String) -> Unit,
+    onToolSelected: (ColoringTool) -> Unit,
+    onBrushSizeSelected: (BrushSize) -> Unit,
+    onUndo: () -> Unit,
+    onClear: () -> Unit,
+    onSave: () -> Unit
+) {
+    val selectedColor = state.palette.firstOrNull { it.id == state.selectedColorId }
+        ?: state.palette.first()
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp, vertical = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Left — canvas card with back arrow + status label
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = Color.White,
+                modifier = Modifier
+                    .weight(0.68f)
+                    .fillMaxHeight()
+                    .shadow(
+                        elevation = 14.dp,
+                        shape = RoundedCornerShape(28.dp),
+                        ambientColor = Color(0x14000000),
+                        spotColor = Color(0x14000000)
+                    )
+            ) {
+                Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+                    Surface(
+                        onClick = onBack,
+                        shape = CircleShape,
+                        color = BrandTokens.SubtleSurface,
+                        modifier = Modifier.size(40.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = BrandTokens.HeadingInk,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color(state.sketch.placeholderTint)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "🖍️", fontSize = 140.sp)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = BrandTokens.SubtleSurface,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    ) {
+                        Text(
+                            text = "${state.tool.label} • ${selectedColor.name} • ${state.brushSize.label}",
+                            fontSize = 14.sp,
+                            color = BrandTokens.MutedInk,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
+            // Right — tools panel
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = Color.White,
+                modifier = Modifier
+                    .weight(0.32f)
+                    .fillMaxHeight()
+                    .shadow(
+                        elevation = 14.dp,
+                        shape = RoundedCornerShape(28.dp),
+                        ambientColor = Color(0x14000000),
+                        spotColor = Color(0x14000000)
+                    )
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+                    ) {
+                        ToolButton(
+                            label = "Brush",
+                            icon = Icons.Filled.Brush,
+                            selected = state.tool == ColoringTool.Brush,
+                            onClick = { onToolSelected(ColoringTool.Brush) }
+                        )
+                        ToolButton(
+                            label = "Eraser",
+                            icon = Icons.Outlined.AutoFixOff,
+                            selected = state.tool == ColoringTool.Eraser,
+                            onClick = { onToolSelected(ColoringTool.Eraser) }
+                        )
+                        ToolButton(
+                            label = "Undo",
+                            icon = Icons.AutoMirrored.Filled.Undo,
+                            selected = false,
+                            onClick = onUndo
+                        )
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    Text(
+                        text = "Colors",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.align(Alignment.CenterHorizontally)
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        state.palette.chunked(3).forEach { rowColors ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+                            ) {
+                                rowColors.forEach { paintColor ->
+                                    ColorSwatch(
+                                        color = Color(paintColor.argb),
+                                        selected = paintColor.id == state.selectedColorId,
+                                        onClick = { onColorSelected(paintColor.id) }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.weight(1f))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BrushSize.entries.forEach { size ->
+                            BrushSizeDot(
+                                size = size,
+                                selected = size == state.brushSize,
+                                onClick = { onBrushSizeSelected(size) }
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    TabletClearChip(onClick = onClear)
+                    Spacer(Modifier.height(10.dp))
+                    TabletSaveButton(onClick = onSave)
+                }
+            }
         }
-    )
+    }
+}
+
+@Composable
+private fun TabletClearChip(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = Color(0xFFFDE0E0),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(48.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.DeleteOutline,
+                contentDescription = null,
+                tint = Color(0xFFC62828),
+                modifier = Modifier.size(18.dp)
+            )
+            Spacer(Modifier.width(6.dp))
+            Text(
+                text = "Clear",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFFC62828)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TabletSaveButton(onClick: () -> Unit) {
+    TactileSurface(
+        onClick = onClick,
+        fill = MaterialTheme.colorScheme.primary,
+        edge = BrandTokens.PrimaryEdge,
+        shape = RoundedCornerShape(50),
+        height = 52.dp,
+        edgeThickness = 6.dp,
+        contentColor = Color.White,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Save,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "Save Picture",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
+    }
 }
 
 @Composable

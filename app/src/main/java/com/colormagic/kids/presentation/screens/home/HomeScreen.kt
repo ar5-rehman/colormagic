@@ -1,7 +1,11 @@
 package com.colormagic.kids.presentation.screens.home
 
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,12 +13,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyGridScope
@@ -29,13 +37,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -43,6 +55,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.colormagic.kids.R
+import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.CreditPill
@@ -61,13 +75,221 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    HomeContent(
-        state = state,
-        onCreateNewSketch = onCreateNewSketch,
-        onCategoryClick = onCategoryClick,
-        onOpenGallery = onOpenGallery,
-        onOpenParentArea = onOpenParentArea
-    )
+    val info = currentWindowAdaptiveInfo()
+    if (info.isCompactWidth) {
+        HomeContent(
+            state = state,
+            onCreateNewSketch = onCreateNewSketch,
+            onCategoryClick = onCategoryClick,
+            onOpenGallery = onOpenGallery,
+            onOpenParentArea = onOpenParentArea
+        )
+    } else {
+        HomeTabletContent(
+            state = state,
+            onCreateNewSketch = onCreateNewSketch,
+            onCategoryClick = onCategoryClick,
+            onOpenGallery = onOpenGallery,
+            onOpenParentArea = onOpenParentArea
+        )
+    }
+}
+
+@Composable
+private fun HomeTabletContent(
+    state: HomeUiState,
+    onCreateNewSketch: () -> Unit,
+    onCategoryClick: (HomeCategory) -> Unit,
+    onOpenGallery: () -> Unit,
+    onOpenParentArea: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 28.dp, vertical = 24.dp),
+            horizontalArrangement = Arrangement.spacedBy(28.dp)
+        ) {
+            // Left sidebar — greeting + child illustration
+            Column(
+                modifier = Modifier
+                    .weight(0.42f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                CreditPill(text = "Sketches left: ${state.sketchesLeft}")
+                BrandHeading(
+                    text = "What shall we\ncolor today?",
+                    fontSize = 34.sp,
+                    lineHeight = 42.sp,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                ChildIllustrationCard()
+            }
+
+            // Right panel — actions
+            Column(
+                modifier = Modifier
+                    .weight(0.58f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(18.dp)
+            ) {
+                CreateNewSketchCard(onClick = onCreateNewSketch)
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    TabletActionTile(
+                        title = "My Gallery",
+                        icon = Icons.Outlined.PhotoLibrary,
+                        container = Color(0xFFB3E5FC),
+                        ink = Color(0xFF01579B),
+                        onClick = onOpenGallery,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TabletActionTile(
+                        title = "Parent Area",
+                        icon = Icons.Outlined.ManageAccounts,
+                        container = Color(0xFFA9C690),
+                        ink = Color(0xFF1B3A1F),
+                        onClick = onOpenParentArea,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                MagicCategoriesBar(
+                    categories = state.categories,
+                    onCategoryClick = onCategoryClick
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChildIllustrationCard() {
+    Surface(
+        shape = RoundedCornerShape(32.dp),
+        color = Color(0xFFCFB9EF),
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(1f)
+    ) {
+        Box(
+            modifier = Modifier.padding(14.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Image(
+                painter = painterResource(R.drawable.child_coloring),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(22.dp))
+            )
+        }
+    }
+}
+
+@Composable
+private fun TabletActionTile(
+    title: String,
+    icon: ImageVector,
+    container: Color,
+    ink: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(26.dp),
+        color = container,
+        modifier = modifier.height(110.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(18.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = ink,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = ink
+            )
+        }
+    }
+}
+
+@Composable
+private fun MagicCategoriesBar(
+    categories: List<HomeCategory>,
+    onCategoryClick: (HomeCategory) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(26.dp),
+        color = BrandTokens.SubtleSurface,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Magic Categories",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = BrandTokens.HeadingInk
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                categories.forEach { category ->
+                    OutlineCategoryChip(
+                        category = category,
+                        onClick = { onCategoryClick(category) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OutlineCategoryChip(category: HomeCategory, onClick: () -> Unit) {
+    val accent = when (category.tone) {
+        CategoryTone.Blue -> Color(0xFF4FA8C7)
+        CategoryTone.Lavender -> Color(0xFF8E6EBE)
+        CategoryTone.Grey -> Color(0xFF7A7A7A)
+        CategoryTone.GreenDeep -> Color(0xFF4F7C53)
+        CategoryTone.GreenLight -> Color(0xFF6FA773)
+    }
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = Color.White,
+        border = androidx.compose.foundation.BorderStroke(1.5.dp, accent),
+        modifier = Modifier.height(38.dp)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 18.dp)
+        ) {
+            Text(
+                text = category.label,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = accent
+            )
+        }
+    }
 }
 
 @Composable
