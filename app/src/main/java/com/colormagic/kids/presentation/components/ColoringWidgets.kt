@@ -29,22 +29,35 @@ import androidx.compose.ui.unit.sp
 import com.colormagic.kids.domain.model.BrushSize
 
 // === ToolButton ===
-// Square rounded button used in the coloring tool row (Brush / Eraser / Undo).
-// Selected state inverts to brand primary so it visually wins the focus.
+// Square rounded button used in the coloring tool/action rows.
+// Three visual states:
+//   • selected  → filled brand primary (loud, this is the active tool)
+//   • enabled   → grey neutral (tap target, but quiet)
+//   • disabled  → muted ink + container so the kid sees "nothing to do here"
 @Composable
 fun ToolButton(
     label: String,
     icon: ImageVector,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
 ) {
-    val fill = if (selected) MaterialTheme.colorScheme.primary else BrandTokens.SubtleSurface
-    val ink = if (selected) Color.White else BrandTokens.HeadingInk
+    val fill = when {
+        selected -> MaterialTheme.colorScheme.primary
+        !enabled -> BrandTokens.SubtleSurface.copy(alpha = 0.55f)
+        else -> BrandTokens.SubtleSurface
+    }
+    val ink = when {
+        selected -> Color.White
+        !enabled -> BrandTokens.MutedInk.copy(alpha = 0.45f)
+        else -> BrandTokens.HeadingInk
+    }
     val borderColor = if (selected) MaterialTheme.colorScheme.primary else Color.Transparent
 
     Surface(
         onClick = onClick,
+        enabled = enabled,
         shape = RoundedCornerShape(18.dp),
         color = fill,
         modifier = modifier

@@ -1,6 +1,8 @@
 package com.colormagic.kids.presentation.screens.coloring
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,11 +21,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BorderColor
+import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.WaterDrop
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Brush
+import androidx.compose.material.icons.filled.Colorize
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.outlined.AutoFixOff
@@ -80,7 +91,9 @@ fun ColoringScreen(
             onColorSelected = viewModel::onColorSelected,
             onToolSelected = viewModel::onToolSelected,
             onBrushSizeSelected = viewModel::onBrushSizeSelected,
+            onStrokeFinished = viewModel::onStrokeFinished,
             onUndo = viewModel::onUndo,
+            onRedo = viewModel::onRedo,
             onClear = viewModel::onClear,
             onSave = onSave
         )
@@ -91,7 +104,9 @@ fun ColoringScreen(
             onColorSelected = viewModel::onColorSelected,
             onToolSelected = viewModel::onToolSelected,
             onBrushSizeSelected = viewModel::onBrushSizeSelected,
+            onStrokeFinished = viewModel::onStrokeFinished,
             onUndo = viewModel::onUndo,
+            onRedo = viewModel::onRedo,
             onClear = viewModel::onClear,
             onSave = onSave
         )
@@ -105,12 +120,14 @@ private fun ColoringTabletContent(
     onColorSelected: (String) -> Unit,
     onToolSelected: (ColoringTool) -> Unit,
     onBrushSizeSelected: (BrushSize) -> Unit,
+    onStrokeFinished: (Stroke) -> Unit,
     onUndo: () -> Unit,
+    onRedo: () -> Unit,
     onClear: () -> Unit,
     onSave: () -> Unit
 ) {
-    val selectedColor = state.palette.firstOrNull { it.id == state.selectedColorId }
-        ?: state.palette.first()
+    val selectedColor = state.selectedColor
+    val fillableMask = state.fillableMask
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -156,16 +173,17 @@ private fun ColoringTabletContent(
                         }
                     }
                     Spacer(Modifier.height(16.dp))
-                    Box(
+                    SketchCanvas(
+                        tool = state.tool,
+                        selectedColor = selectedColor,
+                        brushSize = state.brushSize,
+                        strokes = state.strokes,
+                        fillableMask = fillableMask,
+                        onStrokeFinished = onStrokeFinished,
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color(state.sketch.placeholderTint)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = "🖍️", fontSize = 140.sp)
-                    }
+                    )
                     Spacer(Modifier.height(12.dp))
                     Surface(
                         shape = RoundedCornerShape(50),
@@ -197,31 +215,22 @@ private fun ColoringTabletContent(
                     )
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
-                    ) {
-                        ToolButton(
-                            label = "Brush",
-                            icon = Icons.Filled.Brush,
-                            selected = state.tool == ColoringTool.Brush,
-                            onClick = { onToolSelected(ColoringTool.Brush) }
-                        )
-                        ToolButton(
-                            label = "Eraser",
-                            icon = Icons.Outlined.AutoFixOff,
-                            selected = state.tool == ColoringTool.Eraser,
-                            onClick = { onToolSelected(ColoringTool.Eraser) }
-                        )
-                        ToolButton(
-                            label = "Undo",
-                            icon = Icons.AutoMirrored.Filled.Undo,
-                            selected = false,
-                            onClick = onUndo
-                        )
-                    }
+                    // Brush family — six paint styles in a 3×2 grid.
+                    TabletBrushesGrid(
+                        tool = state.tool,
+                        onToolSelected = onToolSelected
+                    )
 
-                    Spacer(Modifier.height(20.dp))
+                    Spacer(Modifier.height(10.dp))
+
+                    // Action tools — Fill + Eraser, separate row so kids
+                    // never confuse them with brushes.
+                    TabletActionsRow(
+                        tool = state.tool,
+                        onToolSelected = onToolSelected
+                    )
+
+                    Spacer(Modifier.height(18.dp))
 
                     Text(
                         text = "Colors",
@@ -231,11 +240,12 @@ private fun ColoringTabletContent(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Spacer(Modifier.height(10.dp))
+                    // 16-colour palette → 4 rows of 4 fits the right pane cleanly.
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        state.palette.chunked(3).forEach { rowColors ->
+                        state.palette.chunked(4).forEach { rowColors ->
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
                             ) {
                                 rowColors.forEach { paintColor ->
                                     ColorSwatch(
@@ -248,7 +258,7 @@ private fun ColoringTabletContent(
                         }
                     }
 
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.height(14.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -264,7 +274,17 @@ private fun ColoringTabletContent(
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.weight(1f))
+
+                    // Actions — things that change HISTORY, not the active tool.
+                    UndoRedoRow(
+                        canUndo = state.canUndo,
+                        canRedo = state.canRedo,
+                        onUndo = onUndo,
+                        onRedo = onRedo
+                    )
+
+                    Spacer(Modifier.height(14.dp))
 
                     TabletClearChip(onClick = onClear)
                     Spacer(Modifier.height(10.dp))
@@ -349,25 +369,23 @@ private fun ColoringContent(
     onColorSelected: (String) -> Unit,
     onToolSelected: (ColoringTool) -> Unit,
     onBrushSizeSelected: (BrushSize) -> Unit,
+    onStrokeFinished: (Stroke) -> Unit,
     onUndo: () -> Unit,
+    onRedo: () -> Unit,
     onClear: () -> Unit,
     onSave: () -> Unit
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val safeBottom = WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding()
-
-    val selectedColor = state.palette.firstOrNull { it.id == state.selectedColorId }
-        ?: state.palette.first()
+    val scrollState = rememberScrollState()
+    val selectedColor = state.selectedColor
 
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(top = safeTop, bottom = safeBottom)
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(top = safeTop, bottom = safeBottom)) {
+            // Top bar stays pinned — back button always reachable.
             BrandTopBar(
                 onBack = onBack,
                 centered = true,
@@ -389,62 +407,100 @@ private fun ColoringContent(
                 }
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            Box(
+            // The rest scrolls — canvas + tools + actions + footer all reachable
+            // on small phones. Pointer events inside SketchCanvas consume drags so
+            // drawing never accidentally scrolls the screen.
+            Column(
                 modifier = Modifier
-                    .padding(horizontal = 20.dp)
-                    .fillMaxWidth()
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
             ) {
-                SketchCanvasCard(state.sketch)
+                Spacer(Modifier.height(8.dp))
+
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp)
+                        .fillMaxWidth()
+                ) {
+                    SketchCanvasCard(
+                        tool = state.tool,
+                        selectedColor = selectedColor,
+                        brushSize = state.brushSize,
+                        strokes = state.strokes,
+                        fillableMask = state.fillableMask,
+                        onStrokeFinished = onStrokeFinished
+                    )
+                }
+
+                Spacer(Modifier.height(20.dp))
+
+                BrushSizeRow(
+                    selected = state.brushSize,
+                    onSelect = onBrushSizeSelected
+                )
+
+                Spacer(Modifier.height(6.dp))
+
+                Text(
+                    text = "${state.tool.label} • ${selectedColor.name} • ${state.brushSize.label}",
+                    fontSize = 15.sp,
+                    color = BrandTokens.MutedInk,
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+
+                Spacer(Modifier.height(14.dp))
+
+                ColorPaletteRow(
+                    palette = state.palette,
+                    selectedId = state.selectedColorId,
+                    onSelect = onColorSelected
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                BrushesRow(
+                    tool = state.tool,
+                    onToolSelected = onToolSelected
+                )
+
+                Spacer(Modifier.height(10.dp))
+
+                ActionsRow(
+                    tool = state.tool,
+                    onToolSelected = onToolSelected
+                )
+
+                Spacer(Modifier.height(12.dp))
+
+                UndoRedoRow(
+                    canUndo = state.canUndo,
+                    canRedo = state.canRedo,
+                    onUndo = onUndo,
+                    onRedo = onRedo
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                FooterRow(
+                    onClear = onClear,
+                    onSave = onSave
+                )
+
+                Spacer(Modifier.height(24.dp))
             }
-
-            Spacer(Modifier.height(20.dp))
-
-            BrushSizeRow(
-                selected = state.brushSize,
-                onSelect = onBrushSizeSelected
-            )
-
-            Spacer(Modifier.height(6.dp))
-
-            Text(
-                text = "${state.tool.label} • ${selectedColor.name} • ${state.brushSize.label}",
-                fontSize = 15.sp,
-                color = BrandTokens.MutedInk,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
-
-            Spacer(Modifier.height(14.dp))
-
-            ColorPaletteRow(
-                palette = state.palette,
-                selectedId = state.selectedColorId,
-                onSelect = onColorSelected
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            ToolRow(
-                tool = state.tool,
-                onToolSelected = onToolSelected,
-                onUndo = onUndo
-            )
-
-            Spacer(Modifier.height(16.dp))
-
-            FooterRow(
-                onClear = onClear,
-                onSave = onSave
-            )
-
-            Spacer(Modifier.height(16.dp))
         }
     }
 }
 
 @Composable
-private fun SketchCanvasCard(sketch: Sketch) {
+private fun SketchCanvasCard(
+    tool: ColoringTool,
+    selectedColor: PaintColor,
+    brushSize: BrushSize,
+    strokes: List<Stroke>,
+    fillableMask: androidx.compose.ui.graphics.ImageBitmap?,
+    onStrokeFinished: (Stroke) -> Unit
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -458,20 +514,15 @@ private fun SketchCanvasCard(sketch: Sketch) {
         color = Color.White,
         shape = RoundedCornerShape(28.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .padding(14.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(Color(sketch.placeholderTint))
-                .fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            // Swap to AsyncImage(sketch.imageUrl) when backend is wired.
-            Text(
-                text = "🖍️",
-                fontSize = 96.sp
-            )
-        }
+        SketchCanvas(
+            tool = tool,
+            selectedColor = selectedColor,
+            brushSize = brushSize,
+            strokes = strokes,
+            fillableMask = fillableMask,
+            onStrokeFinished = onStrokeFinished,
+            modifier = Modifier.padding(14.dp)
+        )
     }
 }
 
@@ -517,12 +568,139 @@ private fun ColorPaletteRow(
     }
 }
 
+// The six brushes the kid can pick — same set on phone and tablet so the
+// "what brushes do I have" mental model never changes. Order is sequenced by
+// expressiveness (simple → playful).
+private val BRUSHES: List<Pair<ColoringTool, ImageVector>> = listOf(
+    ColoringTool.Crayon to Icons.Filled.Brush,
+    ColoringTool.Marker to Icons.Filled.BorderColor,
+    ColoringTool.Pencil to Icons.Filled.Create,
+    ColoringTool.Watercolor to Icons.Filled.WaterDrop,
+    ColoringTool.Highlighter to Icons.Filled.FormatColorFill,
+    ColoringTool.Magic to Icons.Filled.AutoAwesome
+)
+
 @Composable
-private fun ToolRow(
+private fun BrushesRow(
     tool: ColoringTool,
-    onToolSelected: (ColoringTool) -> Unit,
-    onUndo: () -> Unit
+    onToolSelected: (ColoringTool) -> Unit
 ) {
+    // Horizontally scrollable on phone so all six brushes always fit even
+    // on a 320dp-wide screen. Each ToolButton keeps its 92×76 touch size.
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(BRUSHES, key = { it.first }) { (brushTool, icon) ->
+            ToolButton(
+                label = brushTool.label,
+                icon = icon,
+                selected = tool == brushTool,
+                onClick = { onToolSelected(brushTool) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun ActionsRow(
+    tool: ColoringTool,
+    onToolSelected: (ColoringTool) -> Unit
+) {
+    // Action tools (Fill / Eraser) sit on their own row so kids never confuse
+    // them with the brush family.
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
+    ) {
+        ToolButton(
+            label = "Fill",
+            icon = Icons.Filled.FormatColorFill,
+            selected = tool == ColoringTool.Fill,
+            onClick = { onToolSelected(ColoringTool.Fill) },
+            modifier = Modifier.weight(1f)
+        )
+        ToolButton(
+            label = "Eraser",
+            icon = Icons.Outlined.AutoFixOff,
+            selected = tool == ColoringTool.Eraser,
+            onClick = { onToolSelected(ColoringTool.Eraser) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun TabletBrushesGrid(
+    tool: ColoringTool,
+    onToolSelected: (ColoringTool) -> Unit
+) {
+    // 3×2 grid in the right pane — comfortable touch targets, all six
+    // brushes visible at once.
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        BRUSHES.chunked(3).forEach { rowBrushes ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+            ) {
+                rowBrushes.forEach { (brushTool, icon) ->
+                    ToolButton(
+                        label = brushTool.label,
+                        icon = icon,
+                        selected = tool == brushTool,
+                        onClick = { onToolSelected(brushTool) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                // Pad row if it's not a multiple of 3.
+                repeat(3 - rowBrushes.size) {
+                    Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletActionsRow(
+    tool: ColoringTool,
+    onToolSelected: (ColoringTool) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+    ) {
+        ToolButton(
+            label = "Fill",
+            icon = Icons.Filled.FormatColorFill,
+            selected = tool == ColoringTool.Fill,
+            onClick = { onToolSelected(ColoringTool.Fill) },
+            modifier = Modifier.weight(1f)
+        )
+        ToolButton(
+            label = "Eraser",
+            icon = Icons.Outlined.AutoFixOff,
+            selected = tool == ColoringTool.Eraser,
+            onClick = { onToolSelected(ColoringTool.Eraser) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun UndoRedoRow(
+    canUndo: Boolean,
+    canRedo: Boolean,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit
+) {
+    // History actions live in their own row so kids don't confuse them with
+    // tool selection. Each is enabled only when there's something to do —
+    // ToolButton renders a muted look otherwise so tapping it doesn't feel
+    // like a silent failure.
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -530,22 +708,20 @@ private fun ToolRow(
         horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
     ) {
         ToolButton(
-            label = "Brush",
-            icon = Icons.Filled.Brush,
-            selected = tool == ColoringTool.Brush,
-            onClick = { onToolSelected(ColoringTool.Brush) }
-        )
-        ToolButton(
-            label = "Eraser",
-            icon = Icons.Outlined.AutoFixOff,
-            selected = tool == ColoringTool.Eraser,
-            onClick = { onToolSelected(ColoringTool.Eraser) }
-        )
-        ToolButton(
             label = "Undo",
             icon = Icons.AutoMirrored.Filled.Undo,
             selected = false,
-            onClick = onUndo
+            enabled = canUndo,
+            onClick = onUndo,
+            modifier = Modifier.weight(1f)
+        )
+        ToolButton(
+            label = "Redo",
+            icon = Icons.AutoMirrored.Filled.Redo,
+            selected = false,
+            enabled = canRedo,
+            onClick = onRedo,
+            modifier = Modifier.weight(1f)
         )
     }
 }
@@ -638,8 +814,14 @@ private fun SavePictureButton(
 
 private val ColoringTool.label: String
     get() = when (this) {
-        ColoringTool.Brush -> "Brush"
+        ColoringTool.Crayon -> "Crayon"
+        ColoringTool.Marker -> "Marker"
+        ColoringTool.Pencil -> "Pencil"
+        ColoringTool.Watercolor -> "Watercolor"
+        ColoringTool.Highlighter -> "Highlighter"
+        ColoringTool.Magic -> "Magic"
         ColoringTool.Eraser -> "Eraser"
+        ColoringTool.Fill -> "Fill"
     }
 
 private val BrushSize.label: String
@@ -660,7 +842,9 @@ private fun ColoringPreviewPhone() {
             onColorSelected = {},
             onToolSelected = {},
             onBrushSizeSelected = {},
+            onStrokeFinished = {},
             onUndo = {},
+            onRedo = {},
             onClear = {},
             onSave = {}
         )
