@@ -21,23 +21,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.BorderColor
-import androidx.compose.material.icons.filled.Create
-import androidx.compose.material.icons.filled.WaterDrop
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.Brush
-import androidx.compose.material.icons.filled.Colorize
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.FormatColorFill
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.outlined.AutoFixOff
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -59,10 +52,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.colormagic.kids.R
 import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColoringTool
 import com.colormagic.kids.domain.model.PaintColor
-import com.colormagic.kids.domain.model.Sketch
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.BrandTopBar
@@ -569,15 +562,15 @@ private fun ColorPaletteRow(
 }
 
 // The six brushes the kid can pick — same set on phone and tablet so the
-// "what brushes do I have" mental model never changes. Order is sequenced by
-// expressiveness (simple → playful).
-private val BRUSHES: List<Pair<ColoringTool, ImageVector>> = listOf(
-    ColoringTool.Crayon to Icons.Filled.Brush,
-    ColoringTool.Marker to Icons.Filled.BorderColor,
-    ColoringTool.Pencil to Icons.Filled.Create,
-    ColoringTool.Watercolor to Icons.Filled.WaterDrop,
-    ColoringTool.Highlighter to Icons.Filled.FormatColorFill,
-    ColoringTool.Magic to Icons.Filled.AutoAwesome
+// "what brushes do I have" mental model never changes. Each maps to a
+// full-colour 3D vector drawable; order is sequenced simple → playful.
+private val BRUSHES: List<Pair<ColoringTool, Int>> = listOf(
+    ColoringTool.Crayon to R.drawable.ic_brush_crayon,
+    ColoringTool.Marker to R.drawable.ic_brush_marker,
+    ColoringTool.Pencil to R.drawable.ic_brush_pencil,
+    ColoringTool.Watercolor to R.drawable.ic_brush_watercolor,
+    ColoringTool.Highlighter to R.drawable.ic_brush_highlighter,
+    ColoringTool.Magic to R.drawable.ic_brush_magic
 )
 
 @Composable
@@ -586,16 +579,16 @@ private fun BrushesRow(
     onToolSelected: (ColoringTool) -> Unit
 ) {
     // Horizontally scrollable on phone so all six brushes always fit even
-    // on a 320dp-wide screen. Each ToolButton keeps its 92×76 touch size.
+    // on a 320dp-wide screen.
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(BRUSHES, key = { it.first }) { (brushTool, icon) ->
+        items(BRUSHES, key = { it.first }) { (brushTool, iconRes) ->
             ToolButton(
                 label = brushTool.label,
-                icon = icon,
+                iconPainter = painterResource(iconRes),
                 selected = tool == brushTool,
                 onClick = { onToolSelected(brushTool) }
             )
@@ -646,10 +639,10 @@ private fun TabletBrushesGrid(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
             ) {
-                rowBrushes.forEach { (brushTool, icon) ->
+                rowBrushes.forEach { (brushTool, iconRes) ->
                     ToolButton(
                         label = brushTool.label,
-                        icon = icon,
+                        iconPainter = painterResource(iconRes),
                         selected = tool == brushTool,
                         onClick = { onToolSelected(brushTool) },
                         modifier = Modifier.weight(1f)

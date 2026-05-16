@@ -1,5 +1,6 @@
 package com.colormagic.kids.presentation.components
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -34,6 +36,14 @@ import com.colormagic.kids.domain.model.BrushSize
 //   • selected  → filled brand primary (loud, this is the active tool)
 //   • enabled   → grey neutral (tap target, but quiet)
 //   • disabled  → muted ink + container so the kid sees "nothing to do here"
+//
+// Two icon flavours:
+//   ToolButton(icon: ImageVector)  → Material icon, tinted to the ink colour.
+//                                    Used for action tools (Fill / Eraser /
+//                                    Undo / Redo).
+//   ToolButton(iconPainter: Painter) → full-colour drawable, NOT tinted.
+//                                      Used for the 3D brush art so the
+//                                      gradients survive.
 @Composable
 fun ToolButton(
     label: String,
@@ -42,6 +52,57 @@ fun ToolButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
+) {
+    ToolButtonShell(
+        label = label,
+        selected = selected,
+        enabled = enabled,
+        onClick = onClick,
+        modifier = modifier
+    ) { ink ->
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = ink,
+            modifier = Modifier.size(26.dp)
+        )
+    }
+}
+
+@Composable
+fun ToolButton(
+    label: String,
+    iconPainter: Painter,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true
+) {
+    ToolButtonShell(
+        label = label,
+        selected = selected,
+        enabled = enabled,
+        onClick = onClick,
+        modifier = modifier
+    ) { _ ->
+        // No tint — the 3D brush icons carry their own gradients/colours.
+        // Slightly larger than a Material icon so the artwork detail reads.
+        Image(
+            painter = iconPainter,
+            contentDescription = null,
+            modifier = Modifier.size(38.dp)
+        )
+    }
+}
+
+@Composable
+private fun ToolButtonShell(
+    label: String,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: @Composable (inkColor: Color) -> Unit
 ) {
     val fill = when {
         selected -> MaterialTheme.colorScheme.primary
@@ -61,7 +122,7 @@ fun ToolButton(
         shape = RoundedCornerShape(18.dp),
         color = fill,
         modifier = modifier
-            .size(width = 92.dp, height = 76.dp)
+            .size(width = 92.dp, height = 84.dp)
             .border(2.dp, borderColor, RoundedCornerShape(18.dp))
     ) {
         Column(
@@ -71,12 +132,7 @@ fun ToolButton(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = ink,
-                modifier = Modifier.size(26.dp)
-            )
+            icon(ink)
             Spacer(Modifier.height(4.dp))
             Text(
                 text = label,

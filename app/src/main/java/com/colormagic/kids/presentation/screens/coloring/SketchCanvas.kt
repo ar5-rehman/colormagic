@@ -7,6 +7,8 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,16 +37,18 @@ import com.colormagic.kids.R
 import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColoringTool
 import com.colormagic.kids.domain.model.PaintColor
+import kotlin.math.roundToInt
 
 // How far the paint cursor leads the kid's fingertip — the "finger-lift offset".
 //
-// Roughly thumb-tip height. Small enough that the gesture still feels direct
-// (the cursor visibly tracks the finger), large enough that the painted pixels
-// always sit ABOVE the finger so they're visible.
+// Set generously (~a fingertip-and-a-half) so the brush art and the fresh
+// paint always clear the hand — the kid sees the crayon/marker drawing
+// instead of their own finger covering it. The gesture still feels direct
+// because the brush cursor visibly tracks the finger in real time.
 //
 // Set to 0.dp to disable lift entirely (paint lands exactly under the finger).
 // A parent-controlled setting would live in Preferences and flow in via VM.
-private val FINGER_LIFT_OFFSET = 28.dp
+private val FINGER_LIFT_OFFSET = 56.dp
 
 // Stops the lift from running the cursor off the top of the canvas — keeps
 // at least this much room from the top edge.
@@ -159,19 +163,80 @@ fun SketchCanvas(
             }
         }
 
-        // Brush preview overlay — its own Canvas (NOT offscreen) so the halo
-        // is visible everywhere, including over lines and outside paintable
-        // areas. The kid always sees what their finger is doing.
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            cursor?.let { position ->
-                drawBrushPreview(
-                    center = position,
-                    tool = tool,
-                    color = selectedColor,
-                    size = brushSize,
-                    densityScale = density.density
+        // Cursor overlay — sits ON TOP of the masked drawing layer (NOT inside
+        // the offscreen group) so it's always visible. Brush tools show the
+        // real 3D brush art tracking the finger; Fill / Eraser show a halo
+        // since they have no brush of their own.
+        cursor?.let { position ->
+            val brushIcon = tool.brushIconRes()
+            if (brushIcon != null) {
+                BrushCursor(
+                    iconRes = brushIcon,
+                    position = position,
+                    dotColor = if (tool == ColoringTool.Magic) Color(0xFFB39DDB)
+                    else Color(selectedColor.argb)
                 )
+            } else {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    drawActionCursor(
+                        center = position,
+                        tool = tool,
+                        color = selectedColor,
+                        size = brushSize,
+                        densityScale = density.density
+                    )
+                }
             }
+        }
+    }
+}
+
+// Maps a tool to its 3D brush artwork. Null for tools with no brush
+// (Fill / Eraser) — those fall back to a drawn halo.
+private fun ColoringTool.brushIconRes(): Int? = when (this) {
+    ColoringTool.Crayon -> R.drawable.ic_brush_crayon
+    ColoringTool.Marker -> R.drawable.ic_brush_marker
+    ColoringTool.Pencil -> R.drawable.ic_brush_pencil
+    ColoringTool.Watercolor -> R.drawable.ic_brush_watercolor
+    ColoringTool.Highlighter -> R.drawable.ic_brush_highlighter
+    ColoringTool.Magic -> R.drawable.ic_brush_magic
+    ColoringTool.Fill, ColoringTool.Eraser -> null
+}
+
+// The brush icons are drawn diagonally with the painting tip in the
+// upper-left of the 100×100 artboard. These fractions place that tip exactly
+// on the paint point so the body of the brush trails down-right toward the
+// kid's hand — it reads as a held tool.
+private const val BRUSH_TIP_X = 0.38f
+private const val BRUSH_TIP_Y = 0.17f
+private val BRUSH_CURSOR_SIZE = 84.dp
+
+@Composable
+private fun BrushCursor(
+    iconRes: Int,
+    position: Offset,
+    dotColor: Color
+) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // The 3D brush art — tip anchored on the paint point.
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = null,
+            modifier = Modifier
+                .size(BRUSH_CURSOR_SIZE)
+                .offset {
+                    val sizePx = BRUSH_CURSOR_SIZE.toPx()
+                    IntOffset(
+                        x = (position.x - sizePx * BRUSH_TIP_X).roundToInt(),
+                        y = (position.y - sizePx * BRUSH_TIP_Y).roundToInt()
+                    )
+                }
+        )
+        // A tiny precise dot ON TOP of the brush tip — pinpoints the exact
+        // pixel where paint lands, since the icon tip isn't pixel-perfect.
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            drawCircle(Color.White, radius = 4.5.dp.toPx(), center = position)
+            drawCircle(dotColor, radius = 3f * density, center = position)
         }
     }
 }
@@ -182,45 +247,30 @@ fun SketchCanvas(
 private fun Offset.liftedBy(liftPx: Float, edgePadPx: Float): Offset =
     Offset(x, (y - liftPx).coerceAtLeast(edgePadPx))
 
-private fun DrawScope.drawBrushPreview(
+// Halo cursor for the action tools (Fill / Eraser) — they have no brush
+// artwork, so a sized ring shows where the action will land.
+private fun DrawScope.drawActionCursor(
     center: Offset,
     tool: ColoringTool,
     color: PaintColor,
     size: BrushSize,
     densityScale: Float
 ) {
-    // Preview size matches the actual stroke width for each tool.
     val baseWidth = size.strokePx(densityScale)
-    val previewRadius = when (tool) {
-        ColoringTool.Watercolor -> baseWidth * 0.8f
-        ColoringTool.Highlighter -> baseWidth * 0.9f
-        ColoringTool.Fill -> baseWidth * 1.4f          // fill is bigger than the brush
-        ColoringTool.Pencil -> baseWidth * 0.28f       // pencil is thinner
-        else -> baseWidth / 2f
+    val radius = when (tool) {
+        ColoringTool.Fill -> baseWidth * 1.4f   // fill spot is bigger than a brush
+        else -> baseWidth / 2f                  // Eraser
     }
-    val haloRadius = previewRadius + 3.dp.toPx()
+    val haloRadius = radius + 3.dp.toPx()
 
-    // Inner colour fill — tinted by the active tool so the kid sees the
-    // colour they're about to commit. Alpha matches the brush's character:
-    // watercolor preview is softer than marker, etc.
-    val fillColor = when (tool) {
-        ColoringTool.Eraser -> Color(0xFFE0E0E0)
-        ColoringTool.Magic -> Color(0xFFB39DDB)
-        else -> Color(color.argb)
-    }
-    val previewAlpha = when (tool) {
-        ColoringTool.Watercolor, ColoringTool.Highlighter -> 0.22f
-        ColoringTool.Pencil -> 0.5f
-        else -> 0.35f
-    }
+    val fillColor = if (tool == ColoringTool.Eraser) Color(0xFFE0E0E0) else Color(color.argb)
     drawCircle(
-        color = fillColor.copy(alpha = previewAlpha),
-        radius = previewRadius,
+        color = fillColor.copy(alpha = 0.32f),
+        radius = radius,
         center = center
     )
 
-    // Double ring — one bright, one dark — so the halo is visible against
-    // *any* background (white paper, dark lines, painted pixels, photos).
+    // Double ring — bright + dark — visible against any background.
     drawCircle(
         color = Color.White,
         radius = haloRadius,
@@ -234,10 +284,9 @@ private fun DrawScope.drawBrushPreview(
         style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx())
     )
 
-    // Eraser also gets a diagonal slash inside the halo so it reads as
-    // "removing" rather than "painting grey".
+    // Eraser slash so it reads as "removing", not "painting grey".
     if (tool == ColoringTool.Eraser) {
-        val r = previewRadius * 0.6f
+        val r = radius * 0.6f
         drawLine(
             color = Color(0xFFC62828),
             start = Offset(center.x - r, center.y - r),
