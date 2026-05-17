@@ -1,21 +1,28 @@
-# Add project specific ProGuard rules here.
-# You can control the set of applied configuration files using the
-# proguardFiles setting in build.gradle.
+# ── ColorMagic Kids — R8 / ProGuard rules ──────────────────────────────
 #
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
+# Hilt, Room, Compose, Navigation, Coroutines and Biometric all ship their
+# own *consumer* rules inside their AARs, so the release build needs almost
+# nothing project-specific. The rules below cover crash-report readability
+# and a couple of defensive keeps.
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
+# Keep source file + line numbers so release crash stack traces stay
+# meaningful. mapping.txt under build/outputs/mapping/release/ de-obfuscates.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Keep annotation metadata Hilt / Room rely on at runtime.
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod
+
+# ── Domain & UI state models ───────────────────────────────────────────
+# Not serialised today, but keeping their members is cheap insurance
+# against R8 stripping fields a future backend (Room DTOs, JSON parsing)
+# would reach via reflection.
+-keep class com.colormagic.kids.domain.model.** { *; }
+
+# ── Kotlin coroutines ──────────────────────────────────────────────────
+-dontwarn kotlinx.coroutines.**
+
+# If WebView with a JS bridge is ever added, keep the interface here:
 #-keepclassmembers class fqcn.of.javascript.interface.for.webview {
 #   public *;
 #}
-
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
-
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
