@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -24,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +45,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.foundation.horizontalScroll
+import com.colormagic.kids.domain.model.CategoryIdeas
 import com.colormagic.kids.domain.model.ColoringIdea
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandHeading
@@ -57,6 +61,7 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
 @Composable
 fun CreateSketchScreen(
+    onBack: () -> Unit,
     onMakeSketchRequested: (prompt: String) -> Unit,
     onUpgrade: () -> Unit,
     viewModel: CreateSketchViewModel = hiltViewModel()
@@ -69,6 +74,9 @@ fun CreateSketchScreen(
     // the moment the parent navigates back.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.refreshQuota()
+        // Reshuffle the "Need ideas?" pool each time the screen opens — the
+        // kid sees fresh suggestions rather than the same 6 every visit.
+        viewModel.shuffleIdeas()
     }
 
     val onMakeSketch: () -> Unit = {
@@ -80,7 +88,9 @@ fun CreateSketchScreen(
     if (info.isCompactWidth) {
         CreateSketchContent(
             state = state,
+            onBack = onBack,
             onPromptChanged = viewModel::onPromptChanged,
+            onCategorySelected = viewModel::onCategorySelected,
             onMakeSketch = onMakeSketch,
             onIdeaSelected = viewModel::onIdeaSelected,
             onUpgrade = onUpgrade
@@ -88,7 +98,9 @@ fun CreateSketchScreen(
     } else {
         CreateSketchTabletContent(
             state = state,
+            onBack = onBack,
             onPromptChanged = viewModel::onPromptChanged,
+            onCategorySelected = viewModel::onCategorySelected,
             onMakeSketch = onMakeSketch,
             onIdeaSelected = viewModel::onIdeaSelected,
             onUpgrade = onUpgrade
@@ -99,7 +111,9 @@ fun CreateSketchScreen(
 @Composable
 private fun CreateSketchTabletContent(
     state: CreateSketchUiState,
+    onBack: () -> Unit,
     onPromptChanged: (String) -> Unit,
+    onCategorySelected: (String) -> Unit,
     onMakeSketch: () -> Unit,
     onIdeaSelected: (ColoringIdea) -> Unit,
     onUpgrade: () -> Unit
@@ -108,10 +122,12 @@ private fun CreateSketchTabletContent(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
+        Column(modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 24.dp)) {
+            BackChip(onClick = onBack)
+            Spacer(Modifier.height(12.dp))
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 28.dp, vertical = 24.dp),
+                .fillMaxSize(),
             horizontalArrangement = Arrangement.spacedBy(28.dp)
         ) {
             // Left — prompt + categories + submit
@@ -143,23 +159,10 @@ private fun CreateSketchTabletContent(
                         color = BrandTokens.HeadingInk
                     )
                     Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("Animals", "Space", "Magic", "Vehicles").forEach { tag ->
-                            Surface(
-                                shape = RoundedCornerShape(50),
-                                color = BrandTokens.SubtleSurface,
-                                modifier = Modifier.height(34.dp)
-                            ) {
-                                Text(
-                                    text = tag,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = BrandTokens.HeadingInk,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
-                                )
-                            }
-                        }
-                    }
+                    CategoryChipRow(
+                        categories = state.categories,
+                        onCategorySelected = onCategorySelected
+                    )
                     Spacer(Modifier.height(28.dp))
                     BrandPrimaryButton(
                         label = "Make My Sketch",
@@ -201,13 +204,16 @@ private fun CreateSketchTabletContent(
                 }
             }
         }
+        }
     }
 }
 
 @Composable
 private fun CreateSketchContent(
     state: CreateSketchUiState,
+    onBack: () -> Unit,
     onPromptChanged: (String) -> Unit,
+    onCategorySelected: (String) -> Unit,
     onMakeSketch: () -> Unit,
     onIdeaSelected: (ColoringIdea) -> Unit,
     onUpgrade: () -> Unit
@@ -229,6 +235,8 @@ private fun CreateSketchContent(
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
             item {
+                BackChip(onClick = onBack)
+                Spacer(Modifier.height(12.dp))
                 BrandHeading(text = "Describe your\ncoloring page")
                 Spacer(Modifier.height(20.dp))
             }
@@ -237,6 +245,20 @@ private fun CreateSketchContent(
                     value = state.prompt,
                     onValueChange = onPromptChanged,
                     placeholder = "A cute dinosaur eating an apple..."
+                )
+                Spacer(Modifier.height(20.dp))
+            }
+            item {
+                Text(
+                    text = "Categories",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = BrandTokens.HeadingInk
+                )
+                Spacer(Modifier.height(8.dp))
+                CategoryChipRow(
+                    categories = state.categories,
+                    onCategorySelected = onCategorySelected
                 )
                 Spacer(Modifier.height(20.dp))
             }
@@ -276,6 +298,65 @@ private fun CreateSketchContent(
     }
 }
 
+// Horizontally scrolling row of category chips. Tapping a chip drops a random
+// idea from that category into the prompt input — saves the kid having to
+// think of a subject from scratch.
+@Composable
+private fun CategoryChipRow(
+    categories: List<String>,
+    onCategorySelected: (String) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        categories.forEach { key ->
+            Surface(
+                onClick = { onCategorySelected(key) },
+                shape = RoundedCornerShape(50),
+                color = BrandTokens.SubtleSurface,
+                modifier = Modifier.height(34.dp)
+            ) {
+                Text(
+                    text = CategoryIdeas.labels[key] ?: key,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = BrandTokens.HeadingInk,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                )
+            }
+        }
+    }
+}
+
+// Small circular back arrow chip used as the workflow-screen back affordance.
+// Placed at the top-left of CreateSketch so the kid (or a parent helping out)
+// has an obvious way back to Home — the bottom-nav is intentionally hidden
+// on nested workflow screens.
+@Composable
+private fun BackChip(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = androidx.compose.foundation.shape.CircleShape,
+        color = BrandTokens.SubtleSurface,
+        modifier = Modifier.size(42.dp)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxWidth(),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.material3.Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = BrandTokens.HeadingInk,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
 // Shows the per-sketch cost, or — when the parent's credits are spent — a
 // tappable "out of credits" prompt that deep-links to the Magic Passes
 // screen. The "Make My Sketch" button is disabled alongside.
@@ -301,7 +382,9 @@ private fun CreateSketchPreviewPhone() {
     ColorMagicKidsTheme {
         CreateSketchContent(
             state = CreateSketchUiState(),
+            onBack = {},
             onPromptChanged = {},
+            onCategorySelected = {},
             onMakeSketch = {},
             onIdeaSelected = {},
             onUpgrade = {}
@@ -315,7 +398,9 @@ private fun CreateSketchPreviewTablet() {
     ColorMagicKidsTheme {
         CreateSketchContent(
             state = CreateSketchUiState(),
+            onBack = {},
             onPromptChanged = {},
+            onCategorySelected = {},
             onMakeSketch = {},
             onIdeaSelected = {},
             onUpgrade = {}

@@ -392,13 +392,9 @@ private fun ColoringContent(
                         fontFamily = MaterialTheme.typography.headlineLarge.fontFamily
                     )
                 },
-                trailing = {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "More",
-                        tint = BrandTokens.HeadingInk
-                    )
-                }
+                // 3-dot menu removed — clear/undo/redo already live in the
+                // tools toolbar below, so the top-bar overflow had no unique
+                // actions to host.
             )
 
             // The rest scrolls — canvas + tools + actions + footer all reachable

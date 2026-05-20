@@ -15,12 +15,19 @@
 import {randomUUID} from "crypto";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import OpenAI from "openai";
-import {IMAGE_QUALITY, MAX_PROMPT_LENGTH, OPENAI_API_KEY, REGION} from "./config";
+import {
+  FORCE_FREE_PROVIDER,
+  IMAGE_QUALITY,
+  MAX_PROMPT_LENGTH,
+  OPENAI_API_KEY,
+  REGION,
+} from "./config";
 import {
   commitSketchAndDeduct,
   ensureUserDoc,
   modelForSource,
   pickCreditSource,
+  providerForSource,
 } from "./credits";
 import {UNSAFE_PROMPT_MESSAGE, checkPromptSafety} from "./promptSafety";
 import {
@@ -56,9 +63,20 @@ export const generateSketch = onCall(
     const openai = new OpenAI({apiKey: OPENAI_API_KEY.value()});
 
     // 1. Safety — keyword blocklist + OpenAI moderation. Must clear both.
+    //    Distinguish a *real* content rejection from a server-side moderation
+    //    error: the first deserves the kid-friendly "try a safer idea"
+    //    message, but the second is our backend's problem and the child
+    //    should see a generic retry message — not an accusation that their
+    //    prompt was unsafe.
     const safety = await checkPromptSafety(openai, prompt);
     if (!safety.safe) {
       console.warn(`Unsafe prompt from ${uid}: ${safety.reason}`);
+      if (safety.reason === "moderation:error") {
+        throw new HttpsError(
+          "internal",
+          "We couldn't check that idea right now. Please try again."
+        );
+      }
       throw new HttpsError("invalid-argument", UNSAFE_PROMPT_MESSAGE);
     }
 
@@ -73,11 +91,15 @@ export const generateSketch = onCall(
       );
     }
     const model = modelForSource(source);
+    // Provider follows the credit bucket: free → Pollinations, paid → OpenAI.
+    // `FORCE_FREE_PROVIDER` overrides everything to Pollinations while the
+    // OpenAI account has no billing.
+    const provider = FORCE_FREE_PROVIDER ? "pollinations" : providerForSource(source);
 
     // 3. Generate the line art. Failure here spends NO credit.
     let png: Buffer;
     try {
-      png = await generateColoringImage(openai, model, buildColoringPrompt(prompt));
+      png = await generateColoringImage(openai, provider, model, buildColoringPrompt(prompt));
     } catch (err) {
       console.error("OpenAI generation failed", err);
       throw new HttpsError("internal", "We couldn't draw that sketch. Please try again.");

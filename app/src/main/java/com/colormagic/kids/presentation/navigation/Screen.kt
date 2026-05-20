@@ -5,7 +5,16 @@ import android.net.Uri
 // Routes for nested feature screens drilled into from a top-level destination.
 // Top-level entries (bottom nav) live in [TopLevelDestination].
 sealed class Screen(val route: String) {
-    data object CreateSketch : Screen("create-sketch")
+    // CreateSketch optionally carries a category key (see CategoryIdeas) so
+    // Home → category card can deep-link in with a random prompt prefilled.
+    data object CreateSketch : Screen("create-sketch?category={category}") {
+        const val ARG_CATEGORY = "category"
+        const val ROUTE_PATTERN = "create-sketch?category={category}"
+        const val ROUTE_PLAIN = "create-sketch"
+        fun routeFor(category: String? = null): String =
+            if (category.isNullOrBlank()) ROUTE_PLAIN
+            else "create-sketch?category=${Uri.encode(category)}"
+    }
 
     // Loading carries the kid's prompt as a (URL-encoded) query argument so
     // the LoadingViewModel can run the real backend generation.

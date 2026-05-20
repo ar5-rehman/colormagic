@@ -101,6 +101,22 @@ export function modelForSource(source: CreditSource): string {
 }
 
 /**
+ * Which image provider a credit from [source] uses.
+ *
+ *   Free credit       → "pollinations" (zero cost to us, basic quality)
+ *   Monthly / Extra   → "openai"       (paid quality, paid for by their sub)
+ *
+ * This means paid users get the upgrade they paid for the moment their
+ * Firestore doc shows their purchase — no separate flag, no code change.
+ * If the OpenAI account doesn't have billing yet, override both buckets to
+ * "pollinations" via `FORCE_FREE_PROVIDER` in config.
+ */
+export type ImageProvider = "openai" | "pollinations";
+export function providerForSource(source: CreditSource): ImageProvider {
+  return source === "free" ? "pollinations" : "openai";
+}
+
+/**
  * Atomically deducts one credit AND writes the sketch document, in a single
  * Firestore transaction — so a sketch is recorded if and only if a credit is
  * spent. Call this only AFTER the image is generated and uploaded.

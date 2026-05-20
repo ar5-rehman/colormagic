@@ -88,10 +88,17 @@ private fun MainScaffold() {
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
-                BrandBottomBar(
-                    selected = currentTopLevel,
-                    onSelect = { navController.navigateToTopLevel(it) }
-                )
+                // Bottom nav is only meaningful on top-level destinations
+                // (Home / Gallery / Parents). On nested workflow screens like
+                // CreateSketch, Loading, Coloring etc. the bar would just be
+                // a confusing dead-end — hide it and let the screen's own
+                // back affordance handle navigation.
+                if (currentTopLevel != null) {
+                    BrandBottomBar(
+                        selected = currentTopLevel,
+                        onSelect = { navController.navigateToTopLevel(it) }
+                    )
+                }
             }
         ) { padding ->
             AppNavGraph(

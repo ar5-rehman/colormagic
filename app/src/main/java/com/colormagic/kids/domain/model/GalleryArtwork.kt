@@ -8,5 +8,8 @@ data class GalleryArtwork(
     val title: String,
     val dateLabel: String,
     val thumbnailUrl: String? = null,
-    val placeholderTint: Long = 0xFFEDE7F6
+    val placeholderTint: Long = 0xFFEDE7F6,
+    /** One of [CategoryIdeas] keys (or null for older / uncategorised art).
+     *  Drives the Gallery's category filter chip row. */
+    val category: String? = null
 )

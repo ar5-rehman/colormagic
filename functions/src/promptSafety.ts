@@ -10,6 +10,7 @@
  * Both run before any image model is called. A prompt must clear BOTH.
  */
 import type OpenAI from "openai";
+import {USE_OPENAI_MODERATION} from "./config";
 
 export interface SafetyResult {
   safe: boolean;
@@ -26,18 +27,32 @@ export const UNSAFE_PROMPT_MESSAGE = "Please try a safe and kid-friendly idea.";
  * cheaper than a bad image in front of a child.
  */
 const BLOCKLIST: Record<string, string[]> = {
-  violence: ["kill", "gun", "shoot", "blood", "weapon", "knife", "war", "fight", "punch", "explode", "bomb"],
-  scary: ["scary", "horror", "nightmare", "demon", "zombie", "ghost", "creepy", "monster killing"],
-  adult: ["sexy", "nude", "naked", "kiss", "romantic", "boyfriend", "girlfriend", "dating"],
+  violence: [
+    "kill", "gun", "shoot", "blood", "weapon", "knife", "sword fight",
+    "war", "fight", "punch", "explode", "bomb", "dead", "death", "murder",
+  ],
+  scary: [
+    "scary", "horror", "nightmare", "demon", "zombie", "ghost", "creepy",
+    "monster killing", "haunted", "vampire", "evil", "satan", "devil",
+    "skull", "grave", "graveyard",
+  ],
+  adult: [
+    "sexy", "nude", "naked", "kiss", "romantic", "boyfriend", "girlfriend",
+    "dating", "wedding night", "lingerie", "bikini",
+  ],
   selfHarm: ["suicide", "self harm", "self-harm", "cutting", "hurt myself"],
-  hate: ["racist", "nazi", "hate"],
+  hate: ["racist", "nazi", "hate", "slur"],
   ipAndPeople: [
     "elsa", "mickey", "pokemon", "pikachu", "spiderman", "spider-man",
     "batman", "superman", "disney", "marvel", "barbie", "sonic",
-    "celebrity", "president", "taylor swift", "ronaldo", "messi",
+    "frozen", "minion", "shrek", "harry potter", "paw patrol", "bluey",
+    "celebrity", "president", "taylor swift", "ronaldo", "messi", "trump",
   ],
   personalInfo: ["my address", "phone number", "my school", "home address"],
-  dangerous: ["fire", "matches", "poison", "drugs", "alcohol", "cigarette"],
+  dangerous: [
+    "fire", "matches", "poison", "drugs", "alcohol", "cigarette",
+    "smoking", "vape", "needle", "syringe",
+  ],
 };
 
 /** Layer 1 — keyword scan. */
@@ -73,12 +88,16 @@ export async function moderatePrompt(
   }
 }
 
-/** Runs both layers. Returns the first failure, or safe. */
+/** Runs both layers. Returns the first failure, or safe.
+ *  When `USE_OPENAI_MODERATION` is false (no billing on OpenAI account),
+ *  Layer 2 is skipped and we rely solely on the keyword blocklist + the
+ *  strict prompt template. Flip the flag back on once OpenAI billing is set. */
 export async function checkPromptSafety(
   openai: OpenAI,
   prompt: string
 ): Promise<SafetyResult> {
   const layer1 = keywordCheck(prompt);
   if (!layer1.safe) return layer1;
+  if (!USE_OPENAI_MODERATION) return {safe: true};
   return moderatePrompt(openai, prompt);
 }

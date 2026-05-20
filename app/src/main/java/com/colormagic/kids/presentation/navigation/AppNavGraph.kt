@@ -54,14 +54,20 @@ fun AppNavGraph(
     ) {
         composable(TopLevelDestination.HOME.route) {
             HomeScreen(
-                onCreateNewSketch = { navController.navigate(Screen.CreateSketch.route) },
+                onCreateNewSketch = { navController.navigate(Screen.CreateSketch.routeFor()) },
+                // Category card on Home deep-links into CreateSketch with a
+                // random prompt from that category pre-filled.
+                onCategoryClick = { cat ->
+                    navController.navigate(Screen.CreateSketch.routeFor(cat.id))
+                },
                 onOpenGallery = { navController.navigateToTopLevel(TopLevelDestination.GALLERY) },
                 onOpenParentArea = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) }
             )
         }
         composable(TopLevelDestination.GALLERY.route) {
             GalleryScreen(
-                onStartNewArt = { navController.navigate(Screen.CreateSketch.route) }
+                onStartNewArt = { navController.navigate(Screen.CreateSketch.routeFor()) },
+                onOpenParents = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) }
             )
         }
         composable(TopLevelDestination.PARENTS.route) {
@@ -91,7 +97,7 @@ fun AppNavGraph(
                     )
                 },
                 onCreateSketch = {
-                    navController.navigate(Screen.CreateSketch.route) {
+                    navController.navigate(Screen.CreateSketch.routeFor()) {
                         popUpTo(TopLevelDestination.HOME.route) { inclusive = false }
                     }
                 }
@@ -106,8 +112,17 @@ fun AppNavGraph(
             )
         }
 
-        composable(Screen.CreateSketch.route) {
+        composable(
+            route = Screen.CreateSketch.ROUTE_PATTERN,
+            arguments = listOf(
+                navArgument(Screen.CreateSketch.ARG_CATEGORY) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) {
             CreateSketchScreen(
+                onBack = { navController.popBackStack() },
                 onMakeSketchRequested = { prompt ->
                     // Carry the prompt into Loading, which runs the real
                     // backend generateSketch call.
@@ -146,7 +161,7 @@ fun AppNavGraph(
                 onTryAnother = {
                     // Go back to CreateSketch so the kid can edit the prompt.
                     navController.popBackStack(
-                        Screen.CreateSketch.route,
+                        Screen.CreateSketch.ROUTE_PATTERN,
                         inclusive = false
                     )
                 }
@@ -177,7 +192,7 @@ fun AppNavGraph(
                 },
                 onCreateAnother = {
                     // Start a fresh prompt, leaving Home as the only thing under it.
-                    navController.navigate(Screen.CreateSketch.route) {
+                    navController.navigate(Screen.CreateSketch.routeFor()) {
                         popUpTo(TopLevelDestination.HOME.route) { inclusive = false }
                     }
                 }

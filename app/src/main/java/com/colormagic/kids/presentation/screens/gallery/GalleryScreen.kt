@@ -25,9 +25,14 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.ui.platform.LocalContext
+import com.colormagic.kids.domain.model.CategoryIdeas
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -50,7 +55,6 @@ import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.ArtworkCard
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandTokens
-import com.colormagic.kids.presentation.components.FilterPill
 import com.colormagic.kids.presentation.components.ParentBrandHeader
 import com.colormagic.kids.presentation.components.TactileSurface
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
@@ -59,18 +63,23 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 fun GalleryScreen(
     onStartNewArt: () -> Unit = {},
     onOpenArtwork: (GalleryArtwork) -> Unit = {},
-    onFilter: () -> Unit = {},
+    onOpenParents: () -> Unit = {},
     viewModel: GalleryViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
+    val context = LocalContext.current
+    val onShare: (GalleryArtwork) -> Unit = { artwork -> shareArtwork(context, artwork) }
+
     if (info.isCompactWidth) {
         GalleryContent(
             state = state,
             onStartNewArt = onStartNewArt,
             onOpenArtwork = onOpenArtwork,
             onDelete = viewModel::onDelete,
-            onFilter = onFilter
+            onShare = onShare,
+            onCategorySelected = viewModel::onCategorySelected,
+            onOpenParents = onOpenParents
         )
     } else {
         GalleryTabletContent(
@@ -78,7 +87,8 @@ fun GalleryScreen(
             onStartNewArt = onStartNewArt,
             onOpenArtwork = onOpenArtwork,
             onDelete = viewModel::onDelete,
-            onFilter = onFilter
+            onShare = onShare,
+            onCategorySelected = viewModel::onCategorySelected
         )
     }
 }
@@ -89,26 +99,26 @@ private fun GalleryTabletContent(
     onStartNewArt: () -> Unit,
     onOpenArtwork: (GalleryArtwork) -> Unit,
     onDelete: (String) -> Unit,
-    onFilter: () -> Unit
+    onShare: (GalleryArtwork) -> Unit,
+    onCategorySelected: (String?) -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
         Column(modifier = Modifier.fillMaxSize().padding(horizontal = 28.dp, vertical = 24.dp)) {
-            // Heading + Filter row
-            androidx.compose.foundation.layout.Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                BrandHeading(
-                    text = "My Magical Creations",
-                    fontSize = 32.sp,
-                    lineHeight = 38.sp,
-                    modifier = Modifier.weight(1f)
-                )
-                FilterPill(label = "Filter", onClick = onFilter)
-            }
+            BrandHeading(
+                text = "My Magical Creations",
+                fontSize = 32.sp,
+                lineHeight = 38.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(Modifier.height(14.dp))
+            CategoryFilterChipRow(
+                categories = state.availableCategories,
+                selected = state.selectedCategory,
+                onSelect = onCategorySelected
+            )
 
             Spacer(Modifier.height(20.dp))
 
@@ -123,7 +133,8 @@ private fun GalleryTabletContent(
                     GalleryTabletCard(
                         artwork = artwork,
                         onOpen = { onOpenArtwork(artwork) },
-                        onDelete = { onDelete(artwork.id) }
+                        onDelete = { onDelete(artwork.id) },
+                        onShare = { onShare(artwork) }
                     )
                 }
                 item(key = "start-new") {
@@ -138,7 +149,8 @@ private fun GalleryTabletContent(
 private fun GalleryTabletCard(
     artwork: GalleryArtwork,
     onOpen: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onShare: () -> Unit
 ) {
     Surface(
         onClick = onOpen,
@@ -192,6 +204,25 @@ private fun GalleryTabletCard(
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Surface(
+                    onClick = onShare,
+                    shape = CircleShape,
+                    color = Color(0xFFD0EBFF),
+                    modifier = Modifier.size(34.dp)
+                ) {
+                    androidx.compose.foundation.layout.Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Share,
+                            contentDescription = "Share",
+                            tint = Color(0xFF01579B),
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
@@ -269,7 +300,9 @@ private fun GalleryContent(
     onStartNewArt: () -> Unit,
     onOpenArtwork: (GalleryArtwork) -> Unit,
     onDelete: (String) -> Unit,
-    onFilter: () -> Unit
+    onShare: (GalleryArtwork) -> Unit,
+    onCategorySelected: (String?) -> Unit,
+    onOpenParents: () -> Unit
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
 
@@ -285,23 +318,27 @@ private fun GalleryContent(
             ),
             verticalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            item { ParentBrandHeader() }
+            // Tapping the profile avatar in the header jumps to the Parents tab.
+            item { ParentBrandHeader(onProfileClick = onOpenParents) }
 
             item {
-                Row(
+                BrandHeading(
+                    text = "My Magical\nCreations",
+                    fontSize = 28.sp,
+                    lineHeight = 34.sp,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    BrandHeading(
-                        text = "My Magical\nCreations",
-                        fontSize = 28.sp,
-                        lineHeight = 34.sp,
-                        modifier = Modifier.weight(1f)
-                    )
-                    FilterPill(label = "Filter", onClick = onFilter)
-                }
+                        .padding(horizontal = 20.dp)
+                )
+            }
+
+            item {
+                CategoryFilterChipRow(
+                    categories = state.availableCategories,
+                    selected = state.selectedCategory,
+                    onSelect = onCategorySelected,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
             }
 
             items(state.artworks, key = { it.id }) { artwork ->
@@ -309,6 +346,7 @@ private fun GalleryContent(
                     artwork = artwork,
                     onOpen = { onOpenArtwork(artwork) },
                     onDelete = { onDelete(artwork.id) },
+                    onShare = { onShare(artwork) },
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
@@ -368,6 +406,57 @@ private fun StartNewArtCard(
     }
 }
 
+// Horizontally scrolling category filter — "All" + one chip per known
+// category. The currently selected chip uses the primary accent; unselected
+// chips use the subtle surface tone.
+@Composable
+private fun CategoryFilterChipRow(
+    categories: List<String>,
+    selected: String?,
+    onSelect: (String?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        FilterChip(label = "All", isSelected = selected == null) { onSelect(null) }
+        categories.forEach { key ->
+            FilterChip(
+                label = CategoryIdeas.labels[key] ?: key,
+                isSelected = selected == key
+            ) { onSelect(key) }
+        }
+    }
+}
+
+@Composable
+private fun FilterChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val container = if (isSelected) MaterialTheme.colorScheme.primary
+    else BrandTokens.SubtleSurface
+    val ink = if (isSelected) Color.White else BrandTokens.HeadingInk
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = container,
+        modifier = Modifier.height(34.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = ink,
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+        )
+    }
+}
+
 @Preview(name = "Gallery – phone", showBackground = true, widthDp = 360, heightDp = 1300)
 @Composable
 private fun GalleryPreviewPhone() {
@@ -377,7 +466,9 @@ private fun GalleryPreviewPhone() {
             onStartNewArt = {},
             onOpenArtwork = {},
             onDelete = {},
-            onFilter = {}
+            onShare = {},
+            onCategorySelected = {},
+            onOpenParents = {}
         )
     }
 }

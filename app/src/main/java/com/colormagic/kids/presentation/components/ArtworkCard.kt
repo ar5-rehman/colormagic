@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,6 +44,7 @@ fun ArtworkCard(
     artwork: GalleryArtwork,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
+    onShare: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(24.dp)
@@ -87,6 +89,14 @@ fun ArtworkCard(
                     backgroundColor = Color(0xFFB3E5FC),
                     tint = Color(0xFF01579B),
                     onClick = onOpen
+                )
+                Spacer(Modifier.width(8.dp))
+                CircleIconAction(
+                    icon = Icons.Filled.Share,
+                    contentDescription = "Share ${artwork.title}",
+                    backgroundColor = Color(0xFFD0EBFF),
+                    tint = Color(0xFF01579B),
+                    onClick = onShare
                 )
                 Spacer(Modifier.width(8.dp))
                 CircleIconAction(
