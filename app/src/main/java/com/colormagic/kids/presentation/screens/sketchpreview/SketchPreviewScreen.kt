@@ -47,7 +47,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import com.colormagic.kids.presentation.components.ShimmerBox
 import com.colormagic.kids.domain.model.Sketch
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
@@ -93,26 +94,30 @@ fun SketchPreviewScreen(
     }
 }
 
-// Renders the generated sketch from its network URL (Coil), falling back to a
-// tinted placeholder while there's no image.
+// Renders the generated sketch from its network URL (Coil). While the URL is
+// resolving we draw a shimmer placeholder — never the bundled sample sketch,
+// which would mislead the kid into thinking THAT's their generated page.
 @Composable
 private fun SketchImage(sketch: Sketch, modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
-            .background(Color(sketch.placeholderTint)),
+        modifier = modifier.clip(RoundedCornerShape(22.dp)),
         contentAlignment = Alignment.Center
     ) {
         val url = sketch.imageUrl
         if (url != null) {
-            AsyncImage(
+            SubcomposeAsyncImage(
                 model = url,
                 contentDescription = "Coloring sketch for ${sketch.prompt}",
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) },
+                error = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
             )
         } else {
-            Text(text = "✏️", fontSize = 86.sp)
+            // No URL at all — still better to show shimmer than a stale
+            // bundled sample. If we add fallbacks later this is where to
+            // branch on a "real failure" vs "still arriving" state.
+            ShimmerBox(modifier = Modifier.fillMaxSize())
         }
     }
 }

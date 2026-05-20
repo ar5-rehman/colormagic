@@ -149,7 +149,12 @@ private fun CreateSketchTabletContent(
                     BrandPromptInput(
                         value = state.prompt,
                         onValueChange = onPromptChanged,
-                        placeholder = "A cute dinosaur eating an apple..."
+                        placeholder = if (state.allowFreeText) {
+                            "A cute dinosaur eating an apple..."
+                        } else {
+                            "Tap a category below to pick an idea"
+                        },
+                        enabled = state.allowFreeText
                     )
                     Spacer(Modifier.height(24.dp))
                     Text(
@@ -362,14 +367,20 @@ private fun BackChip(onClick: () -> Unit) {
 // screen. The "Make My Sketch" button is disabled alongside.
 @Composable
 private fun CreditCostPill(state: CreateSketchUiState, onUpgrade: () -> Unit) {
-    if (state.outOfCredits) {
-        CreditPill(
+    // Order matters: out-of-credits beats daily-limit, since one requires a
+    // purchase and the other just an end-of-day wait. Both surface as
+    // "loud" pills so the kid notices instantly.
+    when {
+        state.outOfCredits -> CreditPill(
             text = "Out of credits — tap to get more",
             style = CreditPillStyle.Primary,
             modifier = Modifier.clickable(onClick = onUpgrade)
         )
-    } else {
-        CreditPill(
+        state.dailyLimitReached -> CreditPill(
+            text = "Today's sketch limit reached — come back tomorrow!",
+            style = CreditPillStyle.Primary
+        )
+        else -> CreditPill(
             text = "Uses ${state.sketchCreditsCost} sketch credit",
             style = CreditPillStyle.Subtle
         )

@@ -3,6 +3,7 @@ package com.colormagic.kids.presentation.screens.loading
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.colormagic.kids.data.parents.ParentControlsStore
 import com.colormagic.kids.domain.repository.SketchGenerationResult
 import com.colormagic.kids.domain.repository.SketchRepository
 import com.colormagic.kids.presentation.sketch.SketchSession
@@ -32,7 +33,8 @@ sealed interface LoadingUiState {
 class LoadingViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val sketchRepository: SketchRepository,
-    private val sketchSession: SketchSession
+    private val sketchSession: SketchSession,
+    private val parentControls: ParentControlsStore
 ) : ViewModel() {
 
     // Prompt arrives as a (URL-decoded) nav argument from the Prompt screen.
@@ -59,6 +61,9 @@ class LoadingViewModel @Inject constructor(
                     // Hand the sketch to the session so SketchPreview / Coloring
                     // can pick it up after navigation.
                     sketchSession.setCurrentSketch(result.sketch)
+                    // Tick today's local sketch counter — drives the
+                    // parent-set daily limit gate in CreateSketch.
+                    parentControls.recordSketch()
                     LoadingUiState.Ready
                 }
                 SketchGenerationResult.NoCredits -> LoadingUiState.NoCredits

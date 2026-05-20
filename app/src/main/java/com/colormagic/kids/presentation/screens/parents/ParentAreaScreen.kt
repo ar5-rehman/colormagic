@@ -55,6 +55,7 @@ import com.colormagic.kids.presentation.components.AccountCard
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandTokens
+import com.colormagic.kids.domain.model.SketchLimit
 import com.colormagic.kids.presentation.components.ParentBrandHeader
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
@@ -67,6 +68,15 @@ fun ParentAreaScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
     val user by authViewModel.authState.collectAsStateWithLifecycle()
+
+    // Refresh credit count + plan label on every resume — a sketch made
+    // (which deducts a credit) or a purchase (which adds them) should
+    // reflect immediately when the parent comes back to this screen.
+    androidx.lifecycle.compose.LifecycleEventEffect(
+        androidx.lifecycle.Lifecycle.Event.ON_RESUME
+    ) {
+        viewModel.refreshQuota()
+    }
 
     val accountCard: @Composable (Modifier) -> Unit = { modifier ->
         AccountCard(
@@ -190,7 +200,7 @@ private fun ParentAreaContent(
             ),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item { ParentBrandHeader() }
+            item { ParentBrandHeader(showProfile = false) }
 
             item { accountCard(Modifier.padding(horizontal = 16.dp)) }
 
@@ -285,7 +295,7 @@ private fun CurrentPlanCard(
 
 @Composable
 private fun SparkleCreditsCard(
-    credits: Int,
+    credits: Int?,
     onBuyMore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -302,8 +312,10 @@ private fun SparkleCreditsCard(
             )
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.Bottom) {
+                // While the first quota fetch is still in flight we show an
+                // ellipsis rather than a misleading hardcoded number.
                 Text(
-                    text = "%,d".format(credits),
+                    text = credits?.let { "%,d".format(it) } ?: "…",
                     fontSize = 36.sp,
                     lineHeight = 40.sp,
                     fontWeight = FontWeight.Bold,

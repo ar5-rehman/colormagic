@@ -121,8 +121,20 @@ private fun ArtworkThumbnail(artwork: GalleryArtwork) {
             .background(Color(artwork.placeholderTint)),
         contentAlignment = Alignment.Center
     ) {
-        // Backend will provide thumbnailUrl → swap for AsyncImage here.
-        Text(text = "🎨", fontSize = 56.sp)
+        // Prefer the locally-saved colored PNG (MediaStore content URI).
+        // Falls back to the tinted placeholder if neither URI is set —
+        // happens only on legacy / non-persisted entries.
+        val displayUri = artwork.localUri ?: artwork.thumbnailUrl
+        if (displayUri != null) {
+            coil.compose.AsyncImage(
+                model = displayUri,
+                contentDescription = artwork.title,
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(text = "🎨", fontSize = 56.sp)
+        }
     }
 }
 

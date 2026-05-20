@@ -38,7 +38,11 @@ fun ParentBrandHeader(
     backContentDescription: String = "Back",
     /** Optional click target on the trailing avatar — e.g. Gallery uses it to
      *  open the Parents tab. When null, the avatar is purely decorative. */
-    onProfileClick: (() -> Unit)? = null
+    onProfileClick: (() -> Unit)? = null,
+    /** Whether to render the trailing avatar at all. The Parent screen
+     *  hides it (the screen IS the parent area, so the icon is redundant);
+     *  Gallery shows it as a shortcut. */
+    showProfile: Boolean = true
 ) {
     Row(
         modifier = modifier
@@ -69,23 +73,25 @@ fun ParentBrandHeader(
             fontFamily = MaterialTheme.typography.headlineLarge.fontFamily,
             modifier = Modifier.weight(1f)
         )
-        Surface(
-            onClick = onProfileClick ?: {},
-            enabled = onProfileClick != null,
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer,
-            modifier = Modifier.size(36.dp)
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
+        if (showProfile) {
+            Surface(
+                onClick = onProfileClick ?: {},
+                enabled = onProfileClick != null,
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(36.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Person,
-                    contentDescription = "Profile",
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(20.dp)
-                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Person,
+                        contentDescription = "Profile",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }

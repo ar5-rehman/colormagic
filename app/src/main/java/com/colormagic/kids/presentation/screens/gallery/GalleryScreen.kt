@@ -168,7 +168,17 @@ private fun GalleryTabletCard(
                     .background(Color(artwork.placeholderTint)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "🎨", fontSize = 56.sp)
+                val uri = artwork.localUri ?: artwork.thumbnailUrl
+                if (uri != null) {
+                    coil.compose.AsyncImage(
+                        model = uri,
+                        contentDescription = artwork.title,
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Text(text = "🎨", fontSize = 56.sp)
+                }
             }
             Spacer(Modifier.height(10.dp))
             Text(

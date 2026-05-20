@@ -99,10 +99,12 @@ fun SketchCanvas(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Image(
-                painter = painterResource(R.drawable.sketch),
-                contentDescription = "Coloring sketch",
-                contentScale = ContentScale.FillBounds,
+            // No bitmap yet → animated shimmer. We deliberately do NOT show
+            // the bundled sample drawable here — kids would start colouring
+            // the wrong page. Once a real fallback list ships, branch on a
+            // "download failed" flag from the VM to swap shimmer for one of
+            // the safe sample drawables.
+            com.colormagic.kids.presentation.components.ShimmerBox(
                 modifier = Modifier.fillMaxSize()
             )
         }

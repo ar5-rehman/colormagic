@@ -5,6 +5,12 @@
     <!-- Firebase (Auth, Firestore, Storage, Functions, App Check) needs network. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Saving completed artwork to the phone gallery. Scoped MediaStore on
+         29+ doesn't need a runtime permission; only legacy 24-28 does. -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="28" />
+
     <application
         android:name=".ColorMagicKidsApp"
         android:allowBackup="true"

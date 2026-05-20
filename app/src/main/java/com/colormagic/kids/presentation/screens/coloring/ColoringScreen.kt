@@ -2,6 +2,12 @@ package com.colormagic.kids.presentation.screens.coloring
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntSize
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -73,9 +79,22 @@ fun ColoringScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
+
+    // The actual on-screen size of the canvas, in pixels. Captured by the
+    // SketchCanvasCard via Modifier.onSizeChanged so the saved PNG matches
+    // exactly what the kid sees — strokes were recorded in this coordinate
+    // space, so re-rendering at the same dimensions keeps everything aligned.
+    var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val onSave = {
-        viewModel.onSave()
-        onSaved()
+        // Don't double-fire while a previous save is still running.
+        if (!state.isSaving && canvasSize.width > 0 && canvasSize.height > 0) {
+            coroutineScope.launch {
+                val saved = viewModel.saveArtwork(canvasSize.width, canvasSize.height)
+                if (saved) onSaved()
+            }
+        }
+        Unit
     }
     if (info.isCompactWidth) {
         ColoringContent(
@@ -88,7 +107,8 @@ fun ColoringScreen(
             onUndo = viewModel::onUndo,
             onRedo = viewModel::onRedo,
             onClear = viewModel::onClear,
-            onSave = onSave
+            onSave = onSave,
+            onCanvasSizeChanged = { canvasSize = it }
         )
     } else {
         ColoringTabletContent(
@@ -101,7 +121,8 @@ fun ColoringScreen(
             onUndo = viewModel::onUndo,
             onRedo = viewModel::onRedo,
             onClear = viewModel::onClear,
-            onSave = onSave
+            onSave = onSave,
+            onCanvasSizeChanged = { canvasSize = it }
         )
     }
 }
@@ -117,7 +138,8 @@ private fun ColoringTabletContent(
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onClear: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    onCanvasSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit
 ) {
     val selectedColor = state.selectedColor
     val fillableMask = state.fillableMask
@@ -177,6 +199,7 @@ private fun ColoringTabletContent(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
+                            .onSizeChanged(onCanvasSizeChanged)
                     )
                     Spacer(Modifier.height(12.dp))
                     Surface(
@@ -367,7 +390,8 @@ private fun ColoringContent(
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onClear: () -> Unit,
-    onSave: () -> Unit
+    onSave: () -> Unit,
+    onCanvasSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val safeBottom = WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding()
@@ -419,7 +443,8 @@ private fun ColoringContent(
                         strokes = state.strokes,
                         fillableMask = state.fillableMask,
                         sketchImage = state.sketchImage,
-                        onStrokeFinished = onStrokeFinished
+                        onStrokeFinished = onStrokeFinished,
+                        onCanvasSizeChanged = onCanvasSizeChanged
                     )
                 }
 
@@ -491,7 +516,8 @@ private fun SketchCanvasCard(
     strokes: List<Stroke>,
     fillableMask: androidx.compose.ui.graphics.ImageBitmap?,
     sketchImage: androidx.compose.ui.graphics.ImageBitmap?,
-    onStrokeFinished: (Stroke) -> Unit
+    onStrokeFinished: (Stroke) -> Unit,
+    onCanvasSizeChanged: (androidx.compose.ui.unit.IntSize) -> Unit = {}
 ) {
     Surface(
         modifier = Modifier
@@ -514,7 +540,11 @@ private fun SketchCanvasCard(
             fillableMask = fillableMask,
             sketchImage = sketchImage,
             onStrokeFinished = onStrokeFinished,
-            modifier = Modifier.padding(14.dp)
+            // Capture the on-screen pixel size — the save pipeline renders
+            // the PNG at this exact size so stroke positions stay aligned.
+            modifier = Modifier
+                .padding(14.dp)
+                .onSizeChanged(onCanvasSizeChanged)
         )
     }
 }
@@ -839,7 +869,8 @@ private fun ColoringPreviewPhone() {
             onUndo = {},
             onRedo = {},
             onClear = {},
-            onSave = {}
+            onSave = {},
+            onCanvasSizeChanged = {}
         )
     }
 }

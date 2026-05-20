@@ -76,6 +76,16 @@ fun HomeScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
+
+    // Refresh "Sketches left" on every resume so a sketch made elsewhere
+    // (Loading screen → backend deducts a credit) reflects immediately when
+    // the kid returns to Home — no kill + relaunch needed.
+    androidx.lifecycle.compose.LifecycleEventEffect(
+        androidx.lifecycle.Lifecycle.Event.ON_RESUME
+    ) {
+        viewModel.refreshQuota()
+    }
+
     if (info.isCompactWidth) {
         HomeContent(
             state = state,

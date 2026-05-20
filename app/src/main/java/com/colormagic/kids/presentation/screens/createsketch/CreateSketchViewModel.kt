@@ -3,8 +3,10 @@ package com.colormagic.kids.presentation.screens.createsketch
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.colormagic.kids.data.parents.ParentControlsStore
 import com.colormagic.kids.domain.model.CategoryIdeas
 import com.colormagic.kids.domain.model.ColoringIdea
+import com.colormagic.kids.domain.model.SketchLimit
 import com.colormagic.kids.domain.repository.SketchRepository
 import com.colormagic.kids.presentation.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,21 +25,34 @@ data class CreateSketchUiState(
     /** Stable list of category keys shown as the chip row. */
     val categories: List<String> = CategoryIdeas.keys,
     /** Total credits left; null until the first quota fetch resolves. */
-    val creditsLeft: Int? = null
+    val creditsLeft: Int? = null,
+    /** Parent-set: when false the prompt input is read-only and the kid
+     *  can only generate by tapping a category chip. */
+    val allowFreeText: Boolean = true,
+    /** Parent-set daily cap + how many sketches the kid has used today. */
+    val dailyLimit: SketchLimit = SketchLimit.Unlimited,
+    val sketchesToday: Int = 0
 ) {
     /** True only once quota has loaded and there are no credits to spend. */
     val outOfCredits: Boolean get() = creditsLeft == 0
 
-    /** Generation is allowed with a prompt and at least one known credit.
-     *  While quota is still loading (null), we don't block — the backend is
-     *  the real gate. */
-    val canMakeSketch: Boolean get() = prompt.isNotBlank() && !outOfCredits
+    /** True when the parent's local per-day cap has been hit. Unlimited
+     *  never blocks; Firebase credit limits are a separate gate. */
+    val dailyLimitReached: Boolean
+        get() = dailyLimit.perDay?.let { sketchesToday >= it } ?: false
+
+    /** Generation is allowed with a prompt, with at least one known credit,
+     *  and within the parent-set daily limit. While quota is still loading
+     *  (null), we don't block — the backend is the real credit gate. */
+    val canMakeSketch: Boolean
+        get() = prompt.isNotBlank() && !outOfCredits && !dailyLimitReached
 }
 
 @HiltViewModel
 class CreateSketchViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val sketchRepository: SketchRepository
+    private val sketchRepository: SketchRepository,
+    private val parentControls: ParentControlsStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreateSketchUiState(ideas = freshIdeas()))
@@ -45,11 +60,28 @@ class CreateSketchViewModel @Inject constructor(
 
     init {
         // Deep-link from Home → category card prefills the prompt with a
-        // random idea from that category.
+        // random idea from that category. Honoured even when free-text is
+        // disabled — picking from a chip is the only way to start, and the
+        // category route IS a chip-equivalent action.
         val initialCategory: String? = savedStateHandle[Screen.CreateSketch.ARG_CATEGORY]
         if (!initialCategory.isNullOrBlank()) {
             CategoryIdeas.randomIdeaFor(initialCategory)?.let { idea ->
                 _uiState.update { it.copy(prompt = idea) }
+            }
+        }
+
+        // Mirror parent-control toggles into the screen state so:
+        //   • the prompt input flips read-only on "Allow free text" off,
+        //   • "Make My Sketch" disables itself when the daily cap is hit.
+        viewModelScope.launch {
+            parentControls.state.collect { controls ->
+                _uiState.update {
+                    it.copy(
+                        allowFreeText = controls.allowFreeText,
+                        dailyLimit = controls.dailyLimit,
+                        sketchesToday = controls.sketchesToday
+                    )
+                }
             }
         }
     }
@@ -79,6 +111,9 @@ class CreateSketchViewModel @Inject constructor(
     }
 
     fun onPromptChanged(prompt: String) {
+        // Silently drop typing when free-text is disabled — the input itself
+        // is read-only, but this is a belt-and-braces guard.
+        if (!_uiState.value.allowFreeText) return
         _uiState.update { it.copy(prompt = prompt) }
     }
 

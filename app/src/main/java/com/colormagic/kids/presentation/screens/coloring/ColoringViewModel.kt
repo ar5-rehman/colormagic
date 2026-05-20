@@ -9,12 +9,13 @@ import androidx.lifecycle.viewModelScope
 import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
-import com.colormagic.kids.R
+import com.colormagic.kids.data.gallery.ArtworkRenderer
 import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColoringTool
 import com.colormagic.kids.domain.model.DefaultPalette
 import com.colormagic.kids.domain.model.PaintColor
 import com.colormagic.kids.domain.model.Sketch
+import com.colormagic.kids.domain.repository.GalleryRepository
 import com.colormagic.kids.presentation.sketch.SketchSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -44,7 +45,9 @@ data class ColoringUiState(
      *   Clear   → boundary line (paint is clipped out here)
      * Null while the mask is still being computed on first load.
      */
-    val fillableMask: ImageBitmap? = null
+    val fillableMask: ImageBitmap? = null,
+    /** A save is in progress (render + MediaStore write). */
+    val isSaving: Boolean = false
 ) {
     val canUndo: Boolean get() = strokes.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
@@ -55,7 +58,8 @@ data class ColoringUiState(
 @HiltViewModel
 class ColoringViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val sketchSession: SketchSession
+    private val sketchSession: SketchSession,
+    private val galleryRepository: GalleryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ColoringUiState())
@@ -93,12 +97,11 @@ class ColoringViewModel @Inject constructor(
                         fillableMask = computeFillableMask(bitmap)
                     )
                 }
-            } else {
-                // Bundled fallback — keeps the screen usable offline / out of order.
-                _uiState.update {
-                    it.copy(fillableMask = loadFillableMask(context, R.drawable.sketch))
-                }
             }
+            // No bitmap → leave both null so the canvas keeps shimmering
+            // rather than swapping in a misleading bundled drawable. A
+            // proper "offline / failed fetch" fallback that rotates through
+            // sample sketches ships when the sample library is added.
         }
     }
 
@@ -156,8 +159,42 @@ class ColoringViewModel @Inject constructor(
         _uiState.update { it.copy(strokes = emptyList(), redoStack = emptyList()) }
     }
 
-    fun onSave() {
-        // TODO: rasterise canvas + mask → persist as SavedPicture.
+    /**
+     * Render the current canvas into a PNG and persist it.
+     *
+     * Returns true if the save reached MediaStore + the in-app gallery store,
+     * false otherwise (no sketch loaded, render failure, MediaStore rejected
+     * the write, etc.). The screen uses the result to decide whether to
+     * navigate to SaveSuccess.
+     *
+     * [canvasWidthPx]/[canvasHeightPx] come from the rendered SketchCanvas's
+     * actual on-screen size — that's the coordinate space the strokes were
+     * captured in, so re-rendering at that size keeps the lines perfectly
+     * aligned with the line-art.
+     */
+    suspend fun saveArtwork(canvasWidthPx: Int, canvasHeightPx: Int): Boolean {
+        val state = _uiState.value
+        val sketchImage = state.sketchImage ?: return false
+        if (canvasWidthPx <= 0 || canvasHeightPx <= 0) return false
+
+        _uiState.update { it.copy(isSaving = true) }
+        return try {
+            val bitmap = ArtworkRenderer.render(
+                sketchImage = sketchImage,
+                fillableMask = state.fillableMask,
+                strokes = state.strokes,
+                canvasWidthPx = canvasWidthPx,
+                canvasHeightPx = canvasHeightPx
+            )
+            val saved = galleryRepository.save(
+                bitmap = bitmap,
+                prompt = state.sketch.prompt,
+                category = null  // backend doesn't tag sketches with a category yet
+            )
+            saved != null
+        } finally {
+            _uiState.update { it.copy(isSaving = false) }
+        }
     }
 }
 

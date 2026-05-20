@@ -33,11 +33,14 @@ fun BrandPromptInput(
     onValueChange: (String) -> Unit,
     placeholder: String,
     modifier: Modifier = Modifier,
-    minHeight: Dp = 140.dp
+    minHeight: Dp = 140.dp,
+    /** When false, the input becomes read-only — used when the Parent Area
+     *  toggle "Allow free text prompts" is off (kid must pick a category). */
+    enabled: Boolean = true
 ) {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface,
+        color = if (enabled) MaterialTheme.colorScheme.surface else BrandTokens.SubtleSurface,
         border = BorderStroke(1.dp, BrandTokens.SubtleOutline),
         modifier = modifier.fillMaxWidth()
     ) {
@@ -45,6 +48,8 @@ fun BrandPromptInput(
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
+                readOnly = !enabled,
+                enabled = enabled,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 18.dp, vertical = 16.dp),
