@@ -183,18 +183,30 @@ fun AppNavGraph(
 
         composable(Screen.SaveSuccess.route) {
             SaveSuccessScreen(
+                // Two-step pattern to leave a clean back-stack:
+                //   1. popBackStack to Home WITHOUT saveState — drops the
+                //      whole create-flow (Create / SketchPreview / Save-
+                //      Success) and crucially does NOT bookmark it under
+                //      Home's saved-state key. Otherwise the bottom-nav's
+                //      `restoreState = true` later resurrects SaveSuccess
+                //      when the kid taps Home from Gallery.
+                //   2. navigateToTopLevel to the actual destination — uses
+                //      the standard saveState/restoreState pattern so
+                //      future bottom-nav swaps between top-level screens
+                //      work normally.
                 onGoToGallery = {
-                    // Jump to the Gallery tab and clear the create-flow stack.
-                    navController.navigate(TopLevelDestination.GALLERY.route) {
-                        popUpTo(TopLevelDestination.HOME.route) { inclusive = false }
-                        launchSingleTop = true
-                    }
+                    navController.popBackStack(
+                        TopLevelDestination.HOME.route,
+                        inclusive = false
+                    )
+                    navController.navigateToTopLevel(TopLevelDestination.GALLERY)
                 },
                 onCreateAnother = {
-                    // Start a fresh prompt, leaving Home as the only thing under it.
-                    navController.navigate(Screen.CreateSketch.routeFor()) {
-                        popUpTo(TopLevelDestination.HOME.route) { inclusive = false }
-                    }
+                    navController.popBackStack(
+                        TopLevelDestination.HOME.route,
+                        inclusive = false
+                    )
+                    navController.navigate(Screen.CreateSketch.routeFor())
                 }
             )
         }
