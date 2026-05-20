@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,9 +17,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.SentimentDissatisfied
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,37 +42,122 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.R
+import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandSecondaryButton
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.MagicProgressBar
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
-private const val SKETCH_GENERATION_MS = 3500
+// The progress bar creeps toward 95% over this window while the backend
+// works; if generation finishes sooner the screen just navigates on, if it
+// takes longer the bar simply holds near full. Image models typically take
+// 10–30s, so this is a believable "still working" pace, not a fake timer.
+private const val PROGRESS_CREEP_MS = 25_000
 
 @Composable
 fun LoadingScreen(
-    onComplete: () -> Unit,
-    onCancel: () -> Unit
+    onSketchReady: () -> Unit,
+    onCancel: () -> Unit,
+    viewModel: LoadingViewModel = hiltViewModel()
 ) {
-    // Drives both the progress bar fill and the eventual completion handoff.
-    // When the user cancels, the composable leaves composition and this
-    // coroutine is cancelled — onComplete will not fire.
-    val progress = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = SKETCH_GENERATION_MS, easing = LinearEasing)
-        )
-        onComplete()
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // Once the backend confirms the sketch, hand off to SketchPreview.
+    LaunchedEffect(state) {
+        if (state is LoadingUiState.Ready) onSketchReady()
     }
-    LoadingContent(progress = progress.value, onCancel = onCancel)
+
+    when (val s = state) {
+        LoadingUiState.Generating, LoadingUiState.Ready ->
+            GeneratingContent(onCancel = onCancel)
+        LoadingUiState.NoCredits ->
+            ProblemContent(
+                title = "Out of sketches",
+                message = "No sketch credits left. Ask a grown-up to unlock more.",
+                primaryLabel = null,
+                onPrimary = {},
+                onBack = onCancel
+            )
+        is LoadingUiState.Error ->
+            ProblemContent(
+                title = "Hmm, that didn't work",
+                message = s.message,
+                primaryLabel = "Try Again",
+                onPrimary = viewModel::generate,
+                onBack = onCancel
+            )
+    }
 }
 
 @Composable
-private fun LoadingContent(
-    progress: Float,
-    onCancel: () -> Unit
+private fun GeneratingContent(onCancel: () -> Unit) {
+    val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
+    val safeBottom = WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding()
+
+    // Indeterminate-feel progress: eases to 95% and holds.
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(
+            targetValue = 0.95f,
+            animationSpec = tween(durationMillis = PROGRESS_CREEP_MS, easing = LinearEasing)
+        )
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(
+                    start = 28.dp,
+                    end = 28.dp,
+                    top = safeTop + 24.dp,
+                    bottom = safeBottom + 24.dp
+                ),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Spacer(Modifier.weight(1f))
+            PencilGlowCard()
+            Spacer(Modifier.height(36.dp))
+            Text(
+                text = "Creating your\nsketch...",
+                fontSize = 30.sp,
+                lineHeight = 38.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                textAlign = TextAlign.Center,
+                fontFamily = MaterialTheme.typography.headlineLarge.fontFamily
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "This may take a little moment",
+                fontSize = 15.sp,
+                color = BrandTokens.MutedInk
+            )
+            Spacer(Modifier.height(28.dp))
+            MagicProgressBar(progress = progress.value)
+            Spacer(Modifier.weight(1f))
+            BrandSecondaryButton(
+                label = "Cancel",
+                onClick = onCancel,
+                leadingIcon = Icons.Filled.Close
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProblemContent(
+    title: String,
+    message: String,
+    primaryLabel: String?,
+    onPrimary: () -> Unit,
+    onBack: () -> Unit
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val safeBottom = WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding()
@@ -89,38 +178,46 @@ private fun LoadingContent(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Spacer(Modifier.weight(1f))
-
-            PencilGlowCard()
-
-            Spacer(Modifier.height(36.dp))
-
+            Box(
+                modifier = Modifier
+                    .size(96.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.SentimentDissatisfied,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+            Spacer(Modifier.height(24.dp))
             Text(
-                text = "Creating your\nsketch...",
-                fontSize = 30.sp,
-                lineHeight = 38.sp,
+                text = title,
+                fontSize = 26.sp,
+                lineHeight = 32.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,
                 fontFamily = MaterialTheme.typography.headlineLarge.fontFamily
             )
-
-            Spacer(Modifier.height(12.dp))
-
+            Spacer(Modifier.height(10.dp))
             Text(
-                text = "This may take a little moment",
+                text = message,
                 fontSize = 15.sp,
-                color = BrandTokens.MutedInk
+                lineHeight = 21.sp,
+                color = BrandTokens.MutedInk,
+                textAlign = TextAlign.Center
             )
-
-            Spacer(Modifier.height(28.dp))
-
-            MagicProgressBar(progress = progress)
-
             Spacer(Modifier.weight(1f))
-
+            if (primaryLabel != null) {
+                BrandPrimaryButton(label = primaryLabel, onClick = onPrimary)
+                Spacer(Modifier.height(12.dp))
+            }
             BrandSecondaryButton(
-                label = "Cancel",
-                onClick = onCancel,
+                label = "Go Back",
+                onClick = onBack,
                 leadingIcon = Icons.Filled.Close
             )
         }
@@ -155,26 +252,24 @@ private fun PencilGlowCard() {
     }
 }
 
-@Preview(name = "Loading – early", showBackground = true, widthDp = 360, heightDp = 800)
+@Preview(name = "Loading – generating", showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
-private fun LoadingPreviewEarly() {
+private fun LoadingPreviewGenerating() {
     ColorMagicKidsTheme {
-        LoadingContent(progress = 0.18f, onCancel = {})
+        GeneratingContent(onCancel = {})
     }
 }
 
-@Preview(name = "Loading – mid", showBackground = true, widthDp = 360, heightDp = 800)
+@Preview(name = "Loading – no credits", showBackground = true, widthDp = 360, heightDp = 800)
 @Composable
-private fun LoadingPreviewMid() {
+private fun LoadingPreviewNoCredits() {
     ColorMagicKidsTheme {
-        LoadingContent(progress = 0.55f, onCancel = {})
-    }
-}
-
-@Preview(name = "Loading – tablet", showBackground = true, widthDp = 800, heightDp = 1200)
-@Composable
-private fun LoadingPreviewTablet() {
-    ColorMagicKidsTheme {
-        LoadingContent(progress = 0.42f, onCancel = {})
+        ProblemContent(
+            title = "Out of sketches",
+            message = "No sketch credits left. Ask a grown-up to unlock more.",
+            primaryLabel = null,
+            onPrimary = {},
+            onBack = {}
+        )
     }
 }

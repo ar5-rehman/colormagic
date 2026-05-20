@@ -1,54 +1,40 @@
 package com.colormagic.kids.presentation.auth
 
-import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.colormagic.kids.domain.model.UserProfile
+import com.colormagic.kids.domain.model.AuthUser
 import com.colormagic.kids.domain.repository.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-data class AuthUiState(
-    val isLoading: Boolean = false,
-    val errorMessage: String? = null
-)
-
+// Surfaces the anonymous Firebase identity to the UI and exposes sign-out.
+// There's no "sign in" action — that happens automatically at launch
+// (see SplashViewModel), so this VM is intentionally tiny.
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository
 ) : ViewModel() {
 
-    val currentUser: StateFlow<UserProfile?> = authRepository.currentUser
+    val authState: StateFlow<AuthUser?> = authRepository.authState
 
-    private val _uiState = MutableStateFlow(AuthUiState())
-    val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
-
-    fun signInWithGoogle(activity: Activity) {
-        if (_uiState.value.isLoading) return
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val result = authRepository.signInWithGoogle(activity)
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    errorMessage = result.exceptionOrNull()?.localizedMessage
-                )
-            }
-        }
+    init {
+        // Retry anonymous sign-in if it hasn't resolved yet (e.g. Splash's
+        // attempt failed transiently, or the parent opened the app deep-
+        // linked into the Parent Area without ever showing Splash).
+        // ensureSignedIn is a no-op when a user already exists.
+        viewModelScope.launch { authRepository.ensureSignedIn() }
     }
 
+    /**
+     * Signs out the anonymous account. The next launch mints a fresh uid,
+     * so any credits/sketches on the old account become unreachable —
+     * callers should confirm with the parent before invoking this.
+     */
     fun signOut() {
         viewModelScope.launch {
             authRepository.signOut()
         }
-    }
-
-    fun clearError() {
-        _uiState.update { it.copy(errorMessage = null) }
     }
 }

@@ -1,5 +1,6 @@
 package com.colormagic.kids.presentation.screens.createsketch
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,6 +40,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.domain.model.ColoringIdea
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
@@ -55,14 +58,21 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 @Composable
 fun CreateSketchScreen(
     onMakeSketchRequested: (prompt: String) -> Unit,
+    onUpgrade: () -> Unit,
     viewModel: CreateSketchViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
 
+    // Refresh the credit count every time the screen resumes — a purchase
+    // made on the Subscription screen should re-enable "Make My Sketch"
+    // the moment the parent navigates back.
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.refreshQuota()
+    }
+
     val onMakeSketch: () -> Unit = {
-        if (state.prompt.isNotBlank()) {
-            viewModel.onMakeSketch()
+        if (state.canMakeSketch) {
             onMakeSketchRequested(state.prompt.trim())
         }
     }
@@ -72,14 +82,16 @@ fun CreateSketchScreen(
             state = state,
             onPromptChanged = viewModel::onPromptChanged,
             onMakeSketch = onMakeSketch,
-            onIdeaSelected = viewModel::onIdeaSelected
+            onIdeaSelected = viewModel::onIdeaSelected,
+            onUpgrade = onUpgrade
         )
     } else {
         CreateSketchTabletContent(
             state = state,
             onPromptChanged = viewModel::onPromptChanged,
             onMakeSketch = onMakeSketch,
-            onIdeaSelected = viewModel::onIdeaSelected
+            onIdeaSelected = viewModel::onIdeaSelected,
+            onUpgrade = onUpgrade
         )
     }
 }
@@ -89,7 +101,8 @@ private fun CreateSketchTabletContent(
     state: CreateSketchUiState,
     onPromptChanged: (String) -> Unit,
     onMakeSketch: () -> Unit,
-    onIdeaSelected: (ColoringIdea) -> Unit
+    onIdeaSelected: (ColoringIdea) -> Unit,
+    onUpgrade: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -152,17 +165,14 @@ private fun CreateSketchTabletContent(
                         label = "Make My Sketch",
                         onClick = onMakeSketch,
                         leadingIcon = Icons.Filled.AutoFixHigh,
-                        enabled = state.prompt.isNotBlank()
+                        enabled = state.canMakeSketch
                     )
                     Spacer(Modifier.height(14.dp))
                     Box(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CreditPill(
-                            text = "Uses ${state.sketchCreditsCost} sketch credit",
-                            style = CreditPillStyle.Subtle
-                        )
+                        CreditCostPill(state = state, onUpgrade = onUpgrade)
                     }
                 }
             }
@@ -199,7 +209,8 @@ private fun CreateSketchContent(
     state: CreateSketchUiState,
     onPromptChanged: (String) -> Unit,
     onMakeSketch: () -> Unit,
-    onIdeaSelected: (ColoringIdea) -> Unit
+    onIdeaSelected: (ColoringIdea) -> Unit,
+    onUpgrade: () -> Unit
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
 
@@ -234,7 +245,7 @@ private fun CreateSketchContent(
                     label = "Make My Sketch",
                     onClick = onMakeSketch,
                     leadingIcon = Icons.Filled.AutoFixHigh,
-                    enabled = state.prompt.isNotBlank()
+                    enabled = state.canMakeSketch
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -243,10 +254,7 @@ private fun CreateSketchContent(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CreditPill(
-                        text = "Uses ${state.sketchCreditsCost} sketch credit",
-                        style = CreditPillStyle.Subtle
-                    )
+                    CreditCostPill(state = state, onUpgrade = onUpgrade)
                 }
                 Spacer(Modifier.height(28.dp))
             }
@@ -268,6 +276,25 @@ private fun CreateSketchContent(
     }
 }
 
+// Shows the per-sketch cost, or — when the parent's credits are spent — a
+// tappable "out of credits" prompt that deep-links to the Magic Passes
+// screen. The "Make My Sketch" button is disabled alongside.
+@Composable
+private fun CreditCostPill(state: CreateSketchUiState, onUpgrade: () -> Unit) {
+    if (state.outOfCredits) {
+        CreditPill(
+            text = "Out of credits — tap to get more",
+            style = CreditPillStyle.Primary,
+            modifier = Modifier.clickable(onClick = onUpgrade)
+        )
+    } else {
+        CreditPill(
+            text = "Uses ${state.sketchCreditsCost} sketch credit",
+            style = CreditPillStyle.Subtle
+        )
+    }
+}
+
 @Preview(name = "Create Sketch – phone", showBackground = true, widthDp = 360, heightDp = 880)
 @Composable
 private fun CreateSketchPreviewPhone() {
@@ -276,7 +303,8 @@ private fun CreateSketchPreviewPhone() {
             state = CreateSketchUiState(),
             onPromptChanged = {},
             onMakeSketch = {},
-            onIdeaSelected = {}
+            onIdeaSelected = {},
+            onUpgrade = {}
         )
     }
 }
@@ -289,7 +317,8 @@ private fun CreateSketchPreviewTablet() {
             state = CreateSketchUiState(),
             onPromptChanged = {},
             onMakeSketch = {},
-            onIdeaSelected = {}
+            onIdeaSelected = {},
+            onUpgrade = {}
         )
     }
 }

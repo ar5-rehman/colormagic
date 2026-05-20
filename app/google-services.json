@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "1038007846379",
+    "project_id": "colormagic-555",
+    "storage_bucket": "colormagic-555.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1038007846379:android:f87be31f9423af749a85ae",
+        "android_client_info": {
+          "package_name": "com.colormagic.kids"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1038007846379-373ii1ujlf5pec1ba9qc02vdat54qc3f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.colormagic.kids",
+            "certificate_hash": "a9064e2464dad594dd14dd6e711d02c1c26bc977"
+          }
+        },
+        {
+          "client_id": "1038007846379-kt63kjet1fb6tb63uis9khdod78tpamj.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.colormagic.kids",
+            "certificate_hash": "b8655c387694334d06dcaf630472ce13ce6b8788"
+          }
+        },
+        {
+          "client_id": "1038007846379-4ckbvuelpo0iq775ouf7sgn6bf4mqp2g.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUIzZpx-no3G-RFNxM87JGeLU4z3rg70k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1038007846379-4ckbvuelpo0iq775ouf7sgn6bf4mqp2g.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

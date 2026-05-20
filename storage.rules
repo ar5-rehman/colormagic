@@ -1,0 +1,25 @@
+rules_version = '2';
+
+// ColorMagic Kids — Cloud Storage security rules.
+//
+// Sketch PNGs live at sketches/{uid}/{sketchId}.png. Only the owning,
+// authenticated user can read their folder via the SDK. Writes are
+// server-only — Cloud Functions upload via the Admin SDK, which bypasses
+// these rules.
+//
+// (The download URLs returned by generateSketch carry their own access
+// token, so image loading works regardless — these rules harden any direct
+// SDK access as defense-in-depth.)
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    match /sketches/{uid}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false; // server-only (Functions)
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

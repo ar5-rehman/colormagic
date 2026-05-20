@@ -72,7 +72,9 @@ fun SketchCanvas(
     strokes: List<Stroke>,
     fillableMask: ImageBitmap?,
     onStrokeFinished: (Stroke) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** The backend-generated line-art. Null → fall back to the bundled sample. */
+    sketchImage: ImageBitmap? = null
 ) {
     var inProgress by remember { mutableStateOf<List<StrokePoint>>(emptyList()) }
     // Tracks the live paint position so the overlay halo follows the finger.
@@ -87,12 +89,23 @@ fun SketchCanvas(
             .clip(RoundedCornerShape(20.dp))
             .background(Color.White)
     ) {
-        Image(
-            painter = painterResource(R.drawable.sketch),
-            contentDescription = "Coloring sketch",
-            contentScale = ContentScale.FillBounds,
-            modifier = Modifier.fillMaxSize()
-        )
+        // FillBounds for both the image and the mask (computed from the same
+        // pixels) keeps the mask pixel-aligned with the displayed line art.
+        if (sketchImage != null) {
+            Image(
+                bitmap = sketchImage,
+                contentDescription = "Coloring sketch",
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.sketch),
+                contentDescription = "Coloring sketch",
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // The drawing layer (inside offscreen so the mask works).
         Canvas(

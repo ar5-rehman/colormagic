@@ -21,6 +21,8 @@ import kotlinx.coroutines.withContext
 // [lineThreshold] is the brightness cutoff. Sketches with thin, light grey lines
 // may want a higher value (try 180–200); thick black ink works fine at the
 // default 128. Backend can ship a per-sketch threshold if line styles vary.
+/** Builds the fillable mask from a bundled drawable resource (the bundled
+ *  sample sketch). Delegates to [computeFillableMask]. */
 suspend fun loadFillableMask(
     context: Context,
     @DrawableRes drawableRes: Int,
@@ -28,7 +30,22 @@ suspend fun loadFillableMask(
 ): ImageBitmap = withContext(Dispatchers.Default) {
     val source: Bitmap = BitmapFactory.decodeResource(context.resources, drawableRes)
         ?: error("Could not decode drawable $drawableRes")
+    val mask = computeFillableMask(source, lineThreshold)
+    source.recycle()
+    mask
+}
 
+/**
+ * Builds the fillable mask from any already-decoded bitmap — used for the
+ * backend-generated sketch downloaded from its image URL.
+ *
+ * The source bitmap must be a software bitmap (`getPixels` can't read a
+ * hardware bitmap) — Coil callers must set `allowHardware(false)`.
+ */
+suspend fun computeFillableMask(
+    source: Bitmap,
+    lineThreshold: Int = 128
+): ImageBitmap = withContext(Dispatchers.Default) {
     val width = source.width
     val height = source.height
     val sourcePixels = IntArray(width * height)
@@ -40,8 +57,7 @@ suspend fun loadFillableMask(
     val maskPixels = IntArray(width * height) { i ->
         val argb = sourcePixels[i]
         val a = (argb ushr 24) and 0xFF
-        // If the source pixel is transparent, treat as "outside the page"
-        // — also a boundary, so we don't paint there.
+        // Transparent source pixel → "outside the page", also a boundary.
         if (a < 32) return@IntArray 0
 
         val r = (argb shr 16) and 0xFF
@@ -51,7 +67,6 @@ suspend fun loadFillableMask(
         if (luma >= lineThreshold) 0xFF000000.toInt() else 0
     }
 
-    val mask = Bitmap.createBitmap(maskPixels, width, height, Bitmap.Config.ARGB_8888)
-    source.recycle()
-    mask.asImageBitmap()
+    Bitmap.createBitmap(maskPixels, width, height, Bitmap.Config.ARGB_8888)
+        .asImageBitmap()
 }

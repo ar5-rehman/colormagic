@@ -1,10 +1,11 @@
 package com.colormagic.kids.presentation.screens.subscription
 
-import androidx.fragment.app.FragmentActivity
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.colormagic.kids.domain.model.UserProfile
-import com.colormagic.kids.domain.repository.AuthRepository
+import com.colormagic.kids.domain.model.BillingProducts
+import com.colormagic.kids.domain.model.PurchaseResult
+import com.colormagic.kids.domain.repository.BillingRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -35,55 +36,61 @@ data class SubscriptionUiState(
 
 @HiltViewModel
 class SubscriptionViewModel @Inject constructor(
-    private val authRepository: AuthRepository
-    // TODO: also inject BillingClient wrapper when Play Billing is wired up.
+    private val billingRepository: BillingRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SubscriptionUiState())
     val uiState: StateFlow<SubscriptionUiState> = _uiState.asStateFlow()
 
-    /** Reactive auth state for the screen — drives the inline hint above the Continue button. */
-    val currentUser: StateFlow<UserProfile?> = authRepository.currentUser
+    init {
+        // Connect to Play + preload product details so Continue is instant.
+        viewModelScope.launch { billingRepository.start() }
+    }
 
     fun onPlanSelected(id: PlanTier) =
         _uiState.update { it.copy(selectedPlanId = id) }
 
     /**
-     * Single entry point for the Continue button. Encapsulates the
-     * "auth before paying" rule:
-     *   1. If the parent isn't signed in, run sign-in first.
-     *   2. Only after a successful sign-in do we hand off to Play Billing.
-     *   3. Any failure surfaces as an [errorMessage] in [uiState].
-     *
-     * Wrapping both steps here means the screen never has to coordinate
-     * two ViewModels with a pending-flag dance — the VM owns the rule.
+     * Continue button entry point. The parent already has an anonymous
+     * Firebase identity (created at launch), so there's no sign-in step —
+     * this launches the Google Play purchase flow. The completed purchase is
+     * verified server-side ([BillingRepository.purchase]) before the user is
+     * granted anything.
      */
-    fun attemptSubscribe(
-        activity: FragmentActivity,
-        onCompleted: () -> Unit
-    ) {
+    fun onContinue(activity: Activity, onCompleted: () -> Unit) {
         if (_uiState.value.isProcessing) return
+
+        val productId = when (_uiState.value.selectedPlanId) {
+            PlanTier.Unlimited -> BillingProducts.MONTHLY_PRO
+            PlanTier.Refill -> BillingProducts.EXTRA_20
+            // Starter is the free plan — nothing to purchase.
+            PlanTier.Starter -> {
+                onCompleted()
+                return
+            }
+        }
+
         viewModelScope.launch {
             _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
-
-            if (!authRepository.isSignedIn) {
-                val signInResult = authRepository.signInWithGoogle(activity)
-                if (signInResult.isFailure) {
+            when (val result = billingRepository.purchase(activity, productId)) {
+                is PurchaseResult.Success -> {
+                    _uiState.update { it.copy(isProcessing = false) }
+                    onCompleted()
+                }
+                PurchaseResult.Cancelled ->
+                    _uiState.update { it.copy(isProcessing = false) }
+                PurchaseResult.Pending ->
                     _uiState.update {
                         it.copy(
                             isProcessing = false,
-                            errorMessage = "Sign-in is required to subscribe."
+                            errorMessage = "Your purchase is pending. We'll unlock the magic once it clears."
                         )
                     }
-                    return@launch
-                }
+                is PurchaseResult.Failed ->
+                    _uiState.update {
+                        it.copy(isProcessing = false, errorMessage = result.message)
+                    }
             }
-
-            // TODO: hand off to BillingClient.launchBillingFlow(...).
-            // For the stub flow we proceed straight to the success callback.
-
-            _uiState.update { it.copy(isProcessing = false) }
-            onCompleted()
         }
     }
 

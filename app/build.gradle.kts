@@ -6,6 +6,8 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.devtools.ksp)
     alias(libs.plugins.hilt.android)
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
 }
 val keystorePropertiesFile = rootProject.file("keystore.properties")
 val keystoreProperties = Properties().apply {
@@ -74,6 +76,8 @@ android {
 
     buildFeatures {
         compose = true
+        // Needed so App Check can branch on BuildConfig.DEBUG at runtime.
+        buildConfig = true
     }
 }
 
@@ -124,6 +128,28 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    // Firebase — BoM keeps every Firebase artifact on one compatible version.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.storage)
+    implementation(libs.firebase.functions)
+    implementation(libs.firebase.appcheck.playintegrity)
+    // Debug builds attest via the App Check debug provider (no Play Integrity).
+    debugImplementation(libs.firebase.appcheck.debug)
+
+    // App health: Crashlytics for crash reports, Analytics for screen + event
+    // metrics. Analytics is configured kid-safe in the manifest (no Ad ID).
+    implementation(libs.firebase.crashlytics)
+    implementation(libs.firebase.analytics)
+
+    // Image loading (network sketch URLs).
+    implementation(libs.coil.compose)
+
+    // Google Play Billing — Pro subscription + extra-credit pack.
+    implementation(libs.billing.ktx)
 
     // Test
     testImplementation(libs.junit)

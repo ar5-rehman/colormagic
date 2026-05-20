@@ -172,6 +172,7 @@ private fun ColoringTabletContent(
                         brushSize = state.brushSize,
                         strokes = state.strokes,
                         fillableMask = fillableMask,
+                        sketchImage = state.sketchImage,
                         onStrokeFinished = onStrokeFinished,
                         modifier = Modifier
                             .weight(1f)
@@ -421,6 +422,7 @@ private fun ColoringContent(
                         brushSize = state.brushSize,
                         strokes = state.strokes,
                         fillableMask = state.fillableMask,
+                        sketchImage = state.sketchImage,
                         onStrokeFinished = onStrokeFinished
                     )
                 }
@@ -492,6 +494,7 @@ private fun SketchCanvasCard(
     brushSize: BrushSize,
     strokes: List<Stroke>,
     fillableMask: androidx.compose.ui.graphics.ImageBitmap?,
+    sketchImage: androidx.compose.ui.graphics.ImageBitmap?,
     onStrokeFinished: (Stroke) -> Unit
 ) {
     Surface(
@@ -513,6 +516,7 @@ private fun SketchCanvasCard(
             brushSize = brushSize,
             strokes = strokes,
             fillableMask = fillableMask,
+            sketchImage = sketchImage,
             onStrokeFinished = onStrokeFinished,
             modifier = Modifier.padding(14.dp)
         )

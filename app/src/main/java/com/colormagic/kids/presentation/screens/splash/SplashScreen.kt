@@ -33,6 +33,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.colormagic.kids.R
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 import kotlinx.coroutines.delay
@@ -40,7 +41,11 @@ import kotlinx.coroutines.delay
 private const val SPLASH_DURATION_MS = 2200L
 
 @Composable
-fun SplashScreen(onTimeout: () -> Unit) {
+fun SplashScreen(
+    onTimeout: () -> Unit,
+    // Constructing the VM triggers anonymous Firebase sign-in (see its init).
+    @Suppress("UNUSED_PARAMETER") viewModel: SplashViewModel = hiltViewModel()
+) {
     LaunchedEffect(Unit) {
         delay(SPLASH_DURATION_MS)
         onTimeout()

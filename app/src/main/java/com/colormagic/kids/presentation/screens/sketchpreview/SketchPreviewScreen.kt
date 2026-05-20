@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -46,6 +47,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.colormagic.kids.domain.model.Sketch
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
@@ -56,6 +58,14 @@ import com.colormagic.kids.presentation.components.CreditPill
 import com.colormagic.kids.presentation.components.CreditPillStyle
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
+// Shown only if the screen is somehow reached without a generated sketch.
+private val FALLBACK_SKETCH = Sketch(
+    id = "fallback",
+    prompt = "",
+    imageUrl = null,
+    placeholderTint = 0xFFF7F5FA
+)
+
 @Composable
 fun SketchPreviewScreen(
     onBack: () -> Unit,
@@ -63,22 +73,47 @@ fun SketchPreviewScreen(
     onTryAnother: () -> Unit,
     viewModel: SketchPreviewViewModel = hiltViewModel()
 ) {
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val sketch by viewModel.sketch.collectAsStateWithLifecycle()
+    val displaySketch = sketch ?: FALLBACK_SKETCH
     val info = currentWindowAdaptiveInfo()
     if (info.isCompactWidth) {
         SketchPreviewContent(
-            sketch = state.sketch,
+            sketch = displaySketch,
             onBack = onBack,
-            onColorThis = { onColorThis(state.sketch) },
+            onColorThis = { onColorThis(displaySketch) },
             onTryAnother = onTryAnother
         )
     } else {
         SketchPreviewTabletContent(
-            sketch = state.sketch,
+            sketch = displaySketch,
             onBack = onBack,
-            onColorThis = { onColorThis(state.sketch) },
+            onColorThis = { onColorThis(displaySketch) },
             onTryAnother = onTryAnother
         )
+    }
+}
+
+// Renders the generated sketch from its network URL (Coil), falling back to a
+// tinted placeholder while there's no image.
+@Composable
+private fun SketchImage(sketch: Sketch, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(22.dp))
+            .background(Color(sketch.placeholderTint)),
+        contentAlignment = Alignment.Center
+    ) {
+        val url = sketch.imageUrl
+        if (url != null) {
+            AsyncImage(
+                model = url,
+                contentDescription = "Coloring sketch for ${sketch.prompt}",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(text = "✏️", fontSize = 86.sp)
+        }
     }
 }
 
@@ -158,16 +193,12 @@ private fun SketchPreviewTabletContent(
                             spotColor = Color(0x14000000)
                         )
                 ) {
-                    Box(
+                    SketchImage(
+                        sketch = sketch,
                         modifier = Modifier
                             .padding(20.dp)
                             .fillMaxSize()
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(Color(sketch.placeholderTint)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = "✏️", fontSize = 120.sp)
-                    }
+                    )
                 }
 
                 // Right — action panel
@@ -334,20 +365,12 @@ private fun SketchCard(sketch: Sketch) {
         shape = RoundedCornerShape(28.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            Box(
+            SketchImage(
+                sketch = sketch,
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(16.dp)
-                    .clip(RoundedCornerShape(22.dp))
-                    .background(Color(sketch.placeholderTint)),
-                contentAlignment = Alignment.Center
-            ) {
-                // Backend will provide imageUrl → swap for AsyncImage here.
-                Text(
-                    text = "✏️",
-                    fontSize = 86.sp
-                )
-            }
+            )
             Icon(
                 imageVector = Icons.Filled.AutoAwesome,
                 contentDescription = null,

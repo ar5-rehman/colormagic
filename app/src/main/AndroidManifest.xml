@@ -2,6 +2,9 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Firebase (Auth, Firestore, Storage, Functions, App Check) needs network. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
         android:name=".ColorMagicKidsApp"
         android:allowBackup="true"
@@ -12,6 +15,24 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:supportsRtl="true"
         android:theme="@style/Theme.ColorMagicKids">
+
+        <!-- Kid-safe Analytics: collect product metrics (screen views,
+             crashes) but no advertising signals. Disables Ad ID + SSAID
+             collection and personalized ads, as required for a child-
+             directed app under COPPA / Google's Families policy. -->
+        <meta-data
+            android:name="google_analytics_adid_collection_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_ssaid_collection_enabled"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_personalization_signals"
+            android:value="false" />
+        <meta-data
+            android:name="google_analytics_default_allow_ad_user_data"
+            android:value="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

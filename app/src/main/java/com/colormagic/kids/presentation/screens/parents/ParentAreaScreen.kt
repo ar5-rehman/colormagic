@@ -47,8 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
-import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
@@ -68,19 +66,11 @@ fun ParentAreaScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
-    val context = LocalContext.current
-    val user by authViewModel.currentUser.collectAsStateWithLifecycle()
-    val authUiState by authViewModel.uiState.collectAsStateWithLifecycle()
-
-    val onSignIn: () -> Unit = {
-        (context as? FragmentActivity)?.let { authViewModel.signInWithGoogle(it) }
-    }
+    val user by authViewModel.authState.collectAsStateWithLifecycle()
 
     val accountCard: @Composable (Modifier) -> Unit = { modifier ->
         AccountCard(
             user = user,
-            isLoading = authUiState.isLoading,
-            onSignIn = onSignIn,
             onSignOut = authViewModel::signOut,
             modifier = modifier
         )
@@ -645,8 +635,6 @@ private fun ParentAreaPreviewPhone() {
             accountCard = { modifier ->
                 AccountCard(
                     user = null,
-                    isLoading = false,
-                    onSignIn = {},
                     onSignOut = {},
                     modifier = modifier
                 )

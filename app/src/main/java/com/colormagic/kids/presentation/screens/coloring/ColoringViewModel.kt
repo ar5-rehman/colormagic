@@ -1,15 +1,21 @@
 package com.colormagic.kids.presentation.screens.coloring
 
 import android.content.Context
+import android.graphics.drawable.BitmapDrawable
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import coil.ImageLoader
+import coil.request.ImageRequest
+import coil.request.SuccessResult
 import com.colormagic.kids.R
 import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColoringTool
 import com.colormagic.kids.domain.model.DefaultPalette
 import com.colormagic.kids.domain.model.PaintColor
 import com.colormagic.kids.domain.model.Sketch
+import com.colormagic.kids.presentation.sketch.SketchSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +34,11 @@ data class ColoringUiState(
     val strokes: List<Stroke> = emptyList(),
     val redoStack: List<Stroke> = emptyList(),
     /**
+     * The line-art the kid is colouring. Null until the backend sketch has
+     * downloaded — the canvas falls back to the bundled sample meanwhile.
+     */
+    val sketchImage: ImageBitmap? = null,
+    /**
      * Per-pixel mask of where paint is allowed.
      *   Opaque  → fillable paper
      *   Clear   → boundary line (paint is clipped out here)
@@ -43,23 +54,68 @@ data class ColoringUiState(
 
 @HiltViewModel
 class ColoringViewModel @Inject constructor(
-    @ApplicationContext private val context: Context
-    // TODO: inject SketchRepository when persistence lands.
+    @ApplicationContext private val context: Context,
+    private val sketchSession: SketchSession
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ColoringUiState())
     val uiState: StateFlow<ColoringUiState> = _uiState.asStateFlow()
 
     init {
-        // Compute the fillable mask off the main thread. The kid can still
-        // paint while we wait (mask is null → no clipping), and as soon as it
-        // arrives, in-progress strokes start respecting boundaries.
-        //
-        // Backend swap-in: replace R.drawable.sketch with a downloaded bitmap.
+        loadSketch()
+    }
+
+    /**
+     * Loads the line-art the kid will colour, then computes its fillable mask
+     * off the main thread. The kid can paint freely while the mask resolves
+     * (mask null → no clipping); strokes start respecting boundaries the
+     * moment it lands.
+     *
+     *  • Real flow → download the backend sketch from its image URL.
+     *  • Fallback  → the bundled sample sketch (e.g. opened out of order, or
+     *               the download failed).
+     */
+    private fun loadSketch() {
         viewModelScope.launch {
-            val mask = loadFillableMask(context, R.drawable.sketch)
-            _uiState.update { it.copy(fillableMask = mask) }
+            val sketch = sketchSession.currentSketch.value
+            if (sketch != null) {
+                _uiState.update { it.copy(sketch = sketch) }
+            }
+
+            val bitmap = sketch?.imageUrl?.let { url ->
+                runCatching { downloadBitmap(url) }.getOrNull()
+            }
+
+            if (bitmap != null) {
+                _uiState.update {
+                    it.copy(
+                        sketchImage = bitmap.asImageBitmap(),
+                        fillableMask = computeFillableMask(bitmap)
+                    )
+                }
+            } else {
+                // Bundled fallback — keeps the screen usable offline / out of order.
+                _uiState.update {
+                    it.copy(fillableMask = loadFillableMask(context, R.drawable.sketch))
+                }
+            }
         }
+    }
+
+    /**
+     * Downloads the sketch image via Coil. `allowHardware(false)` is required:
+     * computeFillableMask reads pixels, which a hardware bitmap forbids.
+     */
+    private suspend fun downloadBitmap(url: String): android.graphics.Bitmap? {
+        val loader = ImageLoader.Builder(context).build()
+        val request = ImageRequest.Builder(context)
+            .data(url)
+            .allowHardware(false)
+            .build()
+        val result = loader.execute(request)
+        return (result as? SuccessResult)
+            ?.let { it.drawable as? BitmapDrawable }
+            ?.bitmap
     }
 
     fun onColorSelected(id: String) = _uiState.update { it.copy(selectedColorId = id) }

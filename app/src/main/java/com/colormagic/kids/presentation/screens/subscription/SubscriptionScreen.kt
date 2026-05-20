@@ -1,5 +1,6 @@
 package com.colormagic.kids.presentation.screens.subscription
 
+import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -49,10 +50,9 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.ui.platform.LocalContext
-import androidx.fragment.app.FragmentActivity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -74,15 +74,15 @@ fun SubscriptionScreen(
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
     val context = LocalContext.current
 
-    // The Continue button does double duty: signs in if needed, then bills.
-    // We pass the activity through so AuthRepository can show its prompt.
+    // The parent already has an anonymous Firebase identity (created at
+    // launch), so Continue goes straight to billing — no sign-in step.
+    // launchBillingFlow needs the host Activity.
     val onContinue: () -> Unit = {
-        (context as? FragmentActivity)?.let { activity ->
-            viewModel.attemptSubscribe(activity, onCompleted = onPurchaseSuccessful)
+        (context as? Activity)?.let { activity ->
+            viewModel.onContinue(activity, onCompleted = onPurchaseSuccessful)
         }
     }
 
@@ -92,7 +92,6 @@ fun SubscriptionScreen(
     if (info.isCompactWidth) {
         SubscriptionContent(
             state = state,
-            currentUser = currentUser,
             onBack = onBack,
             onPlanSelected = viewModel::onPlanSelected,
             onContinue = onContinue,
@@ -102,7 +101,6 @@ fun SubscriptionScreen(
     } else {
         SubscriptionTabletContent(
             state = state,
-            currentUser = currentUser,
             onBack = onBack,
             onPlanSelected = viewModel::onPlanSelected,
             onContinue = onContinue,
@@ -115,7 +113,6 @@ fun SubscriptionScreen(
 @Composable
 private fun SubscriptionTabletContent(
     state: SubscriptionUiState,
-    currentUser: com.colormagic.kids.domain.model.UserProfile?,
     onBack: () -> Unit,
     onPlanSelected: (PlanTier) -> Unit,
     onContinue: () -> Unit,
@@ -168,16 +165,9 @@ private fun SubscriptionTabletContent(
 
             Spacer(Modifier.height(20.dp))
 
-            AuthStatusHint(
-                currentUser = currentUser,
-                modifier = Modifier.fillMaxWidth(fraction = 0.6f)
-            )
-
-            Spacer(Modifier.height(12.dp))
-
             Box(modifier = Modifier.fillMaxWidth(fraction = 0.5f)) {
                 ContinueWithGooglePlayButton(
-                    label = continueLabel(currentUser, state.isProcessing),
+                    label = if (state.isProcessing) "Please wait…" else "Continue with Google Play",
                     isProcessing = state.isProcessing,
                     onClick = onContinue
                 )
@@ -209,7 +199,6 @@ private fun SubscriptionTabletContent(
 @Composable
 private fun SubscriptionContent(
     state: SubscriptionUiState,
-    currentUser: com.colormagic.kids.domain.model.UserProfile?,
     onBack: () -> Unit,
     onPlanSelected: (PlanTier) -> Unit,
     onContinue: () -> Unit,
@@ -277,17 +266,8 @@ private fun SubscriptionContent(
             item { Spacer(Modifier.height(8.dp)) }
 
             item {
-                AuthStatusHint(
-                    currentUser = currentUser,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp)
-                )
-            }
-
-            item {
                 ContinueWithGooglePlayButton(
-                    label = continueLabel(currentUser, state.isProcessing),
+                    label = if (state.isProcessing) "Please wait…" else "Continue with Google Play",
                     isProcessing = state.isProcessing,
                     onClick = onContinue,
                     modifier = Modifier.padding(horizontal = 20.dp)
@@ -322,65 +302,6 @@ private fun SubscriptionContent(
     }
 }
 
-/**
- * Inline status pill above the Continue button — tells the parent exactly
- * what tapping Continue will do depending on their auth state.
- */
-@Composable
-private fun AuthStatusHint(
-    currentUser: com.colormagic.kids.domain.model.UserProfile?,
-    modifier: Modifier = Modifier
-) {
-    val (container, ink, message) = if (currentUser == null) {
-        Triple(
-            BrandTokens.SubtleSurface,
-            BrandTokens.MutedInk,
-            "You'll sign in with Google first to start your subscription."
-        )
-    } else {
-        Triple(
-            MaterialTheme.colorScheme.tertiaryContainer,
-            Color(0xFF1B3A1F),
-            "Signed in as ${currentUser.email}. Ready to continue."
-        )
-    }
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = container,
-        modifier = modifier
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = if (currentUser == null) Icons.Filled.Info else Icons.Filled.Check,
-                contentDescription = null,
-                tint = ink,
-                modifier = Modifier.size(14.dp)
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = message,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = ink,
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
-private fun continueLabel(
-    currentUser: com.colormagic.kids.domain.model.UserProfile?,
-    isProcessing: Boolean
-): String = when {
-    isProcessing -> "Please wait…"
-    currentUser == null -> "Sign in & Continue"
-    else -> "Continue with Google Play"
-}
 
 @Composable
 private fun ForParentsOnlyPill() {
@@ -814,7 +735,6 @@ private fun SubscriptionPreviewPhone() {
     ColorMagicKidsTheme {
         SubscriptionContent(
             state = SubscriptionUiState(),
-            currentUser = null,
             onBack = {},
             onPlanSelected = {},
             onContinue = {},

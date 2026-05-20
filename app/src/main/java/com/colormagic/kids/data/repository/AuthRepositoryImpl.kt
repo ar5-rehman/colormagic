@@ -1,66 +1,77 @@
 package com.colormagic.kids.data.repository
 
-import android.app.Activity
-import android.content.Context
-import com.colormagic.kids.domain.model.UserProfile
+import android.util.Log
+import com.colormagic.kids.data.di.ApplicationScope
+import com.colormagic.kids.data.telemetry.AppTelemetry
+import com.colormagic.kids.domain.model.AuthUser
 import com.colormagic.kids.domain.repository.AuthRepository
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseUser
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-// Stubbed implementation. The structure is exactly what the real
-// Credential Manager flow will look like — the commented blocks below
-// show where to plug in CredentialManager / GoogleIdOption /
-// GoogleIdTokenCredential calls once a web client ID is configured.
+// Firebase-backed implementation of [AuthRepository].
+//
+// Anonymous auth only. The OpenAI key, credit ledger and purchase
+// verification all live on the Firebase backend; this class just makes sure
+// the device has a verified Firebase identity to attach those calls to.
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
-    @ApplicationContext private val context: Context
+    private val firebaseAuth: FirebaseAuth,
+    private val telemetry: AppTelemetry,
+    @ApplicationScope private val appScope: CoroutineScope
 ) : AuthRepository {
 
-    private val _currentUser = MutableStateFlow<UserProfile?>(null)
-    override val currentUser: StateFlow<UserProfile?> = _currentUser.asStateFlow()
+    // Bridges FirebaseAuth's listener API into a hot StateFlow. SharingStarted
+    // .Eagerly + the app-lifetime scope means the value is always current,
+    // even before any screen starts collecting it. Each emission also tags
+    // Crashlytics/Analytics with the current anonymous uid so future reports
+    // join back to the right user doc in Firestore.
+    override val authState: StateFlow<AuthUser?> =
+        callbackFlow {
+            val listener = FirebaseAuth.AuthStateListener { auth ->
+                val user = auth.currentUser?.toAuthUser()
+                telemetry.setUserId(user?.uid)
+                trySend(user)
+            }
+            firebaseAuth.addAuthStateListener(listener)
+            awaitClose { firebaseAuth.removeAuthStateListener(listener) }
+        }.stateIn(
+            scope = appScope,
+            started = SharingStarted.Eagerly,
+            initialValue = firebaseAuth.currentUser?.toAuthUser()
+                .also { telemetry.setUserId(it?.uid) }
+        )
 
-    override suspend fun signInWithGoogle(activity: Activity): Result<UserProfile> =
-        runCatching {
-            // ─── TODO: real Credential Manager wiring ─────────────────────
-            //
-            // val credentialManager = CredentialManager.create(context)
-            // val googleIdOption = GetGoogleIdOption.Builder()
-            //     .setServerClientId(BuildConfig.GOOGLE_WEB_CLIENT_ID)
-            //     .setFilterByAuthorizedAccounts(false)
-            //     .build()
-            // val request = GetCredentialRequest.Builder()
-            //     .addCredentialOption(googleIdOption)
-            //     .build()
-            // val result = credentialManager.getCredential(activity, request)
-            // val credential = GoogleIdTokenCredential.createFrom(result.credential.data)
-            // val profile = UserProfile(
-            //     id = credential.id,
-            //     displayName = credential.displayName.orEmpty(),
-            //     email = credential.id,
-            //     photoUrl = credential.profilePictureUri?.toString()
-            // )
-            //
-            // ──────────────────────────────────────────────────────────────
-            //
-            // Stub: simulate latency + return a demo profile.
-            delay(600)
-            val profile = UserProfile(
-                id = "demo-parent-uid",
-                displayName = "Demo Parent",
-                email = "parent@example.com",
-                photoUrl = null
-            )
-            _currentUser.value = profile
-            profile
-        }
+    override val currentUser: AuthUser?
+        get() = firebaseAuth.currentUser?.toAuthUser()
+
+    override suspend fun ensureSignedIn(): Result<AuthUser> = runCatching {
+        // Already signed in (returning user) → reuse the existing uid.
+        firebaseAuth.currentUser?.toAuthUser()
+            ?: firebaseAuth.signInAnonymously().await().user
+                ?.toAuthUser()
+            ?: error("Anonymous sign-in returned no user")
+    }.onFailure { e ->
+        // Without this log the failure is invisible — the listener never
+        // fires, leaving the UI on a forever-spinner. The most common cause
+        // is Anonymous Authentication being disabled in the Firebase Console
+        // (Auth → Sign-in method → enable "Anonymous").
+        Log.e("AuthRepository", "Anonymous sign-in failed", e)
+        telemetry.recordNonFatal(e)
+    }
 
     override suspend fun signOut() {
-        // TODO: credentialManager.clearCredentialState(ClearCredentialStateRequest())
-        _currentUser.value = null
+        firebaseAuth.signOut()
     }
 }
+
+private fun FirebaseUser.toAuthUser(): AuthUser =
+    AuthUser(uid = uid, isAnonymous = isAnonymous)

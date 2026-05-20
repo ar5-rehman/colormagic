@@ -1,0 +1,14 @@
+{
+  "indexes": [
+    {
+      "_comment": "Gallery query: a user's sketches, newest first.",
+      "collectionGroup": "sketches",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {"fieldPath": "userId", "order": "ASCENDING"},
+        {"fieldPath": "createdAt", "order": "DESCENDING"}
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

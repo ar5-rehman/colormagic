@@ -120,7 +120,7 @@ private fun HomeTabletContent(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                CreditPill(text = "Sketches left: ${state.sketchesLeft}")
+                CreditPill(text = "Sketches left: " + (state.sketchesLeft?.toString() ?: "…"))
                 BrandHeading(
                     text = "What shall we\ncolor today?",
                     fontSize = 34.sp,
@@ -326,7 +326,7 @@ private fun HomeContent(
             }
 
             fullWidth {
-                CreditPill(text = "Sketches left: ${state.sketchesLeft}")
+                CreditPill(text = "Sketches left: " + (state.sketchesLeft?.toString() ?: "…"))
                 Spacer(Modifier.height(28.dp))
             }
 

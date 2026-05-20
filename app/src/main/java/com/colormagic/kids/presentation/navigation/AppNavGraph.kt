@@ -1,10 +1,18 @@
 package com.colormagic.kids.presentation.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.navArgument
+import androidx.compose.runtime.getValue
+import com.colormagic.kids.data.telemetry.appTelemetry
 import com.colormagic.kids.presentation.screens.coloring.ColoringScreen
 import com.colormagic.kids.presentation.screens.createsketch.CreateSketchScreen
 import com.colormagic.kids.presentation.screens.gallery.GalleryScreen
@@ -28,6 +36,17 @@ fun AppNavGraph(
     navController: NavHostController,
     modifier: Modifier = Modifier
 ) {
+    // One place logs every screen — adding a new destination automatically
+    // shows up in Firebase Analytics with no extra wiring per screen. We use
+    // the route string (stable, code-defined) rather than the user-facing
+    // label, so renames in copy don't break funnel comparisons over time.
+    val context = LocalContext.current
+    val telemetry = remember(context) { context.appTelemetry() }
+    val currentEntry by navController.currentBackStackEntryAsState()
+    LaunchedEffect(currentEntry?.destination?.route) {
+        currentEntry?.destination?.route?.let(telemetry::logScreenView)
+    }
+
     NavHost(
         navController = navController,
         startDestination = TopLevelDestination.START_DESTINATION.route,
@@ -89,18 +108,29 @@ fun AppNavGraph(
 
         composable(Screen.CreateSketch.route) {
             CreateSketchScreen(
-                onMakeSketchRequested = {
-                    navController.navigate(Screen.Loading.route)
-                }
+                onMakeSketchRequested = { prompt ->
+                    // Carry the prompt into Loading, which runs the real
+                    // backend generateSketch call.
+                    navController.navigate(Screen.Loading.routeFor(prompt))
+                },
+                onUpgrade = { navController.navigate(Screen.Subscription.route) }
             )
         }
 
-        composable(Screen.Loading.route) {
+        composable(
+            route = Screen.Loading.ROUTE_PATTERN,
+            arguments = listOf(
+                navArgument(Screen.Loading.ARG_PROMPT) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                }
+            )
+        ) {
             LoadingScreen(
-                onComplete = {
+                onSketchReady = {
                     // Replace Loading with SketchPreview so back goes to CreateSketch.
                     navController.navigate(Screen.SketchPreview.route) {
-                        popUpTo(Screen.Loading.route) { inclusive = true }
+                        popUpTo(Screen.Loading.ROUTE_PATTERN) { inclusive = true }
                     }
                 },
                 onCancel = { navController.popBackStack() }
