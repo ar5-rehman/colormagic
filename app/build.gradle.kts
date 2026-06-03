@@ -151,6 +151,16 @@ dependencies {
     // Google Play Billing — Pro subscription + extra-credit pack.
     implementation(libs.billing.ktx)
 
+    // Google Mobile Ads — rewarded video ads for the credit economy.
+    // Note: this app is child-directed (COPPA). Rewarded ads must only be
+    // shown to parents (behind the parent gate) to comply with Play Families
+    // policy and COPPA. MobileAds is initialised with child-directed treatment.
+    implementation(libs.play.services.ads)
+
+    // DataStore Preferences — persists daily grant date and rewarded-ad count
+    // locally so the UI can pre-check limits without a network round-trip.
+    implementation(libs.datastore.preferences)
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

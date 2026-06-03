@@ -11,7 +11,15 @@
     "build:watch": "tsc --watch",
     "serve": "npm run build && firebase emulators:start --only functions",
     "deploy": "firebase deploy --only functions",
-    "logs": "firebase functions:log"
+    "logs": "firebase functions:log",
+    "test": "jest --testPathPattern='src/.*\\.test\\.ts$'"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "firebase-admin/firestore": "<rootDir>/src/__mocks__/firebase-admin-firestore.ts"
+    }
   },
   "dependencies": {
     "firebase-admin": "^13.0.1",
@@ -20,6 +28,9 @@
     "openai": "^4.77.0"
   },
   "devDependencies": {
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.4"
   }
 }

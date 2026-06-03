@@ -2,10 +2,12 @@ package com.colormagic.kids.data.di
 
 import com.colormagic.kids.data.repository.AuthRepositoryImpl
 import com.colormagic.kids.data.repository.BillingRepositoryImpl
+import com.colormagic.kids.data.repository.CreditRepositoryImpl
 import com.colormagic.kids.data.repository.GalleryRepositoryImpl
 import com.colormagic.kids.data.repository.SketchRepositoryImpl
 import com.colormagic.kids.domain.repository.AuthRepository
 import com.colormagic.kids.domain.repository.BillingRepository
+import com.colormagic.kids.domain.repository.CreditRepository
 import com.colormagic.kids.domain.repository.GalleryRepository
 import com.colormagic.kids.domain.repository.SketchRepository
 import dagger.Binds
@@ -35,4 +37,8 @@ abstract class DataModule {
     @Binds
     @Singleton
     abstract fun bindGalleryRepository(impl: GalleryRepositoryImpl): GalleryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindCreditRepository(impl: CreditRepositoryImpl): CreditRepository
 }

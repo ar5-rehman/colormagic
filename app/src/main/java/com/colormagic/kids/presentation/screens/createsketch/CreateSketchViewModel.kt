@@ -31,7 +31,9 @@ data class CreateSketchUiState(
     val allowFreeText: Boolean = true,
     /** Parent-set daily cap + how many sketches the kid has used today. */
     val dailyLimit: SketchLimit = SketchLimit.Unlimited,
-    val sketchesToday: Int = 0
+    val sketchesToday: Int = 0,
+    /** True when the user tapped "Make My Sketch" but had no credits. */
+    val showLowCreditsModal: Boolean = false
 ) {
     /** True only once quota has loaded and there are no credits to spend. */
     val outOfCredits: Boolean get() = creditsLeft == 0
@@ -119,6 +121,15 @@ class CreateSketchViewModel @Inject constructor(
 
     fun onIdeaSelected(idea: ColoringIdea) {
         _uiState.update { it.copy(prompt = idea.title) }
+    }
+
+    /** Called when the user taps "Make My Sketch" but is out of credits. */
+    fun onMakeSketchBlockedByCredits() {
+        _uiState.update { it.copy(showLowCreditsModal = true) }
+    }
+
+    fun onLowCreditsModalDismissed() {
+        _uiState.update { it.copy(showLowCreditsModal = false) }
     }
 }
 

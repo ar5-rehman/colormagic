@@ -2,6 +2,7 @@ package com.colormagic.kids.presentation.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.colormagic.kids.domain.repository.CreditRepository
 import com.colormagic.kids.domain.repository.SketchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,7 @@ import javax.inject.Inject
 data class HomeUiState(
     /** Total credits left; null until the first quota fetch resolves. */
     val sketchesLeft: Int? = null,
+    val isPremium: Boolean = false,
     val categories: List<HomeCategory> = HomeCategory.defaults()
 )
 
@@ -38,22 +40,38 @@ data class HomeCategory(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val sketchRepository: SketchRepository
+    private val sketchRepository: SketchRepository,
+    private val creditRepository: CreditRepository
 ) : ViewModel() {
+
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
     init {
+        // Collect the live credit flow so the pill updates immediately after
+        // an ad completes, a purchase finishes, or a sketch is generated —
+        // without needing an explicit refreshQuota() call from every screen.
+        viewModelScope.launch {
+            creditRepository.quotaFlow.collect { quota ->
+                _uiState.update {
+                    it.copy(
+                        sketchesLeft = quota.totalAvailableCredits,
+                        isPremium = quota.isPremium
+                    )
+                }
+            }
+        }
+        // Also do an initial server refresh to pick up any changes that
+        // happened while the app was in the background.
         refreshQuota()
     }
 
-    /** Pulls the live credit count from the backend. Call on resume too,
-     *  since a sketch generated elsewhere changes the number. */
+    /** Explicit refresh — called on every ON_RESUME from HomeScreen. */
     fun refreshQuota() {
         viewModelScope.launch {
-            sketchRepository.getQuota().onSuccess { quota ->
-                _uiState.update { it.copy(sketchesLeft = quota.totalAvailableCredits) }
-            }
+            // refreshQuota() already calls creditRepository.updateLocalQuota()
+            // which triggers the quotaFlow collector above.
+            sketchRepository.getQuota()
         }
     }
 }

@@ -3,8 +3,10 @@ package com.colormagic.kids.data.repository
 import com.colormagic.kids.data.telemetry.AppTelemetry
 import com.colormagic.kids.domain.model.Sketch
 import com.colormagic.kids.domain.model.UserQuota
+import com.colormagic.kids.domain.repository.CreditRepository
 import com.colormagic.kids.domain.repository.SketchGenerationResult
 import com.colormagic.kids.domain.repository.SketchRepository
+import com.colormagic.kids.monetization.CreditConfig
 import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.functions.FirebaseFunctionsException
 import kotlinx.coroutines.tasks.await
@@ -17,7 +19,8 @@ import javax.inject.Singleton
 @Singleton
 class SketchRepositoryImpl @Inject constructor(
     private val functions: FirebaseFunctions,
-    private val telemetry: AppTelemetry
+    private val telemetry: AppTelemetry,
+    private val creditRepository: CreditRepository
 ) : SketchRepository {
 
     override suspend fun generateSketch(prompt: String): SketchGenerationResult {
@@ -34,9 +37,13 @@ class SketchRepositoryImpl @Inject constructor(
             if (sketchId == null || imageUrl == null) {
                 return SketchGenerationResult.Failed(GENERIC_ERROR)
             }
-            SketchGenerationResult.Success(
+            val result = SketchGenerationResult.Success(
                 Sketch(id = sketchId, prompt = prompt, imageUrl = imageUrl)
             )
+            telemetry.logCreditEvent("credits_spent", CreditConfig.Costs.GENERATE_COLORING_PAGE)
+            // Refresh the shared credit flow so every screen sees the deducted balance.
+            creditRepository.refreshQuota()
+            result
         } catch (e: FirebaseFunctionsException) {
             // The backend throws HttpsError; the SDK maps it to a code here.
             // NoCredits and Rejected are expected business outcomes, not bugs —
@@ -66,14 +73,20 @@ class SketchRepositoryImpl @Inject constructor(
 
         @Suppress("UNCHECKED_CAST")
         val data = response.getData() as Map<String, Any?>
-        UserQuota(
+        val quota = UserQuota(
             plan = data["plan"] as? String ?: "free",
             subscriptionActive = data["subscriptionActive"] as? Boolean ?: false,
             remainingFreeSketches = (data["remainingFreeSketches"] as? Number)?.toInt() ?: 0,
             remainingMonthlySketches = (data["remainingMonthlySketches"] as? Number)?.toInt() ?: 0,
             extraCredits = (data["extraCredits"] as? Number)?.toInt() ?: 0,
-            totalAvailableCredits = (data["totalAvailableCredits"] as? Number)?.toInt() ?: 0
+            totalAvailableCredits = (data["totalAvailableCredits"] as? Number)?.toInt() ?: 0,
+            rewardedAdsToday = (data["rewardedAdsToday"] as? Number)?.toInt() ?: 0,
+            rewardedAdsRemaining = (data["rewardedAdsRemaining"] as? Number)?.toInt()
+                ?: CreditConfig.MAX_REWARDED_ADS_PER_DAY
         )
+        // Keep CreditRepository's live flow in sync with this fetch.
+        creditRepository.updateLocalQuota(quota)
+        quota
     }.onFailure { telemetry.recordNonFatal(it) }
 
     private companion object {

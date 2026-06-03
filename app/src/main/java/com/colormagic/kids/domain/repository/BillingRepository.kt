@@ -19,4 +19,12 @@ interface BillingRepository {
      * whole flow finishes — including server-side verification.
      */
     suspend fun purchase(activity: Activity, productId: String): PurchaseResult
+
+    /**
+     * Queries Google Play for any existing purchases and re-verifies each one
+     * with the backend. Used for the "Restore Purchases" button.
+     * Returns [PurchaseResult.Success] if at least one active purchase was
+     * found and restored, or [PurchaseResult.Failed] otherwise.
+     */
+    suspend fun restorePurchases(): PurchaseResult
 }

@@ -23,6 +23,7 @@ import com.colormagic.kids.presentation.screens.purchasesuccess.PurchaseSuccessS
 import com.colormagic.kids.presentation.screens.savesuccess.SaveSuccessScreen
 import com.colormagic.kids.presentation.screens.settings.SettingsScreen
 import com.colormagic.kids.presentation.screens.sketchpreview.SketchPreviewScreen
+import com.colormagic.kids.presentation.screens.credits.GetCreditsScreen
 import com.colormagic.kids.presentation.screens.subscription.SubscriptionScreen
 
 // Inner navigation graph rendered inside MainScaffold.
@@ -61,7 +62,8 @@ fun AppNavGraph(
                     navController.navigate(Screen.CreateSketch.routeFor(cat.id))
                 },
                 onOpenGallery = { navController.navigateToTopLevel(TopLevelDestination.GALLERY) },
-                onOpenParentArea = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) }
+                onOpenParentArea = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) },
+                onGetCredits = { navController.navigate(Screen.GetCredits.route) }
             )
         }
         composable(TopLevelDestination.GALLERY.route) {
@@ -74,6 +76,13 @@ fun AppNavGraph(
             ParentsScreen(
                 onManageSubscription = { navController.navigate(Screen.Subscription.route) },
                 onLeaveTab = { navController.navigateToTopLevel(TopLevelDestination.HOME) }
+            )
+        }
+
+        composable(Screen.GetCredits.route) {
+            GetCreditsScreen(
+                onBack = { navController.popBackStack() },
+                onGoToPremium = { navController.navigate(Screen.Subscription.route) }
             )
         }
 
@@ -124,11 +133,10 @@ fun AppNavGraph(
             CreateSketchScreen(
                 onBack = { navController.popBackStack() },
                 onMakeSketchRequested = { prompt ->
-                    // Carry the prompt into Loading, which runs the real
-                    // backend generateSketch call.
                     navController.navigate(Screen.Loading.routeFor(prompt))
                 },
-                onUpgrade = { navController.navigate(Screen.Subscription.route) }
+                onUpgrade = { navController.navigate(Screen.Subscription.route) },
+                onGetCredits = { navController.navigate(Screen.GetCredits.route) }
             )
         }
 

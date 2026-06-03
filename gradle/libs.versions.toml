@@ -28,6 +28,8 @@ coroutinesPlayServices = "1.9.0"
 coil = "2.7.0"
 billing = "7.1.1"
 firebaseCrashlyticsPlugin = "3.0.2"
+playServicesAds = "23.6.0"
+datastorePreferences = "1.1.2"
 
 [libraries]
 # AndroidX Core
@@ -97,6 +99,12 @@ coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coi
 
 # Google Play Billing — subscription + in-app purchases.
 billing-ktx = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "billing" }
+
+# Google Mobile Ads — rewarded video ads.
+play-services-ads = { group = "com.google.android.gms", name = "play-services-ads", version.ref = "playServicesAds" }
+
+# DataStore Preferences — local credit state (daily grant date, ad count).
+datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 
 # Test
 junit = { group = "junit", name = "junit", version.ref = "junit" }

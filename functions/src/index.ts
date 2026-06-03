@@ -9,3 +9,4 @@ import "./firebase";
 export {generateSketch} from "./generateSketch";
 export {userQuota} from "./userQuota";
 export {verifyPurchase} from "./verifyPurchase";
+export {grantRewardedAdCredits} from "./grantRewardedAdCredits";

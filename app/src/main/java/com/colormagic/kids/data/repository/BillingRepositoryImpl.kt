@@ -14,6 +14,7 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 import com.colormagic.kids.data.di.ApplicationScope
 import com.colormagic.kids.data.telemetry.AppTelemetry
 import com.colormagic.kids.domain.model.BillingProducts
@@ -239,6 +240,34 @@ class BillingRepositoryImpl @Inject constructor(
         suspendCancellableCoroutine<Unit> { cont ->
             billingClient.consumeAsync(params) { _, _ -> if (cont.isActive) cont.resume(Unit) }
         }
+    }
+
+    override suspend fun restorePurchases(): PurchaseResult {
+        if (!connect()) return PurchaseResult.Failed(CONNECT_ERROR)
+
+        // Query active subscriptions
+        val purchases = suspendCancellableCoroutine<List<Purchase>> { cont ->
+            val params = QueryPurchasesParams.newBuilder()
+                .setProductType(BillingClient.ProductType.SUBS)
+                .build()
+            billingClient.queryPurchasesAsync(params) { result, list ->
+                if (cont.isActive) {
+                    cont.resume(
+                        if (result.responseCode == BillingClient.BillingResponseCode.OK) list
+                        else emptyList()
+                    )
+                }
+            }
+        }
+
+        val activePurchase = purchases.firstOrNull {
+            it.purchaseState == Purchase.PurchaseState.PURCHASED
+        } ?: return PurchaseResult.Failed("No active purchases found.")
+
+        val productId = activePurchase.products.firstOrNull()
+            ?: return PurchaseResult.Failed(PURCHASE_ERROR)
+        return verifyOnBackend(productId, activePurchase.purchaseToken)
+            ?: PurchaseResult.Failed(VERIFY_ERROR)
     }
 
     private suspend fun acknowledge(purchaseToken: String) {

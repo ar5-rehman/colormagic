@@ -22,6 +22,20 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.ColorMagicKids">
 
+        <!-- AdMob — replace with your real App ID from the AdMob console.
+             Using the test app ID here; swap before going live.
+             IMPORTANT: This app is child-directed. Rewarded ads are shown only
+             to parents (behind the parent gate) to comply with COPPA and the
+             Google Play Families policy. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713" />
+
+        <!-- Disable Ad ID collection — required for child-directed apps. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.DELAY_APP_MEASUREMENT_INIT"
+            android:value="true" />
+
         <!-- Kid-safe Analytics: collect product metrics (screen views,
              crashes) but no advertising signals. Disables Ad ID + SSAID
              collection and personalized ads, as required for a child-

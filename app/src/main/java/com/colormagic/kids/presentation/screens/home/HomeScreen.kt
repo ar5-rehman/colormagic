@@ -3,6 +3,7 @@ package com.colormagic.kids.presentation.screens.home
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -60,6 +61,7 @@ import com.colormagic.kids.presentation.adaptive.isCompactWidth
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.CreditPill
+import com.colormagic.kids.presentation.components.CreditPillStyle
 import com.colormagic.kids.presentation.components.TactileSurface
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
@@ -72,6 +74,7 @@ fun HomeScreen(
     onCategoryClick: (HomeCategory) -> Unit = {},
     onOpenGallery: () -> Unit = {},
     onOpenParentArea: () -> Unit = {},
+    onGetCredits: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -92,7 +95,8 @@ fun HomeScreen(
             onCreateNewSketch = onCreateNewSketch,
             onCategoryClick = onCategoryClick,
             onOpenGallery = onOpenGallery,
-            onOpenParentArea = onOpenParentArea
+            onOpenParentArea = onOpenParentArea,
+            onGetCredits = onGetCredits
         )
     } else {
         HomeTabletContent(
@@ -100,7 +104,8 @@ fun HomeScreen(
             onCreateNewSketch = onCreateNewSketch,
             onCategoryClick = onCategoryClick,
             onOpenGallery = onOpenGallery,
-            onOpenParentArea = onOpenParentArea
+            onOpenParentArea = onOpenParentArea,
+            onGetCredits = onGetCredits
         )
     }
 }
@@ -111,7 +116,8 @@ private fun HomeTabletContent(
     onCreateNewSketch: () -> Unit,
     onCategoryClick: (HomeCategory) -> Unit,
     onOpenGallery: () -> Unit,
-    onOpenParentArea: () -> Unit
+    onOpenParentArea: () -> Unit,
+    onGetCredits: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -130,7 +136,7 @@ private fun HomeTabletContent(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                CreditPill(text = "Sketches left: " + (state.sketchesLeft?.toString() ?: "…"))
+                CreditPillButton(sketchesLeft = state.sketchesLeft, onClick = onGetCredits)
                 BrandHeading(
                     text = "What shall we\ncolor today?",
                     fontSize = 34.sp,
@@ -308,7 +314,8 @@ private fun HomeContent(
     onCreateNewSketch: () -> Unit,
     onCategoryClick: (HomeCategory) -> Unit,
     onOpenGallery: () -> Unit,
-    onOpenParentArea: () -> Unit
+    onOpenParentArea: () -> Unit,
+    onGetCredits: () -> Unit = {}
 ) {
     // Even with system bars hidden, devices still have a display cutout / camera
     // hole at the top. Pad for it so the heading never bleeds into the notch.
@@ -336,7 +343,7 @@ private fun HomeContent(
             }
 
             fullWidth {
-                CreditPill(text = "Sketches left: " + (state.sketchesLeft?.toString() ?: "…"))
+                CreditPillButton(sketchesLeft = state.sketchesLeft, onClick = onGetCredits)
                 Spacer(Modifier.height(28.dp))
             }
 
@@ -488,6 +495,25 @@ private fun ActionTile(
 
 private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) {
     item(span = { GridItemSpan(maxLineSpan) }) { content() }
+}
+
+/**
+ * Tappable credit balance pill. Tapping opens the Get Credits screen so the
+ * parent can top up. Shows "…" while the first server fetch is in-flight.
+ */
+@Composable
+private fun CreditPillButton(sketchesLeft: Int?, onClick: () -> Unit) {
+    val label = when (sketchesLeft) {
+        null -> "Credits: …"
+        0 -> "Out of credits — tap to get more"
+        else -> "Credits: $sketchesLeft"
+    }
+    val style = if (sketchesLeft == 0) CreditPillStyle.Primary else CreditPillStyle.Subtle
+    CreditPill(
+        text = label,
+        style = style,
+        modifier = Modifier.clickable(onClick = onClick)
+    )
 }
 
 @Preview(name = "Home – phone", showBackground = true, widthDp = 360, heightDp = 880)

@@ -41,9 +41,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -86,6 +89,15 @@ fun SubscriptionScreen(
         }
     }
 
+    // Show restore-purchase result as a one-shot message then clear it
+    val restoreMessage = state.restoreMessage
+    LaunchedEffect(restoreMessage) {
+        if (restoreMessage != null) {
+            delay(3000)
+            viewModel.dismissRestoreMessage()
+        }
+    }
+
     val dismissIcon = if (dismissAsClose) Icons.Filled.Close else Icons.AutoMirrored.Filled.ArrowBack
     val dismissLabel = if (dismissAsClose) "Close" else "Back"
 
@@ -95,6 +107,7 @@ fun SubscriptionScreen(
             onBack = onBack,
             onPlanSelected = viewModel::onPlanSelected,
             onContinue = onContinue,
+            onRestore = viewModel::onRestorePurchases,
             dismissIcon = dismissIcon,
             dismissLabel = dismissLabel
         )
@@ -104,6 +117,7 @@ fun SubscriptionScreen(
             onBack = onBack,
             onPlanSelected = viewModel::onPlanSelected,
             onContinue = onContinue,
+            onRestore = viewModel::onRestorePurchases,
             dismissIcon = dismissIcon,
             dismissLabel = dismissLabel
         )
@@ -116,6 +130,7 @@ private fun SubscriptionTabletContent(
     onBack: () -> Unit,
     onPlanSelected: (PlanTier) -> Unit,
     onContinue: () -> Unit,
+    onRestore: () -> Unit = {},
     dismissIcon: ImageVector,
     dismissLabel: String
 ) {
@@ -191,6 +206,22 @@ private fun SubscriptionTabletContent(
                     modifier = Modifier.fillMaxWidth(fraction = 0.6f)
                 )
             }
+            if (state.restoreMessage != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = state.restoreMessage,
+                    fontSize = 12.sp,
+                    color = Color(0xFF2E7D32),
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth(fraction = 0.6f)
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            RestorePurchasesButton(
+                isRestoring = state.isRestoring,
+                onClick = onRestore,
+                modifier = Modifier.fillMaxWidth(fraction = 0.5f)
+            )
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -202,6 +233,7 @@ private fun SubscriptionContent(
     onBack: () -> Unit,
     onPlanSelected: (PlanTier) -> Unit,
     onContinue: () -> Unit,
+    onRestore: () -> Unit = {},
     dismissIcon: ImageVector,
     dismissLabel: String
 ) {
@@ -297,6 +329,26 @@ private fun SubscriptionContent(
                             .padding(horizontal = 32.dp)
                     )
                 }
+            }
+            if (state.restoreMessage != null) {
+                item {
+                    Text(
+                        text = state.restoreMessage,
+                        fontSize = 12.sp,
+                        color = Color(0xFF2E7D32),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp)
+                    )
+                }
+            }
+            item {
+                RestorePurchasesButton(
+                    isRestoring = state.isRestoring,
+                    onClick = onRestore,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
             }
         }
     }
@@ -705,7 +757,7 @@ private fun ContinueWithGooglePlayButton(
             horizontalArrangement = Arrangement.Center
         ) {
             if (isProcessing) {
-                androidx.compose.material3.CircularProgressIndicator(
+                CircularProgressIndicator(
                     color = Color.White,
                     strokeWidth = 2.5.dp,
                     modifier = Modifier.size(18.dp)
@@ -729,6 +781,45 @@ private fun ContinueWithGooglePlayButton(
     }
 }
 
+// ─── Restore purchases button ──────────────────────────────────────
+
+@Composable
+private fun RestorePurchasesButton(
+    isRestoring: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        enabled = !isRestoring,
+        shape = RoundedCornerShape(50),
+        color = Color.Transparent,
+        modifier = modifier
+            .fillMaxWidth()
+            .height(44.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (isRestoring) {
+                androidx.compose.material3.CircularProgressIndicator(
+                    color = BrandTokens.MutedInk,
+                    strokeWidth = 2.dp,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(
+                text = if (isRestoring) "Restoring…" else "Restore Purchases",
+                fontSize = 14.sp,
+                color = BrandTokens.MutedInk
+            )
+        }
+    }
+}
+
 @Preview(name = "Subscription – phone", showBackground = true, widthDp = 360, heightDp = 1300)
 @Composable
 private fun SubscriptionPreviewPhone() {
@@ -738,6 +829,7 @@ private fun SubscriptionPreviewPhone() {
             onBack = {},
             onPlanSelected = {},
             onContinue = {},
+            onRestore = {},
             dismissIcon = Icons.AutoMirrored.Filled.ArrowBack,
             dismissLabel = "Back"
         )

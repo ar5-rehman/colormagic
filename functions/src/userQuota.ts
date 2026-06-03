@@ -1,12 +1,15 @@
 /**
  * Callable: userQuota
  *
- * Returns the caller's remaining credits so the app can show "Sketches
- * left: N". Creates the user document on first call (free tier).
+ * Returns the caller's credit snapshot. Also performs the lazy daily
+ * credit grant — if the UTC date has rolled over since the last grant, the
+ * daily bucket is replenished before the snapshot is computed and returned.
+ * This means a single quota fetch is always enough to unblock a new day's
+ * worth of sketches without a separate "reset" call.
  */
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {REGION} from "./config";
-import {computeQuota, ensureUserDoc} from "./credits";
+import {computeQuota, ensureUserDoc, grantDailyCreditsIfNeeded} from "./credits";
 import {UserQuotaResponse} from "./types";
 
 export const userQuota = onCall(
@@ -16,7 +19,10 @@ export const userQuota = onCall(
     if (!uid) {
       throw new HttpsError("unauthenticated", "Sign-in required.");
     }
-    const user = await ensureUserDoc(uid);
+    // ensureUserDoc creates the doc on first access; grantDailyCreditsIfNeeded
+    // applies any pending daily/monthly resets and persists them.
+    await ensureUserDoc(uid);
+    const user = await grantDailyCreditsIfNeeded(uid);
     return computeQuota(user);
   }
 );

@@ -58,4 +58,18 @@ class AppTelemetry @Inject constructor() {
             param("outcome", outcome)
         }
     }
+
+    /**
+     * Credit economy events. [eventName] must be one of the defined analytics
+     * event names (see the spec in the monetisation plan):
+     *   credits_screen_opened, rewarded_ad_requested, rewarded_ad_loaded,
+     *   rewarded_ad_completed, rewarded_ad_failed, credits_granted,
+     *   credits_spent, low_credits_modal_shown, premium_screen_opened,
+     *   subscription_started, subscription_restored, subscription_cancelled.
+     */
+    fun logCreditEvent(eventName: String, amount: Int = 0) {
+        analytics.logEvent(eventName) {
+            if (amount > 0) param("amount", amount.toLong())
+        }
+    }
 }

@@ -56,6 +56,7 @@ import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.CreditPill
 import com.colormagic.kids.presentation.components.CreditPillStyle
 import com.colormagic.kids.presentation.components.IdeaCard
+import com.colormagic.kids.presentation.components.LowCreditsModal
 import com.colormagic.kids.presentation.components.SectionTitle
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
@@ -64,6 +65,7 @@ fun CreateSketchScreen(
     onBack: () -> Unit,
     onMakeSketchRequested: (prompt: String) -> Unit,
     onUpgrade: () -> Unit,
+    onGetCredits: () -> Unit = onUpgrade,
     viewModel: CreateSketchViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -79,9 +81,25 @@ fun CreateSketchScreen(
         viewModel.shuffleIdeas()
     }
 
+    // Low-credits modal: shown when the user taps "Make My Sketch" without credits
+    if (state.showLowCreditsModal) {
+        LowCreditsModal(
+            onWatchAd = {
+                viewModel.onLowCreditsModalDismissed()
+                onGetCredits()
+            },
+            onGoPremium = {
+                viewModel.onLowCreditsModalDismissed()
+                onUpgrade()
+            },
+            onDismiss = viewModel::onLowCreditsModalDismissed
+        )
+    }
+
     val onMakeSketch: () -> Unit = {
-        if (state.canMakeSketch) {
-            onMakeSketchRequested(state.prompt.trim())
+        when {
+            state.canMakeSketch -> onMakeSketchRequested(state.prompt.trim())
+            state.outOfCredits -> viewModel.onMakeSketchBlockedByCredits()
         }
     }
 
@@ -93,7 +111,8 @@ fun CreateSketchScreen(
             onCategorySelected = viewModel::onCategorySelected,
             onMakeSketch = onMakeSketch,
             onIdeaSelected = viewModel::onIdeaSelected,
-            onUpgrade = onUpgrade
+            onUpgrade = onUpgrade,
+            onGetCredits = onGetCredits
         )
     } else {
         CreateSketchTabletContent(
@@ -103,7 +122,8 @@ fun CreateSketchScreen(
             onCategorySelected = viewModel::onCategorySelected,
             onMakeSketch = onMakeSketch,
             onIdeaSelected = viewModel::onIdeaSelected,
-            onUpgrade = onUpgrade
+            onUpgrade = onUpgrade,
+            onGetCredits = onGetCredits
         )
     }
 }
@@ -116,7 +136,8 @@ private fun CreateSketchTabletContent(
     onCategorySelected: (String) -> Unit,
     onMakeSketch: () -> Unit,
     onIdeaSelected: (ColoringIdea) -> Unit,
-    onUpgrade: () -> Unit
+    onUpgrade: () -> Unit,
+    onGetCredits: () -> Unit = onUpgrade
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -180,7 +201,7 @@ private fun CreateSketchTabletContent(
                         modifier = Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CreditCostPill(state = state, onUpgrade = onUpgrade)
+                        CreditCostPill(state = state, onGetCredits = onGetCredits)
                     }
                 }
             }
@@ -221,7 +242,8 @@ private fun CreateSketchContent(
     onCategorySelected: (String) -> Unit,
     onMakeSketch: () -> Unit,
     onIdeaSelected: (ColoringIdea) -> Unit,
-    onUpgrade: () -> Unit
+    onUpgrade: () -> Unit,
+    onGetCredits: () -> Unit = onUpgrade
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
 
@@ -281,7 +303,7 @@ private fun CreateSketchContent(
                     modifier = Modifier.fillMaxWidth(),
                     contentAlignment = Alignment.Center
                 ) {
-                    CreditCostPill(state = state, onUpgrade = onUpgrade)
+                    CreditCostPill(state = state, onGetCredits = onGetCredits)
                 }
                 Spacer(Modifier.height(28.dp))
             }
@@ -362,19 +384,15 @@ private fun BackChip(onClick: () -> Unit) {
     }
 }
 
-// Shows the per-sketch cost, or — when the parent's credits are spent — a
-// tappable "out of credits" prompt that deep-links to the Magic Passes
-// screen. The "Make My Sketch" button is disabled alongside.
+// Shows the per-sketch cost, or — when credits are spent — a tappable
+// "out of credits" prompt that links to the Get Credits screen.
 @Composable
-private fun CreditCostPill(state: CreateSketchUiState, onUpgrade: () -> Unit) {
-    // Order matters: out-of-credits beats daily-limit, since one requires a
-    // purchase and the other just an end-of-day wait. Both surface as
-    // "loud" pills so the kid notices instantly.
+private fun CreditCostPill(state: CreateSketchUiState, onGetCredits: () -> Unit) {
     when {
         state.outOfCredits -> CreditPill(
             text = "Out of credits — tap to get more",
             style = CreditPillStyle.Primary,
-            modifier = Modifier.clickable(onClick = onUpgrade)
+            modifier = Modifier.clickable(onClick = onGetCredits)
         )
         state.dailyLimitReached -> CreditPill(
             text = "Today's sketch limit reached — come back tomorrow!",
