@@ -2,6 +2,7 @@ package com.colormagic.kids.data.repository
 
 import com.colormagic.kids.data.local.preferences.CreditPreferences
 import com.colormagic.kids.data.telemetry.AppTelemetry
+import com.colormagic.kids.data.util.currentUtcOffsetMinutes
 import com.colormagic.kids.domain.model.UserQuota
 import com.colormagic.kids.domain.repository.CreditRepository
 import com.colormagic.kids.domain.repository.RewardedAdGrantResult
@@ -27,7 +28,7 @@ class CreditRepositoryImpl @Inject constructor(
     override suspend fun refreshQuota(): Result<UserQuota> = runCatching {
         val response = functions
             .getHttpsCallable(FN_USER_QUOTA)
-            .call()
+            .call(mapOf("utcOffsetMinutes" to currentUtcOffsetMinutes()))
             .await()
 
         @Suppress("UNCHECKED_CAST")
@@ -52,7 +53,7 @@ class CreditRepositoryImpl @Inject constructor(
         return runCatching {
             val response = functions
                 .getHttpsCallable(FN_GRANT_REWARDED_AD_CREDITS)
-                .call()
+                .call(mapOf("utcOffsetMinutes" to currentUtcOffsetMinutes()))
                 .await()
 
             @Suppress("UNCHECKED_CAST")

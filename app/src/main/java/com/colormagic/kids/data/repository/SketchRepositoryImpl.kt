@@ -1,6 +1,7 @@
 package com.colormagic.kids.data.repository
 
 import com.colormagic.kids.data.telemetry.AppTelemetry
+import com.colormagic.kids.data.util.currentUtcOffsetMinutes
 import com.colormagic.kids.domain.model.Sketch
 import com.colormagic.kids.domain.model.UserQuota
 import com.colormagic.kids.domain.repository.CreditRepository
@@ -27,7 +28,10 @@ class SketchRepositoryImpl @Inject constructor(
         return try {
             val response = functions
                 .getHttpsCallable(FN_GENERATE_SKETCH)
-                .call(mapOf("prompt" to prompt))
+                .call(mapOf(
+                    "prompt" to prompt,
+                    "utcOffsetMinutes" to currentUtcOffsetMinutes()
+                ))
                 .await()
 
             @Suppress("UNCHECKED_CAST")
@@ -68,7 +72,7 @@ class SketchRepositoryImpl @Inject constructor(
     override suspend fun getQuota(): Result<UserQuota> = runCatching {
         val response = functions
             .getHttpsCallable(FN_USER_QUOTA)
-            .call(emptyMap<String, Any>())
+            .call(mapOf("utcOffsetMinutes" to currentUtcOffsetMinutes()))
             .await()
 
         @Suppress("UNCHECKED_CAST")

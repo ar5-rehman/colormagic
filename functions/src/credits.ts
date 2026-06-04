@@ -25,21 +25,46 @@ import {SketchDoc, UserDoc, UserQuotaResponse} from "./types";
 
 export type CreditSource = "daily" | "monthly" | "extra";
 
-/** Returns today's date as "YYYY-MM-DD" in UTC. */
+/** Returns today's date as "YYYY-MM-DD" in UTC. (Kept for legacy callers.) */
 export function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Largest plausible real-world timezone offset (UTC±14:00), in minutes. */
+const MAX_OFFSET_MINUTES = 14 * 60;
+
+/**
+ * Sanitises a client-supplied UTC offset (minutes to ADD to UTC to reach the
+ * device's local time; e.g. UTC+5 → 300, US-Pacific → -480). Non-numeric or
+ * out-of-range values fall back to 0 (UTC). Clamping means a spoofed offset can
+ * at most shift the day boundary by ±14h — it can never create a grant loop.
+ */
+export function clampOffsetMinutes(value: unknown): number {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(-MAX_OFFSET_MINUTES, Math.min(MAX_OFFSET_MINUTES, Math.trunc(n)));
+}
+
+/**
+ * The user's LOCAL calendar day ("YYYY-MM-DD") for a given instant, computed
+ * from the (trusted, server-supplied) epoch millis plus the client's timezone
+ * offset. Because the instant always originates from the server clock, changing
+ * the device clock has no effect — only the timezone offset moves the boundary.
+ */
+export function localDayKey(epochMillis: number, offsetMinutes: number): string {
+  return new Date(epochMillis + offsetMinutes * 60_000).toISOString().slice(0, 10);
 }
 
 const userRef = (uid: string) => db.collection(Collections.users).doc(uid);
 
 /** Loads the user doc, creating a fresh free-tier doc on first access. */
-export async function ensureUserDoc(uid: string): Promise<UserDoc> {
+export async function ensureUserDoc(uid: string, offsetMinutes = 0): Promise<UserDoc> {
   const ref = userRef(uid);
   const snap = await ref.get();
-  if (snap.exists) return normalizeUser(snap.data() as UserDoc);
+  if (snap.exists) return normalizeUser(snap.data() as UserDoc, offsetMinutes);
 
   const now = Timestamp.now();
-  const today = todayUtc();
+  const today = localDayKey(now.toMillis(), clampOffsetMinutes(offsetMinutes));
   const fresh: UserDoc = {
     plan: "free",
     subscriptionActive: false,
@@ -52,6 +77,7 @@ export async function ensureUserDoc(uid: string): Promise<UserDoc> {
     // New daily credit fields — grant the first day's credits immediately
     dailyCreditsDate: today,
     dailyCreditsAvailable: FREE_DAILY_CREDITS,
+    lastDailyGrantAt: now,
     rewardedAdsDate: today,
     rewardedAdsToday: 0,
     createdAt: now,
@@ -63,31 +89,44 @@ export async function ensureUserDoc(uid: string): Promise<UserDoc> {
 
 /**
  * Applies all lazy resets in-memory (no Firestore write here):
- *   1. Daily credit refresh  — if today ≠ dailyCreditsDate, replenish daily bucket
- *   2. Rewarded-ad reset     — if today ≠ rewardedAdsDate, zero the counter
+ *   1. Daily credit refresh  — if the user's LOCAL day rolled over since the
+ *                              last grant, replenish the daily bucket
+ *   2. Rewarded-ad reset     — same local-day boundary, zero the counter
  *   3. Pro monthly reset     — if billing window elapsed, zero usedThisMonth
+ *
+ * `offsetMinutes` is the client's timezone offset (minutes to ADD to UTC). The
+ * day boundary is the user's local midnight, but the comparison uses the server
+ * clock (Date.now()), so a tampered device clock cannot trigger extra grants.
  *
  * The caller is responsible for persisting mutations back to Firestore.
  */
-export function normalizeUser(user: UserDoc): UserDoc {
-  const today = todayUtc();
+export function normalizeUser(user: UserDoc, offsetMinutes = 0): UserDoc {
+  const offset = clampOffsetMinutes(offsetMinutes);
+  const nowMs = Date.now();
+  const todayKey = localDayKey(nowMs, offset);
   let result = {...user};
 
-  // ── Daily credit refresh ──────────────────────────────────────────────
-  if (result.dailyCreditsDate !== today) {
+  // ── Daily credit refresh (local-day boundary, server-clock anchored) ───
+  // Prefer the trusted timestamp; fall back to the stored day string for
+  // legacy docs created before lastDailyGrantAt existed.
+  const lastGrantKey = result.lastDailyGrantAt
+    ? localDayKey(result.lastDailyGrantAt.toMillis(), offset)
+    : result.dailyCreditsDate ?? null;
+  if (lastGrantKey !== todayKey) {
     const isPro = result.plan === "pro" && result.subscriptionActive;
     result = {
       ...result,
-      dailyCreditsDate: today,
+      dailyCreditsDate: todayKey,
       dailyCreditsAvailable: isPro ? PREMIUM_DAILY_CREDITS : FREE_DAILY_CREDITS,
+      lastDailyGrantAt: Timestamp.fromMillis(nowMs),
     };
   }
 
   // ── Rewarded-ad counter reset ─────────────────────────────────────────
-  if (result.rewardedAdsDate !== today) {
+  if (result.rewardedAdsDate !== todayKey) {
     result = {
       ...result,
-      rewardedAdsDate: today,
+      rewardedAdsDate: todayKey,
       rewardedAdsToday: 0,
     };
   }
@@ -149,31 +188,37 @@ export function providerForSource(source: CreditSource): ImageProvider {
 /**
  * Grants today's daily credits if not yet granted today, then persists the
  * normalized user doc. Safe to call on every `userQuota` fetch — idempotent
- * for the same UTC day.
+ * for the same local day.
  */
-export async function grantDailyCreditsIfNeeded(uid: string): Promise<UserDoc> {
+export async function grantDailyCreditsIfNeeded(
+  uid: string,
+  offsetMinutes = 0
+): Promise<UserDoc> {
   const ref = userRef(uid);
   const snap = await ref.get();
-  if (!snap.exists) return ensureUserDoc(uid);
+  if (!snap.exists) return ensureUserDoc(uid, offsetMinutes);
 
   const raw = snap.data() as UserDoc;
-  const normalized = normalizeUser(raw);
+  const normalized = normalizeUser(raw, offsetMinutes);
 
   // Only write if something actually changed (avoids unnecessary writes)
-  const daily = normalized.dailyCreditsDate;
-  const adDate = normalized.rewardedAdsDate;
+  const rawGrantMs = raw.lastDailyGrantAt ? raw.lastDailyGrantAt.toMillis() : null;
+  const normGrantMs =
+    normalized.lastDailyGrantAt ? normalized.lastDailyGrantAt.toMillis() : null;
   const monthlyChanged =
     normalized.usedSketchesThisMonth !== raw.usedSketchesThisMonth;
 
   if (
-    daily !== raw.dailyCreditsDate ||
+    normalized.dailyCreditsDate !== raw.dailyCreditsDate ||
     normalized.dailyCreditsAvailable !== raw.dailyCreditsAvailable ||
-    adDate !== raw.rewardedAdsDate ||
+    normGrantMs !== rawGrantMs ||
+    normalized.rewardedAdsDate !== raw.rewardedAdsDate ||
     monthlyChanged
   ) {
     await ref.update({
       dailyCreditsDate: normalized.dailyCreditsDate,
       dailyCreditsAvailable: normalized.dailyCreditsAvailable,
+      lastDailyGrantAt: normalized.lastDailyGrantAt ?? null,
       rewardedAdsDate: normalized.rewardedAdsDate,
       rewardedAdsToday: normalized.rewardedAdsToday,
       usedSketchesThisMonth: normalized.usedSketchesThisMonth,
@@ -191,7 +236,8 @@ export async function grantDailyCreditsIfNeeded(uid: string): Promise<UserDoc> {
  * Runs in a transaction so concurrent ad completions don't double-grant.
  */
 export async function grantRewardedAdCreditsForUser(
-  uid: string
+  uid: string,
+  offsetMinutes = 0
 ): Promise<{error: string | null; newBalance: number; rewardedAdsToday: number}> {
   let newBalance = 0;
   let newAdsToday = 0;
@@ -202,7 +248,7 @@ export async function grantRewardedAdCreditsForUser(
     const snap = await tx.get(ref);
     if (!snap.exists) throw new Error(`User doc ${uid} not found`);
 
-    const user = normalizeUser(snap.data() as UserDoc);
+    const user = normalizeUser(snap.data() as UserDoc, offsetMinutes);
     const adsToday = user.rewardedAdsToday ?? 0;
 
     if (adsToday >= MAX_REWARDED_ADS_PER_DAY) {
@@ -215,10 +261,11 @@ export async function grantRewardedAdCreditsForUser(
     const updated = {
       extraCredits: (user.extraCredits ?? 0) + REWARDED_AD_CREDITS,
       rewardedAdsToday: adsToday + 1,
-      rewardedAdsDate: todayUtc(),
+      rewardedAdsDate: user.rewardedAdsDate,
       // Persist any lazy daily reset that happened inside normalizeUser
       dailyCreditsDate: user.dailyCreditsDate,
       dailyCreditsAvailable: user.dailyCreditsAvailable,
+      lastDailyGrantAt: user.lastDailyGrantAt ?? null,
       updatedAt: Timestamp.now(),
     };
     tx.update(ref, updated);
@@ -240,14 +287,15 @@ export async function grantRewardedAdCreditsForUser(
  */
 export async function commitSketchAndDeduct(
   uid: string,
-  sketch: Omit<SketchDoc, "createdAt">
+  sketch: Omit<SketchDoc, "createdAt">,
+  offsetMinutes = 0
 ): Promise<void> {
   await db.runTransaction(async (tx) => {
     const ref = userRef(uid);
     const snap = await tx.get(ref);
     if (!snap.exists) throw new Error(`User doc ${uid} vanished mid-transaction`);
 
-    const user = normalizeUser(snap.data() as UserDoc);
+    const user = normalizeUser(snap.data() as UserDoc, offsetMinutes);
     const source = pickCreditSource(user);
 
     let {dailyCreditsAvailable, usedSketchesThisMonth, extraCredits} = user;
@@ -262,6 +310,9 @@ export async function commitSketchAndDeduct(
     tx.update(ref, {
       dailyCreditsAvailable,
       dailyCreditsDate: user.dailyCreditsDate,
+      lastDailyGrantAt: user.lastDailyGrantAt ?? null,
+      rewardedAdsDate: user.rewardedAdsDate,
+      rewardedAdsToday: user.rewardedAdsToday,
       usedSketchesThisMonth,
       extraCredits,
       monthlyResetAt: user.monthlyResetAt,

@@ -23,6 +23,7 @@ import {
   REGION,
 } from "./config";
 import {
+  clampOffsetMinutes,
   commitSketchAndDeduct,
   ensureUserDoc,
   modelForSource,
@@ -51,7 +52,10 @@ export const generateSketch = onCall(
       throw new HttpsError("unauthenticated", "Sign-in required.");
     }
 
-    const {prompt: rawPrompt} = (request.data ?? {}) as GenerateSketchRequest;
+    const reqData = (request.data ?? {}) as GenerateSketchRequest &
+      {utcOffsetMinutes?: number};
+    const {prompt: rawPrompt} = reqData;
+    const offset = clampOffsetMinutes(reqData.utcOffsetMinutes);
     const prompt = (rawPrompt ?? "").trim();
     if (!prompt) {
       throw new HttpsError("invalid-argument", "Please describe a picture first.");
@@ -82,7 +86,7 @@ export const generateSketch = onCall(
 
     // 2. Credit pre-check. Fast-fail before spending an OpenAI call.
     //    The model is chosen by the bucket the credit will come from.
-    const user = await ensureUserDoc(uid);
+    const user = await ensureUserDoc(uid, offset);
     const source = pickCreditSource(user);
     if (!source) {
       throw new HttpsError(
@@ -124,7 +128,7 @@ export const generateSketch = onCall(
       quality: IMAGE_QUALITY,
       imageUrl: uploaded.imageUrl,
       storagePath: uploaded.storagePath,
-    });
+    }, offset);
 
     return {success: true, sketchId, imageUrl: uploaded.imageUrl};
   }

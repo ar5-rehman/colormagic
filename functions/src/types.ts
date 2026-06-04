@@ -17,11 +17,17 @@ export interface UserDoc {
   monthlyResetAt: Timestamp | null;
   // Purchased extra packs + rewarded-ad grants share this bucket
   extraCredits: number;
-  // Daily free/premium credit grant — refreshed once per calendar day (UTC)
-  dailyCreditsDate: string | null;   // "YYYY-MM-DD" UTC, null on first create
+  // Daily free/premium credit grant — refreshed once per the USER'S LOCAL
+  // calendar day. The boundary is the user's local midnight, but the decision
+  // is anchored to the trusted server clock (see credits.normalizeUser), so
+  // changing the device clock cannot farm extra grants.
+  dailyCreditsDate: string | null;   // "YYYY-MM-DD" local day of last grant
   dailyCreditsAvailable: number;     // remaining daily credits for today
-  // Rewarded-ad rate limiting — resets daily
-  rewardedAdsDate: string | null;    // "YYYY-MM-DD" UTC
+  /** Server timestamp of the last daily grant — the trusted anchor for the
+   *  local-day reset check. Null only on legacy docs created before this field. */
+  lastDailyGrantAt: Timestamp | null;
+  // Rewarded-ad rate limiting — resets on the same local-day boundary
+  rewardedAdsDate: string | null;    // "YYYY-MM-DD" local day
   rewardedAdsToday: number;          // ads watched today
   createdAt: Timestamp;
   updatedAt: Timestamp;

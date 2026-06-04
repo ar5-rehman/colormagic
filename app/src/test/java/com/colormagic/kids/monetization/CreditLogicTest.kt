@@ -1,5 +1,6 @@
 package com.colormagic.kids.monetization
 
+import com.colormagic.kids.data.util.currentUtcOffsetMinutes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
@@ -344,5 +345,16 @@ class CreditLogicTest {
     @Test
     fun `premium style costs more than generating a page`() {
         assertTrue(CreditConfig.Costs.PREMIUM_STYLE > CreditConfig.Costs.GENERATE_COLORING_PAGE)
+    }
+
+    // ── 9. Client timezone offset (local-day reset) ────────────────────────
+
+    @Test
+    fun `currentUtcOffsetMinutes is within the valid timezone range`() {
+        // Real-world offsets span UTC-12:00 .. UTC+14:00. The value sent to the
+        // backend must fall inside this band so the server's clamp never fires.
+        val offset = currentUtcOffsetMinutes()
+        assertTrue("offset $offset below -12h", offset >= -12 * 60)
+        assertTrue("offset $offset above +14h", offset <= 14 * 60)
     }
 }
