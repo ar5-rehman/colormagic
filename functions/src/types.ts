@@ -32,7 +32,6 @@ export type CreditTransactionType =
   | "daily_grant"
   | "rewarded_ad_grant"
   | "generation_spend"
-  | "export_spend"
   | "premium_grant"
   | "admin_adjustment";
 

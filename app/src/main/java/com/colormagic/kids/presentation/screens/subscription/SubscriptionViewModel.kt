@@ -139,9 +139,10 @@ private val defaultPlans = listOf(
         tagline = "Try out the magic.",
         price = "Free",
         features = listOf(
-            "5 free credits every day",
+            "1 free credit every day",
             "Watch ads to earn +3 credits",
             "Up to 5 rewarded ads/day",
+            "Save to Gallery — always free",
             "Basic coloring tools"
         ),
         isCurrent = true
@@ -156,8 +157,7 @@ private val defaultPlans = listOf(
             "30 credits every day",
             "No ads — ever",
             "All premium coloring tools",
-            "HD export",
-            "Save to Gallery"
+            "Priority generation"
         ),
         isBestValue = true
     ),

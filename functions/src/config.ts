@@ -25,16 +25,17 @@ export const EXTRA_PACK_CREDITS = 20;     // credits granted by one extra pack
 export const MONTHLY_PERIOD_DAYS = 30;    // approximate billing-cycle length
 
 // ── Daily credit economy (hybrid free / rewarded-ad / premium model) ───
-export const FREE_DAILY_CREDITS = 5;          // free-tier daily grant
+export const FREE_DAILY_CREDITS = 1;          // free-tier daily grant
 export const PREMIUM_DAILY_CREDITS = 30;      // premium-tier daily grant
 export const REWARDED_AD_CREDITS = 3;         // credits per completed rewarded ad
 export const MAX_REWARDED_ADS_PER_DAY = 5;    // cap per calendar day
 
 // ── Credit costs per action ────────────────────────────────────────────
+// Only generation costs credits. Saving/exporting artwork to the phone
+// gallery is ALWAYS free for every user (free or premium) — there is no
+// HD-export or watermark charge.
 export const COST_GENERATE_COLORING_PAGE = 1;
 export const COST_PREMIUM_STYLE = 2;
-export const COST_HD_EXPORT = 2;
-export const COST_REMOVE_WATERMARK = 1;
 
 // ── Image generation strategy ──────────────────────────────────────────
 // Per-bucket provider (see credits.providerForSource):

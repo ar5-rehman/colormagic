@@ -469,7 +469,7 @@ private fun HowCreditsWorkSection(modifier: Modifier = Modifier) {
         Spacer(Modifier.height(10.dp))
         CreditRuleRow("Generate a coloring page", "1 credit")
         CreditRuleRow("Apply a premium style", "2 credits")
-        CreditRuleRow("HD export", "2 credits")
+        CreditRuleRow("Save to your gallery", "Free")
         CreditRuleRow("Daily free credits (free plan)", "${CreditConfig.FREE_DAILY_CREDITS}/day")
         CreditRuleRow("Daily free credits (premium)", "${CreditConfig.PREMIUM_DAILY_CREDITS}/day")
         CreditRuleRow("Watch a rewarded ad", "+${CreditConfig.REWARDED_AD_CREDITS} credits")

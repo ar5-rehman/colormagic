@@ -225,11 +225,25 @@ class CreditLogicTest {
     }
 
     @Test
-    fun `HD export costs HD_EXPORT credits`() {
+    fun `applying a premium style costs PREMIUM_STYLE credits`() {
         val user = UserState(dailyCreditsAvailable = 5)
-        val (updated, error) = spendCredits(user, CreditConfig.Costs.HD_EXPORT)
+        val (updated, error) = spendCredits(user, CreditConfig.Costs.PREMIUM_STYLE)
         assertNull(error)
-        assertEquals(5 - CreditConfig.Costs.HD_EXPORT, updated!!.totalAvailableCredits)
+        assertEquals(5 - CreditConfig.Costs.PREMIUM_STYLE, updated!!.totalAvailableCredits)
+    }
+
+    @Test
+    fun `saving to gallery is free for everyone`() {
+        // Saving/exporting costs 0 credits regardless of plan.
+        val free = UserState(plan = "free", dailyCreditsAvailable = 0, extraCredits = 0)
+        val (freeUpdated, freeError) = spendCredits(free, 0)
+        assertNull(freeError)
+        assertEquals(0, freeUpdated!!.totalAvailableCredits)
+
+        val premium = UserState(plan = "pro", subscriptionActive = true, dailyCreditsAvailable = 0)
+        val (proUpdated, proError) = spendCredits(premium, 0)
+        assertNull(proError)
+        assertEquals(0, proUpdated!!.totalAvailableCredits)
     }
 
     @Test
@@ -253,7 +267,7 @@ class CreditLogicTest {
     @Test
     fun `spending more than balance returns insufficient_credits error`() {
         val user = UserState(dailyCreditsAvailable = 1)
-        val (updated, error) = spendCredits(user, CreditConfig.Costs.HD_EXPORT) // costs 2
+        val (updated, error) = spendCredits(user, CreditConfig.Costs.PREMIUM_STYLE) // costs 2
         assertEquals("insufficient_credits", error)
         assertNull(updated)
     }
@@ -328,7 +342,7 @@ class CreditLogicTest {
     }
 
     @Test
-    fun `HD export costs more than generating a page`() {
-        assertTrue(CreditConfig.Costs.HD_EXPORT > CreditConfig.Costs.GENERATE_COLORING_PAGE)
+    fun `premium style costs more than generating a page`() {
+        assertTrue(CreditConfig.Costs.PREMIUM_STYLE > CreditConfig.Costs.GENERATE_COLORING_PAGE)
     }
 }
