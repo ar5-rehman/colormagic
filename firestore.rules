@@ -28,6 +28,12 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // processedAdRewards — AdMob SSV idempotency ledger (one doc per
+    // transaction_id). Server-only, fully private.
+    match /processedAdRewards/{transactionId} {
+      allow read, write: if false;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

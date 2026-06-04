@@ -3,11 +3,14 @@
  *
  * Credit buckets, in consumption priority:
  *   1. daily     — FREE_DAILY_CREDITS (free) or PREMIUM_DAILY_CREDITS (pro)
- *                  granted once per UTC calendar day
- *   2. monthly   — Pro plan's per-cycle allowance (MODEL_PREMIUM)
- *   3. extra     — purchased extra packs + rewarded-ad grants (never expire)
+ *                  granted once per local calendar day → FREE provider
+ *   2. ad        — earned by watching rewarded ads (never expire) → FREE provider
+ *   3. monthly   — Pro plan's per-cycle allowance → PAID provider (OpenAI)
+ *   4. extra     — PURCHASED extra packs (never expire) → PAID provider (OpenAI)
  *
- * Free users only have daily + extra. Pro users have all three.
+ * Economic rule: only PAID credits (monthly, extra) use the costly OpenAI
+ * provider. FREE credits (daily, ad) always use the free Pollinations provider,
+ * so fulfilling a rewarded-ad reward never costs us money.
  */
 import {Timestamp} from "firebase-admin/firestore";
 import {db, Collections} from "./firebase";
@@ -20,10 +23,24 @@ import {
   PREMIUM_DAILY_CREDITS,
   REWARDED_AD_CREDITS,
   MAX_REWARDED_ADS_PER_DAY,
+  PRO_MONTHLY_LIMIT,
 } from "./config";
 import {SketchDoc, UserDoc, UserQuotaResponse} from "./types";
 
-export type CreditSource = "daily" | "monthly" | "extra";
+export type CreditSource = "daily" | "ad" | "monthly" | "extra";
+
+/**
+ * Thrown by commitSketchAndDeduct when the user has no credit left at the
+ * moment of deduction (e.g. a concurrent request spent the last credit between
+ * the pre-check and the commit). Callers map this to a "resource-exhausted"
+ * client error. This guarantees a sketch is recorded ONLY if a credit is spent.
+ */
+export class NoCreditError extends Error {
+  constructor() {
+    super("no_credit_at_commit");
+    this.name = "NoCreditError";
+  }
+}
 
 /** Returns today's date as "YYYY-MM-DD" in UTC. (Kept for legacy callers.) */
 export function todayUtc(): string {
@@ -73,7 +90,10 @@ export async function ensureUserDoc(uid: string, offsetMinutes = 0): Promise<Use
     monthlySketchLimit: 0,
     usedSketchesThisMonth: 0,
     extraCredits: 0,
+    adCredits: 0,
     monthlyResetAt: null,
+    subscriptionExpiresAt: null,
+    subscriptionPurchaseToken: null,
     // New daily credit fields — grant the first day's credits immediately
     dailyCreditsDate: today,
     dailyCreditsAvailable: FREE_DAILY_CREDITS,
@@ -153,36 +173,46 @@ export function computeQuota(user: UserDoc): UserQuotaResponse {
   const remainingMonthly = isPro
     ? Math.max(0, user.monthlySketchLimit - user.usedSketchesThisMonth)
     : 0;
-  const extra = Math.max(0, user.extraCredits);
+  const extra = Math.max(0, user.extraCredits ?? 0);
+  const ad = Math.max(0, user.adCredits ?? 0);
   return {
     plan: user.plan,
     subscriptionActive: user.subscriptionActive,
     remainingFreeSketches: daily,          // repurposed: now means "today's daily"
     remainingMonthlySketches: remainingMonthly,
     extraCredits: extra,
-    totalAvailableCredits: daily + remainingMonthly + extra,
+    adCredits: ad,
+    totalAvailableCredits: daily + ad + remainingMonthly + extra,
     rewardedAdsToday: user.rewardedAdsToday ?? 0,
     rewardedAdsRemaining: Math.max(0, MAX_REWARDED_ADS_PER_DAY - (user.rewardedAdsToday ?? 0)),
   };
 }
 
-/** Which bucket the next sketch draws from — null if out of credits. */
+/** Which bucket the next sketch draws from — null if out of credits.
+ *  FREE buckets (daily, ad) are consumed before PAID ones (monthly, extra). */
 export function pickCreditSource(user: UserDoc): CreditSource | null {
   const q = computeQuota(user);
   if (q.remainingFreeSketches > 0) return "daily";
+  if (q.adCredits > 0) return "ad";
   if (q.remainingMonthlySketches > 0) return "monthly";
   if (q.extraCredits > 0) return "extra";
   return null;
 }
 
-/** The OpenAI model that a credit from [source] unlocks. */
+/** The image model a credit from [source] unlocks. Free buckets → free model. */
 export function modelForSource(source: CreditSource): string {
-  return source === "daily" ? MODEL_FREE : MODEL_PREMIUM;
+  return source === "daily" || source === "ad" ? MODEL_FREE : MODEL_PREMIUM;
 }
 
 export type ImageProvider = "openai" | "pollinations";
+
+/**
+ * Which image service fulfils a credit from [source].
+ * FREE credits (daily, ad) → Pollinations (free). PAID credits (monthly, extra)
+ * → OpenAI. This guarantees rewarded-ad rewards never cost us OpenAI money.
+ */
 export function providerForSource(source: CreditSource): ImageProvider {
-  return source === "daily" ? "pollinations" : "openai";
+  return source === "daily" || source === "ad" ? "pollinations" : "openai";
 }
 
 /**
@@ -230,14 +260,21 @@ export async function grantDailyCreditsIfNeeded(
 }
 
 /**
- * Grants REWARDED_AD_CREDITS to extraCredits and increments rewardedAdsToday.
+ * Grants REWARDED_AD_CREDITS to the FREE adCredits bucket and increments
+ * rewardedAdsToday.
  * Returns an error string if the daily cap is already reached, otherwise null.
  *
  * Runs in a transaction so concurrent ad completions don't double-grant.
+ *
+ * @param dedupKey  Optional idempotency key (e.g. an AdMob SSV transaction_id).
+ *                  When supplied, the grant is recorded in
+ *                  `processedAdRewards/{dedupKey}` and a repeat call with the
+ *                  same key is a no-op — so SSV retries never double-credit.
  */
 export async function grantRewardedAdCreditsForUser(
   uid: string,
-  offsetMinutes = 0
+  offsetMinutes = 0,
+  dedupKey?: string
 ): Promise<{error: string | null; newBalance: number; rewardedAdsToday: number}> {
   let newBalance = 0;
   let newAdsToday = 0;
@@ -245,12 +282,25 @@ export async function grantRewardedAdCreditsForUser(
 
   await db.runTransaction(async (tx) => {
     const ref = userRef(uid);
+    const ledgerRef = dedupKey
+      ? db.collection(Collections.processedAdRewards).doc(dedupKey)
+      : null;
+
+    // All reads must precede all writes in a Firestore transaction.
+    const ledgerSnap = ledgerRef ? await tx.get(ledgerRef) : null;
     const snap = await tx.get(ref);
     if (!snap.exists) throw new Error(`User doc ${uid} not found`);
 
     const user = normalizeUser(snap.data() as UserDoc, offsetMinutes);
-    const adsToday = user.rewardedAdsToday ?? 0;
 
+    // Idempotency: this reward was already granted (SSV retry / replay).
+    if (ledgerSnap?.exists) {
+      newBalance = computeQuota(user).totalAvailableCredits;
+      newAdsToday = user.rewardedAdsToday ?? 0;
+      return;
+    }
+
+    const adsToday = user.rewardedAdsToday ?? 0;
     if (adsToday >= MAX_REWARDED_ADS_PER_DAY) {
       error = "daily_ad_limit_reached";
       newBalance = computeQuota(user).totalAvailableCredits;
@@ -259,7 +309,9 @@ export async function grantRewardedAdCreditsForUser(
     }
 
     const updated = {
-      extraCredits: (user.extraCredits ?? 0) + REWARDED_AD_CREDITS,
+      // Rewarded-ad credits go to the FREE "ad" bucket — NOT extraCredits —
+      // so they're always fulfilled by the free provider, never OpenAI.
+      adCredits: (user.adCredits ?? 0) + REWARDED_AD_CREDITS,
       rewardedAdsToday: adsToday + 1,
       rewardedAdsDate: user.rewardedAdsDate,
       // Persist any lazy daily reset that happened inside normalizeUser
@@ -269,15 +321,38 @@ export async function grantRewardedAdCreditsForUser(
       updatedAt: Timestamp.now(),
     };
     tx.update(ref, updated);
+    if (ledgerRef) {
+      tx.set(ledgerRef, {uid, grantedAt: Timestamp.now()});
+    }
 
     newBalance =
       (user.dailyCreditsAvailable ?? 0) +
+      updated.adCredits +
       Math.max(0, user.monthlySketchLimit - user.usedSketchesThisMonth) +
-      updated.extraCredits;
+      (user.extraCredits ?? 0);
     newAdsToday = updated.rewardedAdsToday;
   });
 
   return {error, newBalance, rewardedAdsToday: newAdsToday};
+}
+
+/**
+ * Sets a user's subscription entitlement from an authoritative Play signal
+ * (RTDN handler). When `active` is false the user reverts to the free plan.
+ */
+export async function setSubscriptionState(
+  uid: string,
+  active: boolean,
+  expiresAt: Timestamp | null
+): Promise<void> {
+  await userRef(uid).update({
+    plan: active ? "pro" : "free",
+    subscriptionActive: active,
+    monthlySketchLimit: active ? PRO_MONTHLY_LIMIT : 0,
+    subscriptionExpiresAt: expiresAt,
+    ...(active && expiresAt ? {monthlyResetAt: expiresAt} : {}),
+    updatedAt: Timestamp.now(),
+  });
 }
 
 /**
@@ -298,13 +373,21 @@ export async function commitSketchAndDeduct(
     const user = normalizeUser(snap.data() as UserDoc, offsetMinutes);
     const source = pickCreditSource(user);
 
-    let {dailyCreditsAvailable, usedSketchesThisMonth, extraCredits} = user;
+    let dailyCreditsAvailable = user.dailyCreditsAvailable ?? 0;
+    let usedSketchesThisMonth = user.usedSketchesThisMonth ?? 0;
+    let extraCredits = user.extraCredits ?? 0;
+    let adCredits = user.adCredits ?? 0;
     if (source === "daily") dailyCreditsAvailable = Math.max(0, dailyCreditsAvailable - 1);
+    else if (source === "ad") adCredits = Math.max(0, adCredits - 1);
     else if (source === "monthly") usedSketchesThisMonth += 1;
     else if (source === "extra") extraCredits = Math.max(0, extraCredits - 1);
     else {
+      // No credit at deduction time — a concurrent request spent the last one.
+      // Abort WITHOUT writing the sketch so the user can't get a free
+      // generation by racing requests. The transaction rolls back cleanly.
       // eslint-disable-next-line no-console
       console.warn(`commitSketch: ${uid} had no credit at deduction time`);
+      throw new NoCreditError();
     }
 
     tx.update(ref, {
@@ -315,6 +398,7 @@ export async function commitSketchAndDeduct(
       rewardedAdsToday: user.rewardedAdsToday,
       usedSketchesThisMonth,
       extraCredits,
+      adCredits,
       monthlyResetAt: user.monthlyResetAt,
       updatedAt: Timestamp.now(),
     });

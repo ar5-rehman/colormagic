@@ -27,6 +27,7 @@ import {
   commitSketchAndDeduct,
   ensureUserDoc,
   modelForSource,
+  NoCreditError,
   pickCreditSource,
   providerForSource,
 } from "./credits";
@@ -120,15 +121,26 @@ export const generateSketch = onCall(
     }
 
     // 5. Only now: deduct 1 credit AND record the sketch, atomically.
-    await commitSketchAndDeduct(uid, {
-      sketchId,
-      userId: uid,
-      prompt,
-      model,
-      quality: IMAGE_QUALITY,
-      imageUrl: uploaded.imageUrl,
-      storagePath: uploaded.storagePath,
-    }, offset);
+    try {
+      await commitSketchAndDeduct(uid, {
+        sketchId,
+        userId: uid,
+        prompt,
+        model,
+        quality: IMAGE_QUALITY,
+        imageUrl: uploaded.imageUrl,
+        storagePath: uploaded.storagePath,
+      }, offset);
+    } catch (err) {
+      if (err instanceof NoCreditError) {
+        // Lost a race for the last credit — no sketch is recorded.
+        throw new HttpsError(
+          "resource-exhausted",
+          "No sketch credits left. Ask a grown-up to unlock more."
+        );
+      }
+      throw err;
+    }
 
     return {success: true, sketchId, imageUrl: uploaded.imageUrl};
   }

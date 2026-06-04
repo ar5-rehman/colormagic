@@ -14,6 +14,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -109,6 +110,15 @@ class GetCreditsViewModel @Inject constructor(
 
     private suspend fun handleAdEarned() {
         _uiState.update { it.copy(isGranting = true) }
+
+        // With SSV, AdMob grants credits server-side (admobSsvCallback). The
+        // client must NOT also grant — it just polls the quota until the
+        // server-side grant lands, then reflects the new balance.
+        if (CreditConfig.USE_ADMOB_SSV) {
+            handleAdEarnedViaSsv()
+            return
+        }
+
         when (val result = creditRepository.grantRewardedAdCredits()) {
             is RewardedAdGrantResult.Success -> {
                 _uiState.update {
@@ -138,5 +148,40 @@ class GetCreditsViewModel @Inject constructor(
         }
     }
 
+    /**
+     * SSV grant path: the reward is granted by AdMob's signed callback to the
+     * backend, which is asynchronous. Poll the quota a few times until the
+     * balance increases, then show the result.
+     */
+    private suspend fun handleAdEarnedViaSsv() {
+        val before = _uiState.value.quota.totalAvailableCredits
+        var granted = false
+        var attempt = 0
+        while (attempt < SSV_POLL_ATTEMPTS && !granted) {
+            val quota = creditRepository.refreshQuota().getOrNull()
+            if (quota != null && quota.totalAvailableCredits > before) {
+                granted = true
+            } else {
+                delay(SSV_POLL_DELAY_MS)
+                attempt++
+            }
+        }
+        _uiState.update {
+            it.copy(
+                isGranting = false,
+                toastMessage = if (granted) {
+                    "${CreditConfig.REWARDED_AD_CREDITS} credits added."
+                } else {
+                    "Your reward is on its way — it'll appear in a moment."
+                }
+            )
+        }
+    }
+
     fun onToastShown() = _uiState.update { it.copy(toastMessage = null) }
+
+    private companion object {
+        const val SSV_POLL_ATTEMPTS = 5
+        const val SSV_POLL_DELAY_MS = 800L
+    }
 }

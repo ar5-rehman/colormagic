@@ -15,6 +15,15 @@ object CreditConfig {
     /** AdMob rewarded ad unit ID — replace with the real unit ID from the AdMob console. */
     const val REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917" // test ID
 
+    /**
+     * When true, rewarded credits are granted by AdMob Server-Side Verification
+     * (the backend admobSsvCallback function), NOT by the client callable. This
+     * is the most tamper-proof path. Keep in sync with USE_ADMOB_SSV in the
+     * backend config.ts. Leave false until SSV is configured in the AdMob
+     * console (Rewarded ad unit → Server-side verification → callback URL).
+     */
+    const val USE_ADMOB_SSV = false
+
     object Costs {
         // Only generation costs credits. Saving/exporting artwork to the phone
         // gallery is ALWAYS free for every user — no HD-export or watermark fee.

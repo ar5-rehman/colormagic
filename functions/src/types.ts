@@ -15,8 +15,18 @@ export interface UserDoc {
   usedSketchesThisMonth: number;
   /** When usedSketchesThisMonth rolls back to 0. Null for free accounts. */
   monthlyResetAt: Timestamp | null;
-  // Purchased extra packs + rewarded-ad grants share this bucket
+  /** End of the currently-paid subscription period (from Google Play). Premium
+   *  access continues until this instant even after the user cancels auto-renew.
+   *  Distinct from monthlyResetAt (which advances each usage cycle). */
+  subscriptionExpiresAt: Timestamp | null;
+  /** The active subscription's Play purchaseToken — lets the backend re-verify
+   *  the real state at expiry. Null for free accounts. */
+  subscriptionPurchaseToken: string | null;
+  // Purchased extra packs (PAID — these use the OpenAI provider).
   extraCredits: number;
+  // Rewarded-ad earned credits (FREE — these always use the free Pollinations
+  // provider, never OpenAI, so ad rewards never cost us money to fulfil).
+  adCredits: number;
   // Daily free/premium credit grant — refreshed once per the USER'S LOCAL
   // calendar day. The boundary is the user's local midnight, but the decision
   // is anchored to the trusted server clock (see credits.normalizeUser), so
@@ -69,7 +79,8 @@ export interface UserQuotaResponse {
   subscriptionActive: boolean;
   remainingFreeSketches: number;      // today's daily credits remaining
   remainingMonthlySketches: number;
-  extraCredits: number;
+  extraCredits: number;               // purchased (paid) credits
+  adCredits: number;                  // rewarded-ad (free) credits
   totalAvailableCredits: number;
   rewardedAdsToday: number;
   rewardedAdsRemaining: number;

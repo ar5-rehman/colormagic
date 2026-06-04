@@ -18,4 +18,6 @@ export const Collections = {
   sketches: "sketches",
   /** Idempotency ledger — one doc per processed Play purchaseToken. */
   processedPurchases: "processedPurchases",
+  /** Idempotency ledger — one doc per AdMob SSV transaction_id. */
+  processedAdRewards: "processedAdRewards",
 } as const;

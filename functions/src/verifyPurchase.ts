@@ -17,7 +17,6 @@
  */
 import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import {google} from "googleapis";
 import {
   ANDROID_PACKAGE_NAME,
   EXTRA_PACK_CREDITS,
@@ -29,15 +28,8 @@ import {
 } from "./config";
 import {computeQuota, ensureUserDoc} from "./credits";
 import {Collections, db} from "./firebase";
+import {androidPublisher} from "./playApi";
 import {VerifyPurchaseRequest, VerifyPurchaseResponse} from "./types";
-
-/** Android Publisher client, authed via the function's service account (ADC). */
-function androidPublisher() {
-  const auth = new google.auth.GoogleAuth({
-    scopes: ["https://www.googleapis.com/auth/androidpublisher"],
-  });
-  return google.androidpublisher({version: "v3", auth});
-}
 
 export const verifyPurchase = onCall(
   {region: REGION, enforceAppCheck: true},
@@ -56,7 +48,11 @@ export const verifyPurchase = onCall(
       );
     }
 
-    // Idempotency guard — already processed → just echo current state.
+    // Idempotency guard (fast path) — already processed → just echo state.
+    // NOTE: this is only an optimisation. The AUTHORITATIVE guard runs inside
+    // the transactions below via tx.get(ledgerRef), which closes the race where
+    // two concurrent calls with the same token both pass this outer check and
+    // both grant credits (a double-spend on the consumable extra pack).
     const ledgerRef = db
       .collection(Collections.processedPurchases)
       .doc(purchaseToken);
@@ -99,6 +95,9 @@ export const verifyPurchase = onCall(
           );
 
       await db.runTransaction(async (tx) => {
+        // Authoritative idempotency guard — abort if another concurrent call
+        // already recorded this token. (All reads must precede writes.)
+        if ((await tx.get(ledgerRef)).exists) return;
         tx.update(userRef, {
           plan: "pro",
           subscriptionActive: true,
@@ -106,6 +105,9 @@ export const verifyPurchase = onCall(
           // Fresh allowance for this billing cycle.
           usedSketchesThisMonth: 0,
           monthlyResetAt: resetAt,
+          // Authoritative end of the paid period + token for re-validation.
+          subscriptionExpiresAt: resetAt,
+          subscriptionPurchaseToken: purchaseToken,
           updatedAt: Timestamp.now(),
         });
         tx.set(ledgerRef, {
@@ -130,6 +132,9 @@ export const verifyPurchase = onCall(
       }
 
       await db.runTransaction(async (tx) => {
+        // Authoritative idempotency guard — prevents the concurrent
+        // double-increment that would mint free credits on the extra pack.
+        if ((await tx.get(ledgerRef)).exists) return;
         tx.update(userRef, {
           extraCredits: FieldValue.increment(EXTRA_PACK_CREDITS),
           updatedAt: Timestamp.now(),

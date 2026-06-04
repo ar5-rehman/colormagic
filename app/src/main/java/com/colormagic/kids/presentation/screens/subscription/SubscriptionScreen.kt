@@ -54,6 +54,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import android.content.Intent
+import android.net.Uri
+import com.colormagic.kids.domain.model.BillingProducts
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.text.font.FontWeight
@@ -89,6 +92,21 @@ fun SubscriptionScreen(
         }
     }
 
+    // Google Play policy: subscriptions are cancelled in the Play Store, not
+    // in-app (the Billing Library has no cancel API). Deep-link the parent to
+    // the Play subscriptions page. Cancelling there stops auto-renew but keeps
+    // premium until the end of the period they already paid for.
+    val onManageSubscription: () -> Unit = {
+        val url = "https://play.google.com/store/account/subscriptions" +
+            "?sku=${BillingProducts.MONTHLY_PRO}&package=${context.packageName}"
+        runCatching {
+            context.startActivity(
+                Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
     // Show restore-purchase result as a one-shot message then clear it
     val restoreMessage = state.restoreMessage
     LaunchedEffect(restoreMessage) {
@@ -108,6 +126,7 @@ fun SubscriptionScreen(
             onPlanSelected = viewModel::onPlanSelected,
             onContinue = onContinue,
             onRestore = viewModel::onRestorePurchases,
+            onManageSubscription = onManageSubscription,
             dismissIcon = dismissIcon,
             dismissLabel = dismissLabel
         )
@@ -118,6 +137,7 @@ fun SubscriptionScreen(
             onPlanSelected = viewModel::onPlanSelected,
             onContinue = onContinue,
             onRestore = viewModel::onRestorePurchases,
+            onManageSubscription = onManageSubscription,
             dismissIcon = dismissIcon,
             dismissLabel = dismissLabel
         )
@@ -131,6 +151,7 @@ private fun SubscriptionTabletContent(
     onPlanSelected: (PlanTier) -> Unit,
     onContinue: () -> Unit,
     onRestore: () -> Unit = {},
+    onManageSubscription: () -> Unit = {},
     dismissIcon: ImageVector,
     dismissLabel: String
 ) {
@@ -222,6 +243,10 @@ private fun SubscriptionTabletContent(
                 onClick = onRestore,
                 modifier = Modifier.fillMaxWidth(fraction = 0.5f)
             )
+            ManageSubscriptionButton(
+                onClick = onManageSubscription,
+                modifier = Modifier.fillMaxWidth(fraction = 0.6f)
+            )
             Spacer(Modifier.height(20.dp))
         }
     }
@@ -234,6 +259,7 @@ private fun SubscriptionContent(
     onPlanSelected: (PlanTier) -> Unit,
     onContinue: () -> Unit,
     onRestore: () -> Unit = {},
+    onManageSubscription: () -> Unit = {},
     dismissIcon: ImageVector,
     dismissLabel: String
 ) {
@@ -347,6 +373,12 @@ private fun SubscriptionContent(
                 RestorePurchasesButton(
                     isRestoring = state.isRestoring,
                     onClick = onRestore,
+                    modifier = Modifier.padding(horizontal = 20.dp)
+                )
+            }
+            item {
+                ManageSubscriptionButton(
+                    onClick = onManageSubscription,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
@@ -817,6 +849,52 @@ private fun RestorePurchasesButton(
                 color = BrandTokens.MutedInk
             )
         }
+    }
+}
+
+// ─── Manage / cancel subscription ──────────────────────────────────
+// Google Play requires cancellation to happen in the Play Store, so this
+// deep-links there. Cancelling stops auto-renew; premium continues until the
+// end of the already-paid period.
+
+@Composable
+private fun ManageSubscriptionButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Surface(
+            onClick = onClick,
+            shape = RoundedCornerShape(50),
+            color = Color.Transparent,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(40.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Manage or Cancel Subscription",
+                    fontSize = 14.sp,
+                    color = BrandTokens.MutedInk
+                )
+            }
+        }
+        Text(
+            text = "Cancel anytime in Google Play. You'll keep premium until the " +
+                "end of the period you've already paid for.",
+            fontSize = 11.sp,
+            lineHeight = 16.sp,
+            color = BrandTokens.MutedInk,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        )
     }
 }
 

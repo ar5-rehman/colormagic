@@ -39,8 +39,10 @@ export const COST_PREMIUM_STYLE = 2;
 
 // ── Image generation strategy ──────────────────────────────────────────
 // Per-bucket provider (see credits.providerForSource):
-//   Free credits      → Pollinations (free public Stable Diffusion endpoint)
-//   Pro / Extra packs → OpenAI gpt-image-1 (paid for by the user's purchase)
+//   Daily + Ad credits  → Pollinations (free public Stable Diffusion endpoint)
+//   Pro + Extra packs   → OpenAI gpt-image-1 (paid for by the user's purchase)
+// Rewarded-ad credits are deliberately routed to the FREE provider so that
+// honouring an ad reward never costs us a paid OpenAI call.
 //
 // Kill switch — set to true while the OpenAI account has no billing. While
 // on, ALL credits use Pollinations regardless of plan (so paid users still
@@ -67,6 +69,27 @@ export const IMAGE_QUALITY = "low";
 // ── Google Play product IDs (must match Play Console exactly) ──────────
 export const PRODUCT_MONTHLY_PRO = "monthly_pro";       // subscription
 export const PRODUCT_EXTRA_20 = "extra_20_sketches";    // one-time in-app
+
+// ── AdMob rewarded Server-Side Verification (SSV) ──────────────────────
+// When SSV is configured in the AdMob console (Rewarded ad unit → SSV →
+// callback URL = the admobSsvCallback function URL), AdMob calls our backend
+// DIRECTLY on a verified reward. That is the authoritative grant and cannot be
+// forged by the client. Until you configure it, leave this false so the
+// client-callable grant path keeps working.
+export const USE_ADMOB_SSV = false;
+/** Google's public keys used to verify rewarded SSV callback signatures. */
+export const ADMOB_VERIFIER_KEYS_URL =
+  "https://www.gstatic.com/admob/reward/verifier-keys.json";
+/** Reject SSV callbacks whose timestamp is older than this (replay defense). */
+export const ADMOB_SSV_MAX_AGE_MS = 60 * 60 * 1000; // 1 hour
+
+// ── Google Play Real-time Developer Notifications (RTDN) ────────────────
+// Pub/Sub topic that Play Console publishes subscription lifecycle events to
+// (renew / cancel / refund / expire). The playRtdnHandler function subscribes
+// to it and revokes "pro" when a subscription is no longer valid. Create the
+// topic and set it in Play Console → Monetization setup → Real-time
+// developer notifications, then redeploy.
+export const PLAY_RTDN_TOPIC = "play-rtdn";
 
 /** Hard cap on prompt length — rejects obviously abusive input early. */
 export const MAX_PROMPT_LENGTH = 200;

@@ -12,6 +12,8 @@ import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.RequestConfiguration
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
+import com.google.android.gms.ads.rewarded.ServerSideVerificationOptions
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,7 +43,8 @@ enum class AdLoadState { Idle, Loading, Ready, Showing, Failed }
 @Singleton
 class RewardedAdManager @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val telemetry: AppTelemetry
+    private val telemetry: AppTelemetry,
+    private val firebaseAuth: FirebaseAuth
 ) {
 
     private val _adLoadState = MutableStateFlow(AdLoadState.Idle)
@@ -112,6 +115,19 @@ class RewardedAdManager @Inject constructor(
         if (ad == null || _adLoadState.value != AdLoadState.Ready) {
             onAdFailed("Ad isn't available right now. Please try again in a moment.")
             return
+        }
+
+        // Server-Side Verification: bind this impression to the signed-in user
+        // so AdMob's SSV callback grants credits to the right account. The
+        // backend trusts this signed callback — never the client.
+        if (CreditConfig.USE_ADMOB_SSV) {
+            firebaseAuth.currentUser?.uid?.let { uid ->
+                ad.setServerSideVerificationOptions(
+                    ServerSideVerificationOptions.Builder()
+                        .setCustomData(uid)
+                        .build()
+                )
+            }
         }
 
         _adLoadState.value = AdLoadState.Showing
