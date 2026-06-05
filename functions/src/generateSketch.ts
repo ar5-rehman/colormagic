@@ -96,24 +96,23 @@ export const generateSketch = onCall(
       );
     }
     const model = modelForSource(source);
-    // Provider follows the credit bucket: free → Pollinations, paid → OpenAI.
-    // `FORCE_FREE_PROVIDER` overrides everything to Pollinations while the
+    // Provider follows the credit bucket: free → Cloudflare, paid → OpenAI.
+    // `FORCE_FREE_PROVIDER` overrides everything to Cloudflare while the
     // OpenAI account has no billing.
-    const provider = FORCE_FREE_PROVIDER ? "pollinations" : providerForSource(source);
+    const provider = FORCE_FREE_PROVIDER ? "cloudflare" : providerForSource(source);
 
     // 3. Generate the line art. Failure here spends NO credit.
     let png: Buffer;
     try {
       png = await generateColoringImage(openai, provider, model, buildColoringPrompt(prompt));
     } catch (err) {
+      // Full reason is logged server-side for diagnosis; the child only ever
+      // sees the friendly message below (rendered on the "Hmm, that didn't
+      // work" screen with a Try Again button).
       console.error(`Image generation failed (provider=${provider}, model=${model})`, err);
-      // TEMP DEBUG: include the real reason in the user-facing message so it can
-      // be diagnosed without the CLI. Revert to the generic message below once
-      // the cause is found.
-      const reason = err instanceof Error ? err.message : String(err);
       throw new HttpsError(
         "internal",
-        `We couldn't draw that sketch. [debug: ${reason}]`
+        "Our magic crayons need a quick rest. Please try again in a moment!"
       );
     }
 

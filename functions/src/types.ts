@@ -24,7 +24,7 @@ export interface UserDoc {
   subscriptionPurchaseToken: string | null;
   // Purchased extra packs (PAID — these use the OpenAI provider).
   extraCredits: number;
-  // Rewarded-ad earned credits (FREE — these always use the free Pollinations
+  // Rewarded-ad earned credits (FREE — these always use the free Cloudflare
   // provider, never OpenAI, so ad rewards never cost us money to fulfil).
   adCredits: number;
   // Daily free/premium credit grant — refreshed once per the USER'S LOCAL

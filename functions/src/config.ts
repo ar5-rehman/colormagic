@@ -25,7 +25,7 @@ export const EXTRA_PACK_CREDITS = 20;     // credits granted by one extra pack
 export const MONTHLY_PERIOD_DAYS = 30;    // approximate billing-cycle length
 
 // ── Daily credit economy (hybrid free / rewarded-ad / premium model) ───
-export const FREE_DAILY_CREDITS = 1;          // free-tier daily grant
+export const FREE_DAILY_CREDITS = 0;          // free tier earns via rewarded ads only (no daily freebie)
 export const PREMIUM_DAILY_CREDITS = 30;      // premium-tier daily grant
 export const REWARDED_AD_CREDITS = 3;         // credits per completed rewarded ad
 export const MAX_REWARDED_ADS_PER_DAY = 5;    // cap per calendar day
@@ -39,16 +39,16 @@ export const COST_PREMIUM_STYLE = 2;
 
 // ── Image generation strategy ──────────────────────────────────────────
 // Per-bucket provider (see credits.providerForSource):
-//   Daily + Ad credits  → Pollinations (free public Stable Diffusion endpoint)
+//   Daily + Ad credits  → Cloudflare Workers AI (FLUX, free tier)
 //   Pro + Extra packs   → OpenAI gpt-image-1 (paid for by the user's purchase)
 // Rewarded-ad credits are deliberately routed to the FREE provider so that
 // honouring an ad reward never costs us a paid OpenAI call.
 //
 // Kill switch — set to true while the OpenAI account has no billing. While
-// on, ALL credits use Pollinations regardless of plan (so paid users still
-// get *something* instead of an error). Flip to false the moment billing is
-// added to the OpenAI account and no other code change is needed; paid
-// users will immediately start getting OpenAI images on their next sketch.
+// on, ALL credits use Cloudflare regardless of plan (so paid users still get
+// *something* instead of an error). Flip to false the moment billing is added
+// to the OpenAI account and no other code change is needed; paid users will
+// immediately start getting OpenAI images on their next sketch.
 export const FORCE_FREE_PROVIDER = true;
 
 /** When false, the OpenAI Moderations API call is skipped. Leave false while

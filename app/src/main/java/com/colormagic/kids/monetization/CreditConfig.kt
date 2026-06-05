@@ -6,7 +6,9 @@ package com.colormagic.kids.monetization
  * these values, update both this file and functions/src/config.ts.
  */
 object CreditConfig {
-    const val FREE_DAILY_CREDITS = 1
+    // Free tier gets NO daily freebie — credits come from rewarded ads or a
+    // premium subscription only.
+    const val FREE_DAILY_CREDITS = 0
     const val REWARDED_AD_CREDITS = 3
     const val MAX_REWARDED_ADS_PER_DAY = 5
     const val PREMIUM_DAILY_CREDITS = 30

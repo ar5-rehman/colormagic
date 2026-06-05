@@ -145,8 +145,8 @@ describe("clampOffsetMinutes", () => {
 
 describe("credit source → provider/model routing", () => {
   test("daily and ad credits use the FREE provider/model", () => {
-    expect(providerForSource("daily")).toBe("pollinations");
-    expect(providerForSource("ad")).toBe("pollinations");
+    expect(providerForSource("daily")).toBe("cloudflare");
+    expect(providerForSource("ad")).toBe("cloudflare");
     expect(modelForSource("daily")).toBe(MODEL_FREE);
     expect(modelForSource("ad")).toBe(MODEL_FREE);
   });
@@ -172,7 +172,7 @@ describe("credit source → provider/model routing", () => {
     const user = makeUser({dailyCreditsAvailable: 0, adCredits: 1, extraCredits: 0});
     const source = pickCreditSource(user)!;
     expect(source).toBe("ad");
-    expect(providerForSource(source)).toBe("pollinations");
+    expect(providerForSource(source)).toBe("cloudflare");
   });
 });
 

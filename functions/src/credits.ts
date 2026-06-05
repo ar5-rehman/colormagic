@@ -9,7 +9,7 @@
  *   4. extra     — PURCHASED extra packs (never expire) → PAID provider (OpenAI)
  *
  * Economic rule: only PAID credits (monthly, extra) use the costly OpenAI
- * provider. FREE credits (daily, ad) always use the free Pollinations provider,
+ * provider. FREE credits (daily, ad) always use the free Cloudflare provider,
  * so fulfilling a rewarded-ad reward never costs us money.
  */
 import {Timestamp} from "firebase-admin/firestore";
@@ -204,15 +204,16 @@ export function modelForSource(source: CreditSource): string {
   return source === "daily" || source === "ad" ? MODEL_FREE : MODEL_PREMIUM;
 }
 
-export type ImageProvider = "openai" | "pollinations";
+export type ImageProvider = "openai" | "cloudflare";
 
 /**
  * Which image service fulfils a credit from [source].
- * FREE credits (daily, ad) → Pollinations (free). PAID credits (monthly, extra)
- * → OpenAI. This guarantees rewarded-ad rewards never cost us OpenAI money.
+ * FREE credits (daily, ad) → Cloudflare Workers AI (free tier). PAID credits
+ * (monthly, extra) → OpenAI. This guarantees rewarded-ad rewards never cost us
+ * OpenAI money.
  */
 export function providerForSource(source: CreditSource): ImageProvider {
-  return source === "daily" || source === "ad" ? "pollinations" : "openai";
+  return source === "daily" || source === "ad" ? "cloudflare" : "openai";
 }
 
 /**

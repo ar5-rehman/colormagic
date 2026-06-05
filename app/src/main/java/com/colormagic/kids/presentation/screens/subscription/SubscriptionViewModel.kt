@@ -139,7 +139,6 @@ private val defaultPlans = listOf(
         tagline = "Try out the magic.",
         price = "Free",
         features = listOf(
-            "1 free credit every day",
             "Watch ads to earn +3 credits",
             "Up to 5 rewarded ads/day",
             "Save to Gallery — always free",

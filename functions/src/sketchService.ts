@@ -56,9 +56,9 @@ export async function generateColoringImage(
   model: string,
   coloringPrompt: string
 ): Promise<Buffer> {
-  // Free path — Pollinations.ai. Returns the PNG bytes directly.
-  if (provider === "pollinations") {
-    return generateWithPollinations(coloringPrompt);
+  // Free path — Cloudflare Workers AI (FLUX). Returns the image bytes.
+  if (provider === "cloudflare") {
+    return generateWithCloudflare(coloringPrompt);
   }
   // Paid path — OpenAI.
 
@@ -103,63 +103,77 @@ export async function generateColoringImage(
 }
 
 /**
- * Free image-generation backend. Calls Pollinations.ai's public Stable
- * Diffusion endpoint — no API key, no cost. The prompt template in
- * buildColoringPrompt() does the heavy lifting to keep output line-art-only.
+ * Free image-generation backend. Calls Cloudflare Workers AI (FLUX schnell).
  *
- * Tradeoffs vs OpenAI:
- *   • No API key / billing required, $0.00 per image
- *   • Generation time ~10–30s (public service, no SLA)
- *   • Output quality lower than gpt-image-1
- *   • No output moderation — relies entirely on our prompt template + the
- *     keyword blocklist run before this is called
+ * Why Cloudflare: a genuine free tier (~10k neurons/day) that works from a
+ * server with an API token, no watermark, reliable infra — unlike Pollinations
+ * whose free tier became unusable from shared server IPs. The prompt template
+ * in buildColoringPrompt() keeps the output a colorable 3D-style line drawing.
+ *
+ * Setup: put these in functions/.env (loaded automatically at deploy):
+ *   CF_ACCOUNT_ID=...   (Cloudflare dashboard → Workers & Pages → Account ID)
+ *   CF_API_TOKEN=...    (My Profile → API Tokens → "Workers AI" template)
  */
-async function generateWithPollinations(prompt: string): Promise<Buffer> {
-  // Pollinations gated its free tier: anonymous requests are limited to ONE
-  // queued request per IP, which is unusable from a shared Cloud Functions IP
-  // (you'll see HTTP 402 "Queue full for IP …"). An API key lifts the limit to
-  // a per-ACCOUNT quota. Put the key in functions/.env as POLLINATIONS_TOKEN=...
-  const token = process.env.POLLINATIONS_TOKEN?.trim();
-  const encoded = encodeURIComponent(prompt);
-
-  // Endpoint choice matters:
-  //  • With an API key → the NEW unified endpoint gen.pollinations.ai, which
-  //    actually honours the key (per-account quota / Pollen credits).
-  //  • Without a key → the legacy anonymous endpoint (heavily rate-limited;
-  //    usually returns HTTP 402 "Queue full" from a shared server IP).
-  // The old image.pollinations.ai endpoint IGNORES the new keys, which is why
-  // adding the key there changed nothing.
-  let url: string;
-  const headers: Record<string, string> = {};
-  if (token) {
-    url =
-      "https://gen.pollinations.ai/image/" +
-      encoded +
-      `?width=1024&height=1024&model=flux&key=${encodeURIComponent(token)}`;
-    headers.Authorization = `Bearer ${token}`;
-  } else {
-    url =
-      "https://image.pollinations.ai/prompt/" +
-      encoded +
-      "?width=1024&height=1024&nologo=true&model=flux";
+async function generateWithCloudflare(prompt: string): Promise<Buffer> {
+  const accountId = process.env.CF_ACCOUNT_ID?.trim();
+  const apiToken = process.env.CF_API_TOKEN?.trim();
+  if (!accountId || !apiToken) {
+    throw new Error(
+      "Cloudflare not configured — set CF_ACCOUNT_ID and CF_API_TOKEN in functions/.env"
+    );
   }
 
-  const fetchImage = async (): Promise<Buffer> => {
+  // FLUX schnell: fast, free-tier-friendly. Prompt goes in the JSON body, so
+  // there are no URL-length limits. `steps` 1-8 (higher = a bit more detail).
+  const url =
+    `https://api.cloudflare.com/client/v4/accounts/${accountId}` +
+    "/ai/run/@cf/black-forest-labs/flux-1-schnell";
+
+  const attempt = async (): Promise<Buffer> => {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 60_000);
     try {
-      const res = await fetch(url, {signal: controller.signal, headers});
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({prompt, steps: 6}),
+        signal: controller.signal,
+      });
+
       if (!res.ok) {
-        const body = (await res.text().catch(() => "")).slice(0, 300);
-        throw new Error(`Pollinations HTTP ${res.status}: ${body}`);
+        const body = (await res.text().catch(() => "")).slice(0, 400);
+        throw new Error(`Cloudflare HTTP ${res.status}: ${body}`);
       }
+
       const contentType = res.headers.get("content-type") ?? "";
+      // flux-1-schnell returns JSON: { success, result: { image: "<base64>" } }
+      if (contentType.includes("application/json")) {
+        const json = (await res.json()) as {
+          success?: boolean;
+          result?: {image?: string};
+          errors?: unknown;
+        };
+        const b64 = json.result?.image;
+        if (!json.success || !b64) {
+          throw new Error(
+            `Cloudflare returned no image: ${JSON.stringify(json.errors ?? json).slice(0, 300)}`
+          );
+        }
+        const buf = Buffer.from(b64, "base64");
+        if (buf.length < 1000) {
+          throw new Error(`Cloudflare image too small (${buf.length} bytes)`);
+        }
+        return buf;
+      }
+
+      // Some Workers AI models return raw image bytes instead of JSON.
       const buf = Buffer.from(await res.arrayBuffer());
-      // Pollinations sometimes returns a small HTML/error page with 200 OK —
-      // guard against uploading a non-image as a "sketch".
       if (!contentType.startsWith("image/") || buf.length < 1000) {
         throw new Error(
-          `Pollinations returned a non-image (type=${contentType}, bytes=${buf.length})`
+          `Cloudflare returned a non-image (type=${contentType}, bytes=${buf.length})`
         );
       }
       return buf;
@@ -168,23 +182,13 @@ async function generateWithPollinations(prompt: string): Promise<Buffer> {
     }
   };
 
-  // The free queue allows 1 in-flight request, so retry with back-off rather
-  // than firing concurrent calls (which would just keep hitting "queue full").
-  const maxAttempts = 3;
-  let lastErr: unknown = new Error("Pollinations: no attempt ran");
-  for (let i = 0; i < maxAttempts; i++) {
-    try {
-      return await fetchImage();
-    } catch (e) {
-      lastErr = e;
-      // eslint-disable-next-line no-console
-      console.warn(`Pollinations attempt ${i + 1}/${maxAttempts} failed:`, e);
-      if (i < maxAttempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 2500));
-      }
-    }
+  try {
+    return await attempt();
+  } catch (first) {
+    // eslint-disable-next-line no-console
+    console.warn("Cloudflare attempt 1 failed, retrying once:", first);
+    return await attempt();
   }
-  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 export interface UploadedSketch {

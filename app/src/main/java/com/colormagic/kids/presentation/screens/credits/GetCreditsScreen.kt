@@ -137,7 +137,6 @@ fun GetCreditsScreen(
                 Spacer(Modifier.height(20.dp))
                 BalanceCard(
                     total = state.quota.totalAvailableCredits,
-                    dailyRemaining = state.quota.remainingFreeSketches,
                     isPremium = state.quota.isPremium,
                     isLoading = state.isLoading,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -204,7 +203,6 @@ private fun TopBar(onBack: () -> Unit) {
 @Composable
 private fun BalanceCard(
     total: Int,
-    dailyRemaining: Int,
     isPremium: Boolean,
     isLoading: Boolean,
     modifier: Modifier = Modifier
@@ -252,7 +250,7 @@ private fun BalanceCard(
                 )
             } else {
                 StatusPill(
-                    text = "$dailyRemaining of ${CreditConfig.FREE_DAILY_CREDITS} daily free credits left",
+                    text = "Watch ads to earn credits",
                     container = Color(0xFFB7A8D9),
                     ink = Color.White
                 )
@@ -477,9 +475,9 @@ private fun HowCreditsWorkSection(modifier: Modifier = Modifier) {
         CreditRuleRow("Generate a coloring page", "1 credit")
         CreditRuleRow("Apply a premium style", "2 credits")
         CreditRuleRow("Save to your gallery", "Free")
-        CreditRuleRow("Daily free credits (free plan)", "${CreditConfig.FREE_DAILY_CREDITS}/day")
-        CreditRuleRow("Daily free credits (premium)", "${CreditConfig.PREMIUM_DAILY_CREDITS}/day")
         CreditRuleRow("Watch a rewarded ad", "+${CreditConfig.REWARDED_AD_CREDITS} credits")
+        CreditRuleRow("Rewarded ads per day", "up to ${CreditConfig.MAX_REWARDED_ADS_PER_DAY}")
+        CreditRuleRow("Premium subscription", "${CreditConfig.PREMIUM_DAILY_CREDITS} credits/day")
     }
 }
 
