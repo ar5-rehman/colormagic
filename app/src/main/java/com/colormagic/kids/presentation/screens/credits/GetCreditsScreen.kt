@@ -10,10 +10,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -91,10 +93,14 @@ fun GetCreditsScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
+      // Cap width and centre on large screens (tablets) so cards don't stretch
+      // edge-to-edge; on phones widthIn(max=640) is a no-op.
+      Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
         LazyColumn(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
+                .fillMaxHeight()
+                .widthIn(max = 640.dp)
+                .align(Alignment.TopCenter),
             contentPadding = PaddingValues(
                 top = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding(),
                 bottom = 24.dp
@@ -173,6 +179,7 @@ fun GetCreditsScreen(
                 HowCreditsWorkSection(modifier = Modifier.padding(horizontal = 24.dp))
             }
         }
+      }
     }
 }
 

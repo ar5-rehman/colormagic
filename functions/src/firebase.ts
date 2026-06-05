@@ -20,4 +20,6 @@ export const Collections = {
   processedPurchases: "processedPurchases",
   /** Idempotency ledger — one doc per AdMob SSV transaction_id. */
   processedAdRewards: "processedAdRewards",
+  /** Parent-submitted feedback (suggestions / bug reports / questions). */
+  feedback: "feedback",
 } as const;

@@ -72,4 +72,10 @@ class AppTelemetry @Inject constructor() {
             if (amount > 0) param("amount", amount.toLong())
         }
     }
+
+    /** A generic, parameter-less app event (e.g. feedback_submitted). The name
+     *  must be a stable identifier and must never contain free-text PII. */
+    fun logAppEvent(eventName: String) {
+        analytics.logEvent(eventName) {}
+    }
 }

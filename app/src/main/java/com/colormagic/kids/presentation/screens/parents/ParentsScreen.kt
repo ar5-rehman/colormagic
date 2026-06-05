@@ -21,6 +21,7 @@ import javax.inject.Inject
 @Composable
 fun ParentsScreen(
     onManageSubscription: () -> Unit,
+    onOpenSupport: () -> Unit,
     onLeaveTab: () -> Unit,
     router: ParentsRouterViewModel = hiltViewModel()
 ) {
@@ -32,7 +33,10 @@ fun ParentsScreen(
             onCancel = onLeaveTab
         )
     } else {
-        ParentAreaScreen(onManageSubscription = onManageSubscription)
+        ParentAreaScreen(
+            onManageSubscription = onManageSubscription,
+            onOpenSupport = onOpenSupport
+        )
     }
 }
 

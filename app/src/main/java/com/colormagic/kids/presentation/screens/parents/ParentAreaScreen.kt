@@ -23,12 +23,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SupportAgent
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,10 +45,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.colormagic.kids.presentation.util.AppLinks
+import com.colormagic.kids.presentation.util.openUrl
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
@@ -62,12 +68,16 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 @Composable
 fun ParentAreaScreen(
     onManageSubscription: () -> Unit,
+    onOpenSupport: () -> Unit = {},
     viewModel: ParentAreaViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
     val user by authViewModel.authState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val onTerms = { context.openUrl(AppLinks.TERMS_URL) }
+    val onPrivacy = { context.openUrl(AppLinks.PRIVACY_URL) }
 
     // Refresh credit count + plan label on every resume — a sketch made
     // (which deducts a credit) or a purchase (which adds them) should
@@ -76,6 +86,13 @@ fun ParentAreaScreen(
         androidx.lifecycle.Lifecycle.Event.ON_RESUME
     ) {
         viewModel.refreshQuota()
+    }
+
+    // Refresh credits/plan whenever the account identity changes — e.g. after a
+    // sign-out mints a fresh anonymous uid — so the new account's balance shows
+    // right away instead of waiting for the next resume.
+    androidx.compose.runtime.LaunchedEffect(user?.uid) {
+        if (user?.uid != null) viewModel.refreshQuota()
     }
 
     val accountCard: @Composable (Modifier) -> Unit = { modifier ->
@@ -94,6 +111,9 @@ fun ParentAreaScreen(
             onSketchLimitChanged = viewModel::onSketchLimitChanged,
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
             onClearArtwork = viewModel::onClearArtwork,
+            onOpenSupport = onOpenSupport,
+            onTerms = onTerms,
+            onPrivacy = onPrivacy,
             accountCard = accountCard
         )
     } else {
@@ -104,6 +124,9 @@ fun ParentAreaScreen(
             onSketchLimitChanged = viewModel::onSketchLimitChanged,
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
             onClearArtwork = viewModel::onClearArtwork,
+            onOpenSupport = onOpenSupport,
+            onTerms = onTerms,
+            onPrivacy = onPrivacy,
             accountCard = accountCard
         )
     }
@@ -117,6 +140,9 @@ private fun ParentAreaTabletContent(
     onSketchLimitChanged: (SketchLimit) -> Unit,
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
     onClearArtwork: () -> Unit,
+    onOpenSupport: () -> Unit,
+    onTerms: () -> Unit,
+    onPrivacy: () -> Unit,
     accountCard: @Composable (Modifier) -> Unit
 ) {
     Surface(
@@ -169,7 +195,9 @@ private fun ParentAreaTabletContent(
                         allowFreeTextPrompts = state.allowFreeTextPrompts,
                         onAllowFreeTextPromptsChanged = onAllowFreeTextPromptsChanged
                     )
+                    HelpSupportCard(onOpenSupport = onOpenSupport)
                     ClearArtworkCard(onDelete = onClearArtwork)
+                    LegalFooter(onTerms = onTerms, onPrivacy = onPrivacy)
                 }
             }
         }
@@ -184,6 +212,9 @@ private fun ParentAreaContent(
     onSketchLimitChanged: (SketchLimit) -> Unit,
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
     onClearArtwork: () -> Unit,
+    onOpenSupport: () -> Unit,
+    onTerms: () -> Unit,
+    onPrivacy: () -> Unit,
     accountCard: @Composable (Modifier) -> Unit
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
@@ -235,9 +266,24 @@ private fun ParentAreaContent(
             }
 
             item {
+                HelpSupportCard(
+                    onOpenSupport = onOpenSupport,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+
+            item {
                 ClearArtworkCard(
                     onDelete = onClearArtwork,
                     modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+
+            item {
+                LegalFooter(
+                    onTerms = onTerms,
+                    onPrivacy = onPrivacy,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
                 )
             }
         }
@@ -549,6 +595,97 @@ private fun PrivacyCard(modifier: Modifier = Modifier) {
     }
 }
 
+// ─── Card: Help & Support ──────────────────────────────────────────
+
+@Composable
+private fun HelpSupportCard(
+    onOpenSupport: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onOpenSupport,
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFFB7E0F2),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF055680)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.SupportAgent,
+                    contentDescription = null,
+                    tint = Color(0xFFE3F2FB),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Help & Support",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF093B57)
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = "Send a suggestion, report a bug, or ask a question.",
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp,
+                    color = Color(0xFF0B4D72)
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                contentDescription = null,
+                tint = Color(0xFF0B4D72),
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+// ─── Legal footer (Terms / Privacy) ────────────────────────────────
+
+@Composable
+private fun LegalFooter(
+    onTerms: () -> Unit,
+    onPrivacy: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LegalLink(text = "Terms of Service", onClick = onTerms)
+        Text(text = "  •  ", fontSize = 13.sp, color = BrandTokens.MutedInk)
+        LegalLink(text = "Privacy Policy", onClick = onPrivacy)
+    }
+}
+
+@Composable
+private fun LegalLink(text: String, onClick: () -> Unit) {
+    Surface(onClick = onClick, color = Color.Transparent) {
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)
+        )
+    }
+}
+
 // ─── Card: Clear Artwork ───────────────────────────────────────────
 
 @Composable
@@ -644,6 +781,9 @@ private fun ParentAreaPreviewPhone() {
             onSketchLimitChanged = {},
             onAllowFreeTextPromptsChanged = {},
             onClearArtwork = {},
+            onOpenSupport = {},
+            onTerms = {},
+            onPrivacy = {},
             accountCard = { modifier ->
                 AccountCard(
                     user = null,

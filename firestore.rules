@@ -34,6 +34,13 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // feedback — parent-submitted support messages. Written only by the
+    // submitFeedback Cloud Function (Admin SDK); never readable/writable by
+    // clients.
+    match /feedback/{id} {
+      allow read, write: if false;
+    }
+
     // Deny everything else by default.
     match /{document=**} {
       allow read, write: if false;

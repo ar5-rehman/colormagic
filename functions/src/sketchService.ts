@@ -9,51 +9,38 @@ import {IMAGE_QUALITY, IMAGE_SIZE} from "./config";
 import type {ImageProvider} from "./credits";
 
 /**
- * Wraps the child's idea in a strict coloring-page template. The template
- * forces black-and-white line art and re-states the safety constraints so
- * the image model has them even though the prompt already passed our gate.
+ * Wraps the child's idea in a strict 3D-STYLE coloring-page template.
+ *
+ * The output is still clean black-and-white line art the child colors in, but
+ * the subject is drawn to look three-dimensional: rounded volumetric forms,
+ * gentle perspective/depth, and light interior contour lines that suggest
+ * roundness — like a 3D cartoon character turned into a printable coloring page.
+ *
+ * The template does two jobs at once:
+ *  1. Restate the safety constraints (defence in depth — the image model has
+ *     its own moderation, but reinforcing here cuts edge cases).
+ *  2. Lock the output to a 3D-LOOK line drawing that is still COLORABLE: pure
+ *     black outlines on white with large open regions and NO solid shading /
+ *     gradients / color (image models love to add those unless told repeatedly).
+ *
+ * Phrasing tricks that materially improve output quality:
+ *   • "3D-style cartoon ... volumetric rounded forms with depth and perspective"
+ *     — pushes the model toward dimensional shapes instead of flat icons
+ *   • "thick clean black outlines on a pure white background" — keeps it line art
+ *   • "light, thin interior contour lines only" — adds 3D form without filling
+ *     the regions the child needs to color
+ *   • Negative constraints repeated — image models weight repeats more strongly
  */
 export function buildColoringPrompt(childPrompt: string): string {
-  // The prompt has to do two jobs simultaneously:
-  //  1. Restate the safety constraints (defence in depth — the image model
-  //     has its own moderation, but reinforcing here cuts edge cases).
-  //  2. Lock the output style to clean line art with NO color and NO shading.
-  //     Image models love to add gradients/colors unless told repeatedly.
-  //
-  // Phrasing tricks that materially improve output quality:
-  //   • "in the style of a printable coloring book for young children" —
-  //     activates the model's coloring-book training samples
-  //   • "vector-like black outlines on a pure white background" — anchors
-  //     it to line-art rather than illustration
-  //   • Negative constraints listed twice (style + important) — image models
-  //     weight repeated instructions more strongly
-  return `Create a printable black-and-white coloring book page for a young child (ages 4 to 10).
-
-Subject:
-${childPrompt}
-
-Required style:
-- in the style of a printable coloring book for young children
-- simple, friendly cartoon characters with rounded shapes
-- thick clean BLACK outlines on a PURE WHITE background
-- vector-like line art only — no shading, no fill, no color of any kind
-- large open empty regions inside every shape so the child can color them in
-- cute, happy, smiling, gentle expressions
-- a single clearly centred subject
-- no realistic textures, no realistic faces, no photo-realism
-
-ABSOLUTELY DO NOT INCLUDE:
-- color of any kind (the page must be 100% black and white)
-- gray shading, hatching, dots, or gradients
-- realistic skin, hair, or fur textures
-- tiny details that a small child cannot color
-- text, letters, numbers, signatures, watermarks, or logos
-- copyrighted, branded, or trademarked characters
-- real or recognisable people, celebrities, or public figures
-- anything scary, violent, sad, adult, romantic, weapon-related, or otherwise unsafe for a 4-year-old
-- backgrounds, scenery, or borders that fill the page — leave open whitespace
-
-Think: a friendly illustration a parent would print from a coloring book for their preschooler.`;
+  // Pushes hard toward a 3D LOOK while staying colorable. The tension: real 3D
+  // needs shading, but a coloring page must stay blank inside — so we lean on
+  // the depth cues that DON'T fill the regions (perspective, three-quarter
+  // angle, volumetric rounded forms, interior contour lines, a ground shadow).
+  return `A cute 3D-style cartoon ${childPrompt}, drawn as a coloring page for kids (ages 4-10).
+Make it clearly THREE-DIMENSIONAL: a chunky, rounded, VOLUMETRIC character shown from a slightly angled three-quarter view with strong depth and perspective — like a 3D-rendered Pixar-style character turned into a coloring outline.
+Use bold clean BLACK outlines on a PURE WHITE background, with thin interior CONTOUR lines along curved edges to show roundness and form, and a simple oval outline shadow on the ground beneath a single centered subject.
+Keep big open white areas inside the shapes so a child can still color it in.
+Avoid: solid color, heavy gray shading, gradients, tiny details, text, logos, branded characters, real people, and anything scary or unsafe for young children.`;
 }
 
 /**
@@ -128,15 +115,76 @@ export async function generateColoringImage(
  *     keyword blocklist run before this is called
  */
 async function generateWithPollinations(prompt: string): Promise<Buffer> {
-  const url =
-    "https://image.pollinations.ai/prompt/" +
-    encodeURIComponent(prompt) +
-    "?width=1024&height=1024&nologo=true&model=flux";
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Pollinations request failed: HTTP ${res.status}`);
+  // Pollinations gated its free tier: anonymous requests are limited to ONE
+  // queued request per IP, which is unusable from a shared Cloud Functions IP
+  // (you'll see HTTP 402 "Queue full for IP …"). An API key lifts the limit to
+  // a per-ACCOUNT quota. Put the key in functions/.env as POLLINATIONS_TOKEN=...
+  const token = process.env.POLLINATIONS_TOKEN?.trim();
+  const encoded = encodeURIComponent(prompt);
+
+  // Endpoint choice matters:
+  //  • With an API key → the NEW unified endpoint gen.pollinations.ai, which
+  //    actually honours the key (per-account quota / Pollen credits).
+  //  • Without a key → the legacy anonymous endpoint (heavily rate-limited;
+  //    usually returns HTTP 402 "Queue full" from a shared server IP).
+  // The old image.pollinations.ai endpoint IGNORES the new keys, which is why
+  // adding the key there changed nothing.
+  let url: string;
+  const headers: Record<string, string> = {};
+  if (token) {
+    url =
+      "https://gen.pollinations.ai/image/" +
+      encoded +
+      `?width=1024&height=1024&model=flux&key=${encodeURIComponent(token)}`;
+    headers.Authorization = `Bearer ${token}`;
+  } else {
+    url =
+      "https://image.pollinations.ai/prompt/" +
+      encoded +
+      "?width=1024&height=1024&nologo=true&model=flux";
   }
-  return Buffer.from(await res.arrayBuffer());
+
+  const fetchImage = async (): Promise<Buffer> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60_000);
+    try {
+      const res = await fetch(url, {signal: controller.signal, headers});
+      if (!res.ok) {
+        const body = (await res.text().catch(() => "")).slice(0, 300);
+        throw new Error(`Pollinations HTTP ${res.status}: ${body}`);
+      }
+      const contentType = res.headers.get("content-type") ?? "";
+      const buf = Buffer.from(await res.arrayBuffer());
+      // Pollinations sometimes returns a small HTML/error page with 200 OK —
+      // guard against uploading a non-image as a "sketch".
+      if (!contentType.startsWith("image/") || buf.length < 1000) {
+        throw new Error(
+          `Pollinations returned a non-image (type=${contentType}, bytes=${buf.length})`
+        );
+      }
+      return buf;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  // The free queue allows 1 in-flight request, so retry with back-off rather
+  // than firing concurrent calls (which would just keep hitting "queue full").
+  const maxAttempts = 3;
+  let lastErr: unknown = new Error("Pollinations: no attempt ran");
+  for (let i = 0; i < maxAttempts; i++) {
+    try {
+      return await fetchImage();
+    } catch (e) {
+      lastErr = e;
+      // eslint-disable-next-line no-console
+      console.warn(`Pollinations attempt ${i + 1}/${maxAttempts} failed:`, e);
+      if (i < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 export interface UploadedSketch {

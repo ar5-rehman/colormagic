@@ -14,3 +14,5 @@ export {grantRewardedAdCredits} from "./grantRewardedAdCredits";
 export {admobSsvCallback} from "./admobSsv";
 // Google Play Real-time Developer Notifications (subscription lifecycle).
 export {playRtdnHandler} from "./playRtdn";
+// Parent-side support form (suggestions / bug reports / questions).
+export {submitFeedback} from "./submitFeedback";

@@ -70,6 +70,18 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun signOut() {
         firebaseAuth.signOut()
+        // Anonymous-only app: there is no other account to land on, so signing
+        // out immediately mints a FRESH anonymous identity. This matches the
+        // Account card's promise ("Signing out starts a fresh one"), keeps every
+        // backend call authenticated, and — crucially — stops the UI getting
+        // stuck on the "resolving identity" spinner (which made sign-out look
+        // broken). The new uid gets a brand-new server-side account on its
+        // first quota fetch (fresh daily credits, empty history).
+        runCatching { firebaseAuth.signInAnonymously().await() }
+            .onFailure { e ->
+                Log.e("AuthRepository", "Re-sign-in after sign out failed", e)
+                telemetry.recordNonFatal(e)
+            }
     }
 }
 

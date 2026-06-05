@@ -22,6 +22,7 @@ import com.colormagic.kids.presentation.screens.parents.ParentsScreen
 import com.colormagic.kids.presentation.screens.purchasesuccess.PurchaseSuccessScreen
 import com.colormagic.kids.presentation.screens.savesuccess.SaveSuccessScreen
 import com.colormagic.kids.presentation.screens.settings.SettingsScreen
+import com.colormagic.kids.presentation.screens.support.SupportScreen
 import com.colormagic.kids.presentation.screens.sketchpreview.SketchPreviewScreen
 import com.colormagic.kids.presentation.screens.credits.GetCreditsScreen
 import com.colormagic.kids.presentation.screens.subscription.SubscriptionScreen
@@ -75,8 +76,13 @@ fun AppNavGraph(
         composable(TopLevelDestination.PARENTS.route) {
             ParentsScreen(
                 onManageSubscription = { navController.navigate(Screen.Subscription.route) },
+                onOpenSupport = { navController.navigate(Screen.Support.route) },
                 onLeaveTab = { navController.navigateToTopLevel(TopLevelDestination.HOME) }
             )
+        }
+
+        composable(Screen.Support.route) {
+            SupportScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Screen.GetCredits.route) {

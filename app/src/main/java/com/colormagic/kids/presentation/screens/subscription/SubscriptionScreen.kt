@@ -54,9 +54,12 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextDecoration
 import android.content.Intent
 import android.net.Uri
 import com.colormagic.kids.domain.model.BillingProducts
+import com.colormagic.kids.presentation.util.AppLinks
+import com.colormagic.kids.presentation.util.openUrl
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.text.font.FontWeight
@@ -217,6 +220,8 @@ private fun SubscriptionTabletContent(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(fraction = 0.6f)
             )
+            Spacer(Modifier.height(8.dp))
+            SubscriptionLegalLinks(modifier = Modifier.fillMaxWidth(fraction = 0.6f))
             if (state.errorMessage != null) {
                 Spacer(Modifier.height(6.dp))
                 Text(
@@ -341,6 +346,11 @@ private fun SubscriptionContent(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 32.dp)
+                )
+            }
+            item {
+                SubscriptionLegalLinks(
+                    modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
             if (state.errorMessage != null) {
@@ -894,6 +904,36 @@ private fun ManageSubscriptionButton(
             color = BrandTokens.MutedInk,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)
+        )
+    }
+}
+
+// ─── Terms / Privacy (required near the purchase action) ───────────
+
+@Composable
+private fun SubscriptionLegalLinks(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        LegalLinkText(text = "Terms of Service") { context.openUrl(AppLinks.TERMS_URL) }
+        Text(text = "  •  ", fontSize = 12.sp, color = BrandTokens.MutedInk)
+        LegalLinkText(text = "Privacy Policy") { context.openUrl(AppLinks.PRIVACY_URL) }
+    }
+}
+
+@Composable
+private fun LegalLinkText(text: String, onClick: () -> Unit) {
+    Surface(onClick = onClick, color = Color.Transparent) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = MaterialTheme.colorScheme.primary,
+            textDecoration = TextDecoration.Underline,
+            modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp)
         )
     }
 }

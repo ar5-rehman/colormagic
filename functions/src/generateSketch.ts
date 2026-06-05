@@ -106,8 +106,15 @@ export const generateSketch = onCall(
     try {
       png = await generateColoringImage(openai, provider, model, buildColoringPrompt(prompt));
     } catch (err) {
-      console.error("OpenAI generation failed", err);
-      throw new HttpsError("internal", "We couldn't draw that sketch. Please try again.");
+      console.error(`Image generation failed (provider=${provider}, model=${model})`, err);
+      // TEMP DEBUG: include the real reason in the user-facing message so it can
+      // be diagnosed without the CLI. Revert to the generic message below once
+      // the cause is found.
+      const reason = err instanceof Error ? err.message : String(err);
+      throw new HttpsError(
+        "internal",
+        `We couldn't draw that sketch. [debug: ${reason}]`
+      );
     }
 
     // 4. Upload. Failure here also spends NO credit.
