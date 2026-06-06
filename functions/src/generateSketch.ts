@@ -16,6 +16,7 @@ import {randomUUID} from "crypto";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import OpenAI from "openai";
 import {
+  ENFORCE_APP_CHECK,
   FORCE_FREE_PROVIDER,
   IMAGE_QUALITY,
   MAX_PROMPT_LENGTH,
@@ -42,7 +43,7 @@ import {GenerateSketchRequest, GenerateSketchResponse} from "./types";
 export const generateSketch = onCall(
   {
     region: REGION,
-    enforceAppCheck: true,
+    enforceAppCheck: ENFORCE_APP_CHECK,
     secrets: [OPENAI_API_KEY],
     timeoutSeconds: 120,
     memory: "512MiB",

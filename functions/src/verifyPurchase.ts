@@ -19,6 +19,7 @@ import {FieldValue, Timestamp} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {
   ANDROID_PACKAGE_NAME,
+  ENFORCE_APP_CHECK,
   EXTRA_PACK_CREDITS,
   MONTHLY_PERIOD_DAYS,
   PRODUCT_EXTRA_20,
@@ -32,7 +33,7 @@ import {androidPublisher} from "./playApi";
 import {VerifyPurchaseRequest, VerifyPurchaseResponse} from "./types";
 
 export const verifyPurchase = onCall(
-  {region: REGION, enforceAppCheck: true},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<VerifyPurchaseResponse> => {
     const uid = request.auth?.uid;
     if (!uid) {

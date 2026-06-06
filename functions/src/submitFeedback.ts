@@ -11,7 +11,7 @@
  */
 import {Timestamp} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import {REGION} from "./config";
+import {ENFORCE_APP_CHECK, REGION} from "./config";
 import {Collections, db} from "./firebase";
 
 const VALID_TYPES = ["suggestion", "bug", "question"] as const;
@@ -28,7 +28,7 @@ interface SubmitFeedbackRequest {
 }
 
 export const submitFeedback = onCall(
-  {region: REGION, enforceAppCheck: true},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<{success: true; id: string}> => {
     const uid = request.auth?.uid;
     if (!uid) {

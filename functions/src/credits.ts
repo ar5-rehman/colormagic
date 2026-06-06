@@ -104,6 +104,8 @@ export async function ensureUserDoc(uid: string, offsetMinutes = 0): Promise<Use
     updatedAt: now,
   };
   await ref.set(fresh);
+  // eslint-disable-next-line no-console
+  console.log(`ensureUserDoc: CREATED new user doc users/${uid}`);
   return fresh;
 }
 

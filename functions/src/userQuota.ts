@@ -8,7 +8,7 @@
  * worth of sketches without a separate "reset" call.
  */
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import {REGION} from "./config";
+import {ENFORCE_APP_CHECK, REGION} from "./config";
 import {
   clampOffsetMinutes,
   computeQuota,
@@ -52,12 +52,14 @@ async function revalidateSubscriptionIfExpired(
 }
 
 export const userQuota = onCall(
-  {region: REGION, enforceAppCheck: true},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<UserQuotaResponse> => {
     const uid = request.auth?.uid;
     if (!uid) {
       throw new HttpsError("unauthenticated", "Sign-in required.");
     }
+    // eslint-disable-next-line no-console
+    console.log(`userQuota: invoked for uid=${uid} (appCheck=${request.app != null})`);
     // The client sends its timezone offset so daily credits reset at the
     // user's LOCAL midnight (anchored to the server clock — not gameable).
     const offset = clampOffsetMinutes(

@@ -15,6 +15,18 @@ export const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 /** Deploy region — keep functions, Firestore and Storage in the same region. */
 export const REGION = "us-central1";
 
+/**
+ * App Check enforcement on the callable functions.
+ *
+ * IMPORTANT: this is enforced by the function itself — the App Check console's
+ * "Unenforced" toggle does NOT override it. During development the debug token
+ * regenerates on every reinstall, which then blocks EVERY callable with
+ * "App attestation failed" (and stops the Firestore user doc from ever being
+ * created). Keep this false while developing; set it to true before publishing
+ * (and register your release Play Integrity / debug tokens in App Check).
+ */
+export const ENFORCE_APP_CHECK = false;
+
 /** Must match the Android app's applicationId (release variant, no suffix). */
 export const ANDROID_PACKAGE_NAME = "com.colormagic.kids";
 

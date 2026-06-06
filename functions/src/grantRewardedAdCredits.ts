@@ -16,6 +16,7 @@
  */
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {
+  ENFORCE_APP_CHECK,
   REGION,
   REWARDED_AD_CREDITS,
   MAX_REWARDED_ADS_PER_DAY,
@@ -39,7 +40,7 @@ interface GrantRewardedAdResponse {
 }
 
 export const grantRewardedAdCredits = onCall(
-  {region: REGION, enforceAppCheck: true},
+  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<GrantRewardedAdResponse> => {
     const uid = request.auth?.uid;
     if (!uid) {
