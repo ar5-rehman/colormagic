@@ -6,7 +6,9 @@ import com.colormagic.kids.data.telemetry.AppTelemetry
 import com.colormagic.kids.domain.model.AuthUser
 import com.colormagic.kids.domain.repository.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
+import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,8 +16,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 import javax.inject.Singleton
+
+// Max time to wait for a Firebase sign-in before giving up so the UI never
+// hangs on an endless spinner.
+private const val SIGN_IN_TIMEOUT_MS = 15_000L
 
 // Firebase-backed implementation of [AuthRepository].
 //
@@ -56,15 +63,41 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun ensureSignedIn(): Result<AuthUser> = runCatching {
         // Already signed in (returning user) → reuse the existing uid.
         firebaseAuth.currentUser?.toAuthUser()
-            ?: firebaseAuth.signInAnonymously().await().user
-                ?.toAuthUser()
-            ?: error("Anonymous sign-in returned no user")
+        // Otherwise sign in anonymously, but with a HARD TIMEOUT so a hung
+        // network/Firebase call can never leave the UI spinning forever.
+        // withTimeoutOrNull returns null on timeout → we convert that into a
+        // clear, retryable error instead of an infinite wait.
+            ?: withTimeoutOrNull(SIGN_IN_TIMEOUT_MS) {
+                firebaseAuth.signInAnonymously().await().user?.toAuthUser()
+            }
+            ?: error("Couldn't reach the server. Check your internet and tap Try again.")
     }.onFailure { e ->
-        // Without this log the failure is invisible — the listener never
-        // fires, leaving the UI on a forever-spinner. The most common cause
-        // is Anonymous Authentication being disabled in the Firebase Console
-        // (Auth → Sign-in method → enable "Anonymous").
         Log.e("AuthRepository", "Anonymous sign-in failed", e)
+        telemetry.recordNonFatal(e)
+    }
+
+    override suspend fun signInWithGoogle(idToken: String): Result<AuthUser> = runCatching {
+        val credential = GoogleAuthProvider.getCredential(idToken, null)
+        val current = firebaseAuth.currentUser
+
+        val user = withTimeoutOrNull(SIGN_IN_TIMEOUT_MS) {
+            val result = if (current != null && current.isAnonymous) {
+                // Upgrade the guest in place — same uid, so credits/art carry over.
+                try {
+                    current.linkWithCredential(credential).await()
+                } catch (collision: FirebaseAuthUserCollisionException) {
+                    // This Google account already has its own Firebase user → sign
+                    // into that instead. (The anonymous uid is abandoned.)
+                    firebaseAuth.signInWithCredential(credential).await()
+                }
+            } else {
+                firebaseAuth.signInWithCredential(credential).await()
+            }
+            result.user?.toAuthUser()
+        }
+        user ?: error("Google sign-in timed out. Please try again.")
+    }.onFailure { e ->
+        Log.e("AuthRepository", "Google sign-in failed", e)
         telemetry.recordNonFatal(e)
     }
 
@@ -77,13 +110,24 @@ class AuthRepositoryImpl @Inject constructor(
         // stuck on the "resolving identity" spinner (which made sign-out look
         // broken). The new uid gets a brand-new server-side account on its
         // first quota fetch (fresh daily credits, empty history).
-        runCatching { firebaseAuth.signInAnonymously().await() }
-            .onFailure { e ->
-                Log.e("AuthRepository", "Re-sign-in after sign out failed", e)
-                telemetry.recordNonFatal(e)
-            }
+        runCatching {
+            withTimeoutOrNull(SIGN_IN_TIMEOUT_MS) {
+                firebaseAuth.signInAnonymously().await()
+            } ?: error("Re-sign-in timed out")
+        }.onFailure { e ->
+            Log.e("AuthRepository", "Re-sign-in after sign out failed", e)
+            telemetry.recordNonFatal(e)
+            // The AuthViewModel's recovery collector will retry and surface a
+            // visible error if this keeps failing — never an endless spinner.
+        }
     }
 }
 
 private fun FirebaseUser.toAuthUser(): AuthUser =
-    AuthUser(uid = uid, isAnonymous = isAnonymous)
+    AuthUser(
+        uid = uid,
+        isAnonymous = isAnonymous,
+        email = email,
+        displayName = displayName,
+        photoUrl = photoUrl?.toString()
+    )

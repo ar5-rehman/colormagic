@@ -48,6 +48,7 @@ import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandTertiaryButton
 import com.colormagic.kids.presentation.components.BrandTokens
+import com.colormagic.kids.presentation.components.ConfettiOverlay
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
 @Composable
@@ -58,18 +59,23 @@ fun SaveSuccessScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
-    if (info.isCompactWidth) {
-        SaveSuccessContent(
-            picture = state.picture,
-            onGoToGallery = onGoToGallery,
-            onCreateAnother = onCreateAnother
-        )
-    } else {
-        SaveSuccessTabletContent(
-            picture = state.picture,
-            onGoToGallery = onGoToGallery,
-            onCreateAnother = onCreateAnother
-        )
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (info.isCompactWidth) {
+            SaveSuccessContent(
+                picture = state.picture,
+                onGoToGallery = onGoToGallery,
+                onCreateAnother = onCreateAnother
+            )
+        } else {
+            SaveSuccessTabletContent(
+                picture = state.picture,
+                onGoToGallery = onGoToGallery,
+                onCreateAnother = onCreateAnother
+            )
+        }
+        // A celebratory confetti burst rains over the success screen once.
+        // Draw-only (no touch handling) so the buttons stay tappable.
+        ConfettiOverlay(modifier = Modifier.fillMaxSize())
     }
 }
 

@@ -161,6 +161,12 @@ dependencies {
     // locally so the UI can pre-check limits without a network round-trip.
     implementation(libs.datastore.preferences)
 
+    // Credential Manager + Google ID — "Sign in with Google" (optional upgrade
+    // from the anonymous guest account).
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
+
     // Test
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

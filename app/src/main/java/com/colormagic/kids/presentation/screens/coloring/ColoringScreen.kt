@@ -60,6 +60,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.R
 import com.colormagic.kids.domain.model.BrushSize
+import com.colormagic.kids.domain.model.ColorPalettes
 import com.colormagic.kids.domain.model.ColoringTool
 import com.colormagic.kids.domain.model.PaintColor
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
@@ -79,6 +80,38 @@ fun ColoringScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
+
+    // ── Delight: light haptics + spoken color names (free for everyone) ──
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
+    // TextToSpeech instance, kept for the life of the screen and shut down on exit.
+    val tts = remember {
+        val ref = arrayOfNulls<android.speech.tts.TextToSpeech>(1)
+        ref[0] = android.speech.tts.TextToSpeech(context) { status ->
+            if (status == android.speech.tts.TextToSpeech.SUCCESS) {
+                ref[0]?.language = java.util.Locale.getDefault()
+            }
+        }
+        ref[0]!!
+    }
+    androidx.compose.runtime.DisposableEffect(Unit) {
+        onDispose { tts.stop(); tts.shutdown() }
+    }
+
+    fun tick() = haptics.performHapticFeedback(
+        androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress
+    )
+
+    val onColorSelected: (String) -> Unit = { id ->
+        tick()
+        // Say the color name out loud — kids learn their colors as they paint.
+        state.palette.firstOrNull { it.id == id }?.let {
+            tts.speak(it.name, android.speech.tts.TextToSpeech.QUEUE_FLUSH, null, "color")
+        }
+        viewModel.onColorSelected(id)
+    }
+    val onToolSelected: (ColoringTool) -> Unit = { t -> tick(); viewModel.onToolSelected(t) }
+    val onPaletteSelected: (String) -> Unit = { id -> tick(); viewModel.onPaletteSelected(id) }
 
     // The actual on-screen size of the canvas, in pixels. Captured by the
     // SketchCanvasCard via Modifier.onSizeChanged so the saved PNG matches
@@ -100,8 +133,9 @@ fun ColoringScreen(
         ColoringContent(
             state = state,
             onBack = onBack,
-            onColorSelected = viewModel::onColorSelected,
-            onToolSelected = viewModel::onToolSelected,
+            onColorSelected = onColorSelected,
+            onToolSelected = onToolSelected,
+            onPaletteSelected = onPaletteSelected,
             onBrushSizeSelected = viewModel::onBrushSizeSelected,
             onStrokeFinished = viewModel::onStrokeFinished,
             onUndo = viewModel::onUndo,
@@ -114,8 +148,9 @@ fun ColoringScreen(
         ColoringTabletContent(
             state = state,
             onBack = onBack,
-            onColorSelected = viewModel::onColorSelected,
-            onToolSelected = viewModel::onToolSelected,
+            onColorSelected = onColorSelected,
+            onToolSelected = onToolSelected,
+            onPaletteSelected = onPaletteSelected,
             onBrushSizeSelected = viewModel::onBrushSizeSelected,
             onStrokeFinished = viewModel::onStrokeFinished,
             onUndo = viewModel::onUndo,
@@ -133,6 +168,7 @@ private fun ColoringTabletContent(
     onBack: () -> Unit,
     onColorSelected: (String) -> Unit,
     onToolSelected: (ColoringTool) -> Unit,
+    onPaletteSelected: (String) -> Unit,
     onBrushSizeSelected: (BrushSize) -> Unit,
     onStrokeFinished: (Stroke) -> Unit,
     onUndo: () -> Unit,
@@ -257,7 +293,12 @@ private fun ColoringTabletContent(
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     )
                     Spacer(Modifier.height(10.dp))
-                    // 16-colour palette → 4 rows of 4 fits the right pane cleanly.
+                    PaletteSwitcherRow(
+                        selectedPaletteId = state.selectedPaletteId,
+                        onSelect = onPaletteSelected
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    // palette → 4 columns fits the right pane cleanly.
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         state.palette.chunked(4).forEach { rowColors ->
                             Row(
@@ -385,6 +426,7 @@ private fun ColoringContent(
     onBack: () -> Unit,
     onColorSelected: (String) -> Unit,
     onToolSelected: (ColoringTool) -> Unit,
+    onPaletteSelected: (String) -> Unit,
     onBrushSizeSelected: (BrushSize) -> Unit,
     onStrokeFinished: (Stroke) -> Unit,
     onUndo: () -> Unit,
@@ -465,6 +507,13 @@ private fun ColoringContent(
                 )
 
                 Spacer(Modifier.height(14.dp))
+
+                PaletteSwitcherRow(
+                    selectedPaletteId = state.selectedPaletteId,
+                    onSelect = onPaletteSelected
+                )
+
+                Spacer(Modifier.height(10.dp))
 
                 ColorPaletteRow(
                     palette = state.palette,
@@ -566,6 +615,38 @@ private fun BrushSizeRow(
                 onClick = { onSelect(size) }
             )
             Spacer(Modifier.width(4.dp))
+        }
+    }
+}
+
+// Theme switcher — Classic / Pastel / Neon / Ocean. Changing the theme swaps
+// the whole swatch set so kids can paint in different moods.
+@Composable
+private fun PaletteSwitcherRow(
+    selectedPaletteId: String,
+    onSelect: (String) -> Unit
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(ColorPalettes.all, key = { it.id }) { palette ->
+            val selected = palette.id == selectedPaletteId
+            Surface(
+                onClick = { onSelect(palette.id) },
+                shape = RoundedCornerShape(50),
+                color = if (selected) MaterialTheme.colorScheme.primary
+                else BrandTokens.SubtleSurface
+            ) {
+                Text(
+                    text = palette.name,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (selected) Color.White else BrandTokens.HeadingInk,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+            }
         }
     }
 }
@@ -864,6 +945,7 @@ private fun ColoringPreviewPhone() {
             onBack = {},
             onColorSelected = {},
             onToolSelected = {},
+            onPaletteSelected = {},
             onBrushSizeSelected = {},
             onStrokeFinished = {},
             onUndo = {},

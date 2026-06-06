@@ -1,40 +1,130 @@
 package com.colormagic.kids.presentation.auth
 
+import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.colormagic.kids.data.auth.GoogleSignInHelper
 import com.colormagic.kids.domain.model.AuthUser
 import com.colormagic.kids.domain.repository.AuthRepository
+import com.colormagic.kids.domain.repository.CreditRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// Surfaces the anonymous Firebase identity to the UI and exposes sign-out.
-// There's no "sign in" action — that happens automatically at launch
-// (see SplashViewModel), so this VM is intentionally tiny.
+// Surfaces the Firebase identity to the UI: anonymous (guest) by default, with
+// an optional "Sign in with Google" upgrade that links to the same account.
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val googleSignInHelper: GoogleSignInHelper,
+    private val creditRepository: CreditRepository
 ) : ViewModel() {
 
     val authState: StateFlow<AuthUser?> = authRepository.authState
 
+    private val _isWorking = MutableStateFlow(false)
+    /** True while a Google sign-in is in progress (disable the button). */
+    val isWorking: StateFlow<Boolean> = _isWorking.asStateFlow()
+
+    private val _message = MutableStateFlow<String?>(null)
+    /** One-shot feedback to show as a toast/snackbar, then cleared. */
+    val message: StateFlow<String?> = _message.asStateFlow()
+
+    private val _authError = MutableStateFlow<String?>(null)
+    /** Non-null when we have NO identity AND sign-in failed — the UI shows the
+     *  reason + a Retry button instead of an endless spinner. */
+    val authError: StateFlow<String?> = _authError.asStateFlow()
+
     init {
-        // Retry anonymous sign-in if it hasn't resolved yet (e.g. Splash's
-        // attempt failed transiently, or the parent opened the app deep-
-        // linked into the Parent Area without ever showing Splash).
-        // ensureSignedIn is a no-op when a user already exists.
-        viewModelScope.launch { authRepository.ensureSignedIn() }
+        ensureGuest()
+
+        // Safety net: if we ever end up with NO identity (e.g. a sign-out's
+        // re-sign-in failed, or a transient launch error), recover by
+        // re-establishing a guest. The 1.5s wait lets the normal re-sign-in
+        // win first; this only kicks in if it didn't.
+        viewModelScope.launch {
+            authState.collect { current ->
+                if (current == null) {
+                    delay(1500)
+                    if (authRepository.currentUser == null) ensureGuest()
+                } else {
+                    _authError.value = null
+                }
+            }
+        }
+    }
+
+    /** Ensures a guest identity exists, capturing any failure reason so it can
+     *  be shown in the UI (instead of hanging on a spinner forever). */
+    private fun ensureGuest() {
+        viewModelScope.launch {
+            // Clear the error first so the card shows the spinner again while we
+            // retry — immediate visible feedback when "Try again" is tapped.
+            _authError.value = null
+            authRepository.ensureSignedIn()
+                .onSuccess {
+                    _authError.value = null
+                    // Create/touch the Firestore user doc immediately so a guest
+                    // exists server-side right after sign-in (the doc is created
+                    // by userQuota → ensureUserDoc on the backend).
+                    creditRepository.refreshQuota()
+                }
+                .onFailure {
+                    _authError.value = it.message ?: "Couldn't connect. Check your internet."
+                }
+        }
+    }
+
+    /** Called by the Retry button when sign-in failed. */
+    fun retrySignIn() = ensureGuest()
+
+    /**
+     * Launches the Google account picker, then links/signs in with Firebase.
+     * Needs the host [activity] because Credential Manager presents UI.
+     */
+    fun signInWithGoogle(activity: Activity) {
+        if (_isWorking.value) return
+        viewModelScope.launch {
+            _isWorking.value = true
+            googleSignInHelper.getGoogleIdToken(activity)
+                .onSuccess { idToken ->
+                    authRepository.signInWithGoogle(idToken)
+                        .onSuccess {
+                            _message.value = "Signed in with Google."
+                            // Same uid after linking → same Firestore doc; this
+                            // just refreshes the cached balance for the (now
+                            // Google) account so the UI is instantly correct.
+                            creditRepository.refreshQuota()
+                        }
+                        .onFailure {
+                            _message.value = "Couldn't sign in with Google. Please try again."
+                        }
+                }
+                .onFailure {
+                    // Usually the parent dismissed the chooser, or Google
+                    // sign-in isn't configured yet. Keep it gentle.
+                    _message.value = "Google sign-in was cancelled."
+                }
+            _isWorking.value = false
+        }
     }
 
     /**
-     * Signs out the anonymous account. The next launch mints a fresh uid,
-     * so any credits/sketches on the old account become unreachable —
-     * callers should confirm with the parent before invoking this.
+     * Signs out. For a guest this starts a fresh guest account; for a
+     * Google-linked account it returns to a new guest. Either way the app
+     * stays usable (a fresh anonymous identity is created immediately).
      */
     fun signOut() {
         viewModelScope.launch {
             authRepository.signOut()
         }
+    }
+
+    fun messageShown() {
+        _message.value = null
     }
 }

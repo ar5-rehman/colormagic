@@ -30,6 +30,16 @@ interface AuthRepository {
     suspend fun ensureSignedIn(): Result<AuthUser>
 
     /**
+     * Signs in with a Google ID token (obtained via Credential Manager).
+     *
+     * If the current user is anonymous, the Google credential is LINKED to it,
+     * keeping the same uid so credits/sketches/subscription carry over. If that
+     * Google account already belongs to another Firebase user, we sign into
+     * that existing account instead (the guest uid is then abandoned).
+     */
+    suspend fun signInWithGoogle(idToken: String): Result<AuthUser>
+
+    /**
      * Signs the current user out.
      *
      * NOTE: anonymous accounts cannot be recovered. After sign-out the next

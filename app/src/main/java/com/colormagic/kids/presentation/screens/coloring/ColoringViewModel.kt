@@ -11,8 +11,8 @@ import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.colormagic.kids.data.gallery.ArtworkRenderer
 import com.colormagic.kids.domain.model.BrushSize
+import com.colormagic.kids.domain.model.ColorPalettes
 import com.colormagic.kids.domain.model.ColoringTool
-import com.colormagic.kids.domain.model.DefaultPalette
 import com.colormagic.kids.domain.model.PaintColor
 import com.colormagic.kids.domain.model.Sketch
 import com.colormagic.kids.domain.repository.GalleryRepository
@@ -28,8 +28,9 @@ import javax.inject.Inject
 
 data class ColoringUiState(
     val sketch: Sketch = stubSketch,
-    val palette: List<PaintColor> = DefaultPalette.colors,
-    val selectedColorId: String = DefaultPalette.colors.first().id,
+    val selectedPaletteId: String = ColorPalettes.default.id,
+    val palette: List<PaintColor> = ColorPalettes.default.colors,
+    val selectedColorId: String = ColorPalettes.default.colors.first().id,
     val tool: ColoringTool = ColoringTool.Crayon,
     val brushSize: BrushSize = BrushSize.Medium,
     val strokes: List<Stroke> = emptyList(),
@@ -123,6 +124,19 @@ class ColoringViewModel @Inject constructor(
 
     fun onColorSelected(id: String) = _uiState.update { it.copy(selectedColorId = id) }
     fun onToolSelected(tool: ColoringTool) = _uiState.update { it.copy(tool = tool) }
+
+    /** Switches the whole color theme (Classic / Pastel / Neon / Ocean) and
+     *  selects that palette's first swatch so the active color stays valid. */
+    fun onPaletteSelected(paletteId: String) {
+        val palette = ColorPalettes.byId(paletteId)
+        _uiState.update {
+            it.copy(
+                selectedPaletteId = palette.id,
+                palette = palette.colors,
+                selectedColorId = palette.colors.first().id
+            )
+        }
+    }
     fun onBrushSizeSelected(size: BrushSize) = _uiState.update { it.copy(brushSize = size) }
 
     fun onStrokeFinished(stroke: Stroke) {

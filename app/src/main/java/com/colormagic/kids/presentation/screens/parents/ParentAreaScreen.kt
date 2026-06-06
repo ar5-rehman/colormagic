@@ -75,9 +75,20 @@ fun ParentAreaScreen(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
     val user by authViewModel.authState.collectAsStateWithLifecycle()
+    val isAuthWorking by authViewModel.isWorking.collectAsStateWithLifecycle()
+    val authMessage by authViewModel.message.collectAsStateWithLifecycle()
+    val authError by authViewModel.authError.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val onTerms = { context.openUrl(AppLinks.TERMS_URL) }
     val onPrivacy = { context.openUrl(AppLinks.PRIVACY_URL) }
+
+    // Show sign-in feedback (success / cancelled) as a quick toast.
+    androidx.compose.runtime.LaunchedEffect(authMessage) {
+        authMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            authViewModel.messageShown()
+        }
+    }
 
     // Refresh credit count + plan label on every resume — a sketch made
     // (which deducts a credit) or a purchase (which adds them) should
@@ -99,6 +110,12 @@ fun ParentAreaScreen(
         AccountCard(
             user = user,
             onSignOut = authViewModel::signOut,
+            onSignInWithGoogle = {
+                (context as? android.app.Activity)?.let { authViewModel.signInWithGoogle(it) }
+            },
+            isWorking = isAuthWorking,
+            errorText = authError,
+            onRetry = authViewModel::retrySignIn,
             modifier = modifier
         )
     }
