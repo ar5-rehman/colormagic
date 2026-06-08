@@ -122,9 +122,12 @@ private fun GalleryTabletContent(
 
             Spacer(Modifier.height(20.dp))
 
-            // 4-column grid of artworks; the "Start New Art" tile slots in as the last item.
+            // Adaptive grid: cards stay a comfortable size and the column count
+            // follows the width (≈3 on a portrait tablet, more when wider) so
+            // the layout never looks sparse with tiny tiles. The "Start New Art"
+            // tile slots in as the last item.
             LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
+                columns = GridCells.Adaptive(minSize = 200.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()

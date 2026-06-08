@@ -122,6 +122,7 @@ private fun MainScaffold() {
                 BrandTopNavBar(
                     selected = currentTopLevel,
                     onSelect = { navController.navigateToTopLevel(it) },
+                    onProfile = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) },
                     onSettings = { navController.navigate(Screen.Settings.route) }
                 )
             }

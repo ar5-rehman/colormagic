@@ -128,7 +128,10 @@ private fun HomeTabletContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 28.dp, vertical = 24.dp),
-            horizontalArrangement = Arrangement.spacedBy(28.dp)
+            horizontalArrangement = Arrangement.spacedBy(28.dp),
+            // Centre the two columns vertically so a portrait tablet doesn't
+            // leave a large empty area beneath the content.
+            verticalAlignment = Alignment.CenterVertically
         ) {
             // Left sidebar — greeting + child illustration
             Column(
