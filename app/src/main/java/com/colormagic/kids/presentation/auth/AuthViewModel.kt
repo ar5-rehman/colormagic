@@ -1,6 +1,8 @@
 package com.colormagic.kids.presentation.auth
 
 import android.app.Activity
+import androidx.credentials.exceptions.GetCredentialCancellationException
+import androidx.credentials.exceptions.NoCredentialException
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.colormagic.kids.data.auth.GoogleSignInHelper
@@ -115,13 +117,23 @@ class AuthViewModel @Inject constructor(
                             _message.value = "Couldn't sign in with Google. Please try again."
                         }
                 }
-                .onFailure {
-                    // Usually the parent dismissed the chooser, or Google
-                    // sign-in isn't configured yet. Keep it gentle.
-                    _message.value = "Google sign-in was cancelled."
+                .onFailure { t ->
+                    // Only show "cancelled" for an actual user cancel — other
+                    // failures (no account, transient errors, misconfig) get a
+                    // message that tells the parent what to do, instead of
+                    // wrongly blaming them for cancelling.
+                    _message.value = googleSignInMessage(t)
                 }
             _isWorking.value = false
         }
+    }
+
+    /** Maps a Credential Manager failure to a parent-friendly message. */
+    private fun googleSignInMessage(t: Throwable): String = when (t) {
+        is GetCredentialCancellationException -> "Sign-in cancelled."
+        is NoCredentialException ->
+            "No Google account found on this device. Add one in Settings, then try again."
+        else -> "Couldn't sign in with Google. Please try again."
     }
 
     /**

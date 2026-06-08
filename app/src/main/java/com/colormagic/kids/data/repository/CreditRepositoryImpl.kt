@@ -97,6 +97,12 @@ class CreditRepositoryImpl @Inject constructor(
         creditPrefs.saveQuota(quota)
     }
 
+    override suspend fun seedFromCacheIfUnknown() {
+        if (_quotaFlow.value === UserQuota.UNKNOWN) {
+            creditPrefs.cachedQuota()?.let { _quotaFlow.value = it }
+        }
+    }
+
     private companion object {
         const val FN_USER_QUOTA = "userQuota"
         const val FN_GRANT_REWARDED_AD_CREDITS = "grantRewardedAdCredits"

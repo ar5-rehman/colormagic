@@ -48,6 +48,34 @@ class CreditPreferences @Inject constructor(@ApplicationContext private val cont
         return if (date == todayString()) prefs[Keys.REWARDED_ADS_TODAY] ?: 0 else 0
     }
 
+    /**
+     * Reconstructs the last cached quota, or null if the server has never
+     * returned one on this install. Used so the credit pill can show the last
+     * known balance instantly (and stop its loading shimmer) instead of
+     * waiting on — or hanging forever after — a failed network call.
+     */
+    suspend fun cachedQuota(): UserQuota? {
+        val prefs = store.data.first()
+        val total = prefs[Keys.TOTAL_CREDITS] ?: return null // never cached yet
+        val today = todayString()
+        val daily = if (prefs[Keys.DAILY_CREDITS_DATE] == today) {
+            prefs[Keys.DAILY_CREDITS_AVAILABLE] ?: 0
+        } else 0
+        val adsToday = if (prefs[Keys.REWARDED_ADS_DATE] == today) {
+            prefs[Keys.REWARDED_ADS_TODAY] ?: 0
+        } else 0
+        return UserQuota(
+            plan = prefs[Keys.PLAN] ?: "free",
+            subscriptionActive = (prefs[Keys.SUBSCRIPTION_ACTIVE] ?: 0) == 1,
+            remainingFreeSketches = daily,
+            remainingMonthlySketches = 0,
+            extraCredits = 0,
+            totalAvailableCredits = total,
+            rewardedAdsToday = adsToday,
+            rewardedAdsRemaining = (MAX_REWARDED_ADS_PER_DAY - adsToday).coerceAtLeast(0)
+        )
+    }
+
     /** Saves the full quota snapshot from the server to local cache. */
     suspend fun saveQuota(quota: UserQuota) {
         store.edit { prefs ->

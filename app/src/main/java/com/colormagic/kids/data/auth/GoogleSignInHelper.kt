@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
+import androidx.credentials.exceptions.GetCredentialInterruptedException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import javax.inject.Inject
@@ -48,7 +49,15 @@ class GoogleSignInHelper @Inject constructor() {
             .addCredentialOption(googleIdOption)
             .build()
 
-        val response = CredentialManager.create(context).getCredential(context, request)
+        val credentialManager = CredentialManager.create(context)
+        // GetCredentialInterruptedException is a transient error (the system UI
+        // was interrupted, or a race with Play services). Retrying once clears
+        // most of the intermittent "sign-in failed" cases.
+        val response = try {
+            credentialManager.getCredential(context, request)
+        } catch (e: GetCredentialInterruptedException) {
+            credentialManager.getCredential(context, request)
+        }
         val credential = response.credential
 
         if (credential is CustomCredential &&

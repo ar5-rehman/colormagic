@@ -34,4 +34,10 @@ interface CreditRepository {
 
     /** Updates the local cache after a successful server grant. */
     suspend fun updateLocalQuota(quota: UserQuota)
+
+    /**
+     * If the quota is still the pre-load [UserQuota.UNKNOWN] sentinel and a
+     * cached value exists, publish it immediately. No-op for a brand-new
+     * install (keeps the loading shimmer until the first fetch). */
+    suspend fun seedFromCacheIfUnknown()
 }
