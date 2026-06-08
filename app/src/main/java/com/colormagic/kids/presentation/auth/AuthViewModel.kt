@@ -4,6 +4,7 @@ import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.colormagic.kids.data.auth.GoogleSignInHelper
+import com.colormagic.kids.data.util.NetworkMonitor
 import com.colormagic.kids.domain.model.AuthUser
 import com.colormagic.kids.domain.repository.AuthRepository
 import com.colormagic.kids.domain.repository.CreditRepository
@@ -21,7 +22,8 @@ import javax.inject.Inject
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val googleSignInHelper: GoogleSignInHelper,
-    private val creditRepository: CreditRepository
+    private val creditRepository: CreditRepository,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     val authState: StateFlow<AuthUser?> = authRepository.authState
@@ -54,6 +56,15 @@ class AuthViewModel @Inject constructor(
                 } else {
                     _authError.value = null
                 }
+            }
+        }
+
+        // Auto-recover on reconnect: if the very first sign-in failed because
+        // the device was offline (common on a fresh install with no network),
+        // retry the moment a connection appears — no Retry tap needed.
+        viewModelScope.launch {
+            networkMonitor.isOnline.collect { online ->
+                if (online && authRepository.currentUser == null) ensureGuest()
             }
         }
     }

@@ -191,6 +191,10 @@ private fun CreateSketchTabletContent(
                         onCategorySelected = onCategorySelected
                     )
                     Spacer(Modifier.height(28.dp))
+                    if (!state.isOnline) {
+                        OfflineBanner()
+                        Spacer(Modifier.height(14.dp))
+                    }
                     BrandPrimaryButton(
                         label = "Make My Sketch",
                         onClick = onMakeSketch,
@@ -290,6 +294,12 @@ private fun CreateSketchContent(
                 )
                 Spacer(Modifier.height(20.dp))
             }
+            if (!state.isOnline) {
+                item {
+                    OfflineBanner()
+                    Spacer(Modifier.height(12.dp))
+                }
+            }
             item {
                 BrandPrimaryButton(
                     label = "Make My Sketch",
@@ -380,6 +390,33 @@ private fun BackChip(onClick: () -> Unit) {
                 contentDescription = "Back",
                 tint = BrandTokens.HeadingInk,
                 modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+// Shown when the device has no internet. Generation runs on the server, so
+// "Make My Sketch" is disabled — but the saved gallery still works offline,
+// which this banner makes clear in kid-friendly language.
+@Composable
+private fun OfflineBanner() {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color(0xFFFFF3E0),
+        shape = RoundedCornerShape(18.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "📴", fontSize = 22.sp)
+            Spacer(Modifier.width(12.dp))
+            Text(
+                text = "You're offline. Connect to the internet to make new pictures — " +
+                    "you can still color the ones in your gallery!",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF8A4B00)
             )
         }
     }

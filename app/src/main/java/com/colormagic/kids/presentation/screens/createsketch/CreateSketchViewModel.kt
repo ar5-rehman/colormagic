@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.colormagic.kids.data.parents.ParentControlsStore
+import com.colormagic.kids.data.util.NetworkMonitor
 import com.colormagic.kids.domain.model.CategoryIdeas
 import com.colormagic.kids.domain.model.ColoringIdea
 import com.colormagic.kids.domain.model.SketchLimit
@@ -35,6 +36,10 @@ data class CreateSketchUiState(
     /** Parent-set daily cap + how many sketches the kid has used today. */
     val dailyLimit: SketchLimit = SketchLimit.Unlimited,
     val sketchesToday: Int = 0,
+    /** Device connectivity. Generation runs on the server, so when offline we
+     *  show a banner and disable "Make My Sketch". Defaults true so the UI
+     *  doesn't flash an offline banner before the first reading arrives. */
+    val isOnline: Boolean = true,
     /** True when the user tapped "Make My Sketch" but had no credits. */
     val showLowCreditsModal: Boolean = false
 ) {
@@ -47,17 +52,19 @@ data class CreateSketchUiState(
         get() = dailyLimit.perDay?.let { sketchesToday >= it } ?: false
 
     /** Generation is allowed with a prompt, with at least one known credit,
-     *  and within the parent-set daily limit. While quota is still loading
-     *  (null), we don't block — the backend is the real credit gate. */
+     *  within the parent-set daily limit, and while online (generation is a
+     *  server call). While quota is still loading (null), we don't block on
+     *  credits — the backend is the real credit gate. */
     val canMakeSketch: Boolean
-        get() = prompt.isNotBlank() && !outOfCredits && !dailyLimitReached
+        get() = prompt.isNotBlank() && !outOfCredits && !dailyLimitReached && isOnline
 }
 
 @HiltViewModel
 class CreateSketchViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val sketchRepository: SketchRepository,
-    private val parentControls: ParentControlsStore
+    private val parentControls: ParentControlsStore,
+    private val networkMonitor: NetworkMonitor
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreateSketchUiState(ideas = freshIdeas()))
@@ -87,6 +94,17 @@ class CreateSketchViewModel @Inject constructor(
                         sketchesToday = controls.sketchesToday
                     )
                 }
+            }
+        }
+
+        // Track connectivity: disable "Make My Sketch" + show the offline
+        // banner when down, and the moment the connection returns, refresh the
+        // credit count so the screen recovers on its own.
+        viewModelScope.launch {
+            networkMonitor.isOnline.collect { online ->
+                val cameBackOnline = online && !_uiState.value.isOnline
+                _uiState.update { it.copy(isOnline = online) }
+                if (cameBackOnline) refreshQuota()
             }
         }
     }

@@ -5,6 +5,10 @@
     <!-- Firebase (Auth, Firestore, Storage, Functions, App Check) needs network. -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- NetworkMonitor watches connectivity so the app can show an offline
+         banner, disable "Make My Sketch", and auto-recover when back online. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <!-- Saving completed artwork to the phone gallery. Scoped MediaStore on
          29+ doesn't need a runtime permission; only legacy 24-28 does. -->
     <uses-permission
