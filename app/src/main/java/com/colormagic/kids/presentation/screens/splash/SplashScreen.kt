@@ -23,6 +23,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,19 +38,17 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.colormagic.kids.R
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
-import kotlinx.coroutines.delay
-
-private const val SPLASH_DURATION_MS = 2200L
 
 @Composable
 fun SplashScreen(
-    onTimeout: () -> Unit,
-    // Constructing the VM triggers anonymous Firebase sign-in (see its init).
-    @Suppress("UNUSED_PARAMETER") viewModel: SplashViewModel = hiltViewModel()
+    // Called with the route to go to next (Main for returning users, Onboarding
+    // on first launch). The VM decides + also triggers anonymous sign-in.
+    onReady: (route: String) -> Unit,
+    viewModel: SplashViewModel = hiltViewModel()
 ) {
-    LaunchedEffect(Unit) {
-        delay(SPLASH_DURATION_MS)
-        onTimeout()
+    val nextRoute by viewModel.nextRoute.collectAsStateWithLifecycle()
+    LaunchedEffect(nextRoute) {
+        nextRoute?.let(onReady)
     }
     SplashContent()
 }
