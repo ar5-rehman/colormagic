@@ -39,7 +39,10 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 fun LowCreditsModal(
     onWatchAd: () -> Unit,
     onGoPremium: () -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    /** When true, the parent is already subscribed — hide ad + upgrade options
+     *  and offer a Credit Refill instead (premium users never see ads). */
+    isPremium: Boolean = false
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -65,9 +68,13 @@ fun LowCreditsModal(
         },
         text = {
             Text(
-                text = "You're out of credits. Watch a short ad to earn " +
-                    "${CreditConfig.REWARDED_AD_CREDITS} credits, or upgrade for more " +
-                    "credits and no ads.",
+                text = if (isPremium)
+                    "You've used today's credits — they refresh tomorrow. " +
+                        "Need more right now? Grab a Credit Refill."
+                else
+                    "You're out of credits. Watch a short ad to earn " +
+                        "${CreditConfig.REWARDED_AD_CREDITS} credits, or upgrade for more " +
+                        "credits and no ads.",
                 fontSize = 15.sp,
                 lineHeight = 22.sp,
                 color = BrandTokens.MutedInk,
@@ -82,34 +89,36 @@ fun LowCreditsModal(
                     .padding(horizontal = 4.dp, vertical = 4.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Primary CTA — Watch Ad
-                Surface(
-                    onClick = onWatchAd,
-                    shape = RoundedCornerShape(50),
-                    color = Color(0xFF2E7D32),
-                    modifier = Modifier.fillMaxWidth().height(50.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
+                // Primary CTA — Watch Ad (free users only; premium never sees ads)
+                if (!isPremium) {
+                    Surface(
+                        onClick = onWatchAd,
+                        shape = RoundedCornerShape(50),
+                        color = Color(0xFF2E7D32),
+                        modifier = Modifier.fillMaxWidth().height(50.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayCircle,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Watch Ad  +${CreditConfig.REWARDED_AD_CREDITS} Credits",
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayCircle,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Watch Ad  +${CreditConfig.REWARDED_AD_CREDITS} Credits",
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
 
-                // Secondary CTA — Go Premium
+                // Secondary CTA — Go Premium (free) / Buy Credit Refill (premium)
                 Surface(
                     onClick = onGoPremium,
                     shape = RoundedCornerShape(50),
@@ -129,7 +138,7 @@ fun LowCreditsModal(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            text = "Go Premium",
+                            text = if (isPremium) "Buy Credit Refill" else "Go Premium",
                             fontWeight = FontWeight.Bold,
                             color = Color.White
                         )

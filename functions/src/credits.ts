@@ -210,12 +210,13 @@ export type ImageProvider = "openai" | "cloudflare";
 
 /**
  * Which image service fulfils a credit from [source].
- * FREE credits (daily, ad) → Cloudflare Workers AI (free tier). PAID credits
- * (monthly, extra) → OpenAI. This guarantees rewarded-ad rewards never cost us
- * OpenAI money.
+ *
+ * OpenAI is currently DISABLED — EVERY credit (free + premium) is fulfilled by
+ * Cloudflare Workers AI. To re-introduce paid OpenAI quality later, change this
+ * back to: `source === "daily" || source === "ad" ? "cloudflare" : "openai"`.
  */
-export function providerForSource(source: CreditSource): ImageProvider {
-  return source === "daily" || source === "ad" ? "cloudflare" : "openai";
+export function providerForSource(_source: CreditSource): ImageProvider {
+  return "cloudflare";
 }
 
 /**

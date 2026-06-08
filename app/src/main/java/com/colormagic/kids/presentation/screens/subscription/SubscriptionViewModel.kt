@@ -7,6 +7,7 @@ import com.colormagic.kids.data.telemetry.AppTelemetry
 import com.colormagic.kids.domain.model.BillingProducts
 import com.colormagic.kids.domain.model.PurchaseResult
 import com.colormagic.kids.domain.repository.BillingRepository
+import com.colormagic.kids.domain.repository.CreditRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,6 +41,7 @@ data class SubscriptionUiState(
 @HiltViewModel
 class SubscriptionViewModel @Inject constructor(
     private val billingRepository: BillingRepository,
+    private val creditRepository: CreditRepository,
     private val telemetry: AppTelemetry
 ) : ViewModel() {
 
@@ -50,6 +52,28 @@ class SubscriptionViewModel @Inject constructor(
         // Connect to Play + preload product details so Continue is instant.
         viewModelScope.launch { billingRepository.start() }
         telemetry.logCreditEvent("premium_screen_opened")
+
+        // Reflect the user's ACTUAL plan on the cards (so a premium user sees
+        // "Current Plan" on Premium, not on Free). Driven by the live quota.
+        viewModelScope.launch { creditRepository.refreshQuota() }
+        viewModelScope.launch {
+            creditRepository.quotaFlow.collect { quota ->
+                val premium = quota.isPremium
+                _uiState.update { st ->
+                    st.copy(
+                        plans = st.plans.map { plan ->
+                            plan.copy(
+                                isCurrent = when (plan.id) {
+                                    PlanTier.Unlimited -> premium
+                                    PlanTier.Starter -> !premium
+                                    else -> false
+                                }
+                            )
+                        }
+                    )
+                }
+            }
+        }
     }
 
     fun onPlanSelected(id: PlanTier) =
@@ -80,6 +104,10 @@ class SubscriptionViewModel @Inject constructor(
             when (val result = billingRepository.purchase(activity, productId)) {
                 is PurchaseResult.Success -> {
                     telemetry.logCreditEvent("subscription_started")
+                    // Refresh the shared quota so every screen (Home pill, Parent
+                    // area, Get Credits) instantly reflects premium: 30 credits/day,
+                    // no ads, "Magic Pro" plan label.
+                    creditRepository.refreshQuota()
                     _uiState.update { it.copy(isProcessing = false) }
                     onCompleted()
                 }
@@ -107,6 +135,7 @@ class SubscriptionViewModel @Inject constructor(
             when (val result = billingRepository.restorePurchases()) {
                 is PurchaseResult.Success -> {
                     telemetry.logCreditEvent("subscription_restored")
+                    creditRepository.refreshQuota()
                     _uiState.update {
                         it.copy(isRestoring = false, restoreMessage = "Purchase restored successfully.")
                     }
@@ -151,7 +180,7 @@ private val defaultPlans = listOf(
         name = "Premium",
         tagline = "Create more with fewer limits.",
         price = "$4.99",
-        priceSuffix = "/mo",
+        priceSuffix = "per month",
         features = listOf(
             "30 credits every day",
             "No ads — ever",
@@ -165,6 +194,7 @@ private val defaultPlans = listOf(
         name = "Credit Refill",
         tagline = "A quick boost of creativity.",
         price = "$1.99",
+        priceSuffix = "one time",
         features = listOf("20 extra credits", "Never expires", "Use anytime")
     )
 )

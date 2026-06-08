@@ -43,13 +43,18 @@ class AuthRepositoryImpl @Inject constructor(
     // join back to the right user doc in Firestore.
     override val authState: StateFlow<AuthUser?> =
         callbackFlow {
-            val listener = FirebaseAuth.AuthStateListener { auth ->
+            // IdTokenListener (not just AuthStateListener): it also fires when
+            // the SAME signed-in user changes — e.g. when a guest LINKS a Google
+            // account. linkWithCredential refreshes the ID token but keeps the
+            // same uid, so AuthStateListener wouldn't fire and the UI would keep
+            // showing "Sign in with Google" even though the user is now Google.
+            val listener = FirebaseAuth.IdTokenListener { auth ->
                 val user = auth.currentUser?.toAuthUser()
                 telemetry.setUserId(user?.uid)
                 trySend(user)
             }
-            firebaseAuth.addAuthStateListener(listener)
-            awaitClose { firebaseAuth.removeAuthStateListener(listener) }
+            firebaseAuth.addIdTokenListener(listener)
+            awaitClose { firebaseAuth.removeIdTokenListener(listener) }
         }.stateIn(
             scope = appScope,
             started = SharingStarted.Eagerly,
@@ -123,11 +128,16 @@ class AuthRepositoryImpl @Inject constructor(
     }
 }
 
-private fun FirebaseUser.toAuthUser(): AuthUser =
-    AuthUser(
+private fun FirebaseUser.toAuthUser(): AuthUser {
+    // When a guest LINKS a Google account, Firebase doesn't always copy the
+    // Google name/email/photo onto the top-level user profile — they live in
+    // providerData instead. Fall back to that so the UI always has them.
+    val google = providerData.firstOrNull { it.providerId == "google.com" }
+    return AuthUser(
         uid = uid,
         isAnonymous = isAnonymous,
-        email = email,
-        displayName = displayName,
-        photoUrl = photoUrl?.toString()
+        email = email?.takeIf { it.isNotBlank() } ?: google?.email,
+        displayName = displayName?.takeIf { it.isNotBlank() } ?: google?.displayName,
+        photoUrl = (photoUrl ?: google?.photoUrl)?.toString()
     )
+}

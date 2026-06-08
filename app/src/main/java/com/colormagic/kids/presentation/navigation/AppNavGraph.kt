@@ -77,6 +77,7 @@ fun AppNavGraph(
             ParentsScreen(
                 onManageSubscription = { navController.navigate(Screen.Subscription.route) },
                 onOpenSupport = { navController.navigate(Screen.Support.route) },
+                onGetCredits = { navController.navigate(Screen.GetCredits.route) },
                 onLeaveTab = { navController.navigateToTopLevel(TopLevelDestination.HOME) }
             )
         }
@@ -99,7 +100,10 @@ fun AppNavGraph(
                     navController.navigate(Screen.PurchaseSuccess.route) {
                         popUpTo(Screen.Subscription.route) { inclusive = true }
                     }
-                }
+                },
+                // Header avatar → Parent area (gated). Available here because
+                // this Subscription instance lives inside the main app graph.
+                onProfile = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) }
             )
         }
 

@@ -6,6 +6,8 @@ package com.colormagic.kids.domain.model
 data class ColoringIdea(
     val id: String,
     val title: String,
+    /** Big emoji shown as the card's "illustration" while there are no images. */
+    val emoji: String = "✨",
     val previewImageUrl: String? = null,
     val previewTint: Long = 0xFFEDE7F6
 )

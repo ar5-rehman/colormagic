@@ -10,7 +10,6 @@
  * Both run before any image model is called. A prompt must clear BOTH.
  */
 import type OpenAI from "openai";
-import {USE_OPENAI_MODERATION} from "./config";
 
 export interface SafetyResult {
   safe: boolean;
@@ -88,16 +87,12 @@ export async function moderatePrompt(
   }
 }
 
-/** Runs both layers. Returns the first failure, or safe.
- *  When `USE_OPENAI_MODERATION` is false (no billing on OpenAI account),
- *  Layer 2 is skipped and we rely solely on the keyword blocklist + the
- *  strict prompt template. Flip the flag back on once OpenAI billing is set. */
-export async function checkPromptSafety(
-  openai: OpenAI,
-  prompt: string
-): Promise<SafetyResult> {
-  const layer1 = keywordCheck(prompt);
-  if (!layer1.safe) return layer1;
-  if (!USE_OPENAI_MODERATION) return {safe: true};
-  return moderatePrompt(openai, prompt);
+/**
+ * Prompt safety gate. OpenAI moderation is DISABLED for now, so this is the
+ * keyword blocklist only (plus the strict prompt template downstream). To
+ * re-enable OpenAI's moderation, pass an OpenAI client and
+ * `return moderatePrompt(openai, prompt)` when the keyword check passes.
+ */
+export function checkPromptSafety(prompt: string): SafetyResult {
+  return keywordCheck(prompt);
 }

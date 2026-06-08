@@ -1,11 +1,14 @@
 /**
- * Sketch generation pipeline: build a safe prompt → call OpenAI → upload the
- * PNG to Firebase Storage. Pure of credit logic — the caller wires that in.
+ * Sketch generation pipeline: build a safe prompt → generate the image
+ * (Cloudflare Workers AI) → upload the PNG to Firebase Storage. Pure of credit
+ * logic — the caller wires that in.
+ *
+ * NOTE: OpenAI is currently DISABLED — Cloudflare handles ALL generation (free
+ * + premium). To re-enable OpenAI later, restore the OpenAI branch here and the
+ * provider mapping in credits.providerForSource.
  */
 import {randomUUID} from "crypto";
-import type OpenAI from "openai";
 import {storage} from "./firebase";
-import {IMAGE_QUALITY, IMAGE_SIZE} from "./config";
 import type {ImageProvider} from "./credits";
 
 /**
@@ -44,62 +47,21 @@ Avoid: solid color, heavy gray shading, gradients, tiny details, text, logos, br
 }
 
 /**
- * Calls the OpenAI Image API and returns the PNG bytes.
+ * Generates the coloring-page image and returns the PNG/JPEG bytes.
  *
- * The request is built as a plain object and passed loosely typed: the model
- * IDs in config.ts are project-specific and may not match the SDK's compiled
- * union, so we avoid a hard type dependency on them.
+ * OpenAI is disabled for now, so the only active provider is Cloudflare. The
+ * [provider] argument is kept so re-enabling OpenAI later is a one-spot change.
  */
 export async function generateColoringImage(
-  openai: OpenAI,
   provider: ImageProvider,
-  model: string,
   coloringPrompt: string
 ): Promise<Buffer> {
-  // Free path — Cloudflare Workers AI (FLUX). Returns the image bytes.
-  if (provider === "cloudflare") {
-    return generateWithCloudflare(coloringPrompt);
+  if (provider !== "cloudflare") {
+    throw new Error(
+      `Image provider "${provider}" is disabled; only Cloudflare is active.`
+    );
   }
-  // Paid path — OpenAI.
-
-  // `quality` is only valid on gpt-image-1 / dall-e-3. dall-e-2 rejects the
-  // request outright if we send it. Build the param object accordingly.
-  const params: Record<string, unknown> = {
-    model,
-    prompt: coloringPrompt,
-    size: IMAGE_SIZE,
-    n: 1,
-  };
-  if (model.startsWith("gpt-image")) {
-    params.quality = IMAGE_QUALITY;
-    // Output-side safety on gpt-image-1:
-    //   • moderation:"auto" — runs OpenAI's strictest output filter; any
-    //     image that touches sexual/violent/etc. content is refused with an
-    //     error, which we surface as a generic "try a different idea" to
-    //     the child.
-    //   • background:"opaque" — forces a flat opaque (white in our prompt)
-    //     background rather than transparent, so the page prints cleanly.
-    params.moderation = "auto";
-    params.background = "opaque";
-  } else if (model === "dall-e-3") {
-    params.quality = IMAGE_QUALITY;
-  }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result = await openai.images.generate(params as any);
-
-  const first = result.data?.[0];
-  if (!first) throw new Error("OpenAI returned no image data");
-
-  // gpt-image models return base64; dall-e models may return a URL.
-  if (first.b64_json) {
-    return Buffer.from(first.b64_json, "base64");
-  }
-  if (first.url) {
-    const res = await fetch(first.url);
-    if (!res.ok) throw new Error(`Image fetch failed: HTTP ${res.status}`);
-    return Buffer.from(await res.arrayBuffer());
-  }
-  throw new Error("OpenAI image had neither b64_json nor url");
+  return generateWithCloudflare(coloringPrompt);
 }
 
 /**

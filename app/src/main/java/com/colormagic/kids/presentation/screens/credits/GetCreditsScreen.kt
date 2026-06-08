@@ -175,7 +175,10 @@ fun GetCreditsScreen(
 
             // ── How credits work ─────────────────────────────────────
             item {
-                HowCreditsWorkSection(modifier = Modifier.padding(horizontal = 24.dp))
+                HowCreditsWorkSection(
+                    isPremium = state.quota.isPremium,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                )
             }
         }
       }
@@ -463,7 +466,10 @@ private fun PremiumUpsellCard(
 }
 
 @Composable
-private fun HowCreditsWorkSection(modifier: Modifier = Modifier) {
+private fun HowCreditsWorkSection(
+    isPremium: Boolean,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
             text = "How credits work",
@@ -475,8 +481,11 @@ private fun HowCreditsWorkSection(modifier: Modifier = Modifier) {
         CreditRuleRow("Generate a coloring page", "1 credit")
         CreditRuleRow("Apply a premium style", "2 credits")
         CreditRuleRow("Save to your gallery", "Free")
-        CreditRuleRow("Watch a rewarded ad", "+${CreditConfig.REWARDED_AD_CREDITS} credits")
-        CreditRuleRow("Rewarded ads per day", "up to ${CreditConfig.MAX_REWARDED_ADS_PER_DAY}")
+        // Ad rows only make sense for non-premium users.
+        if (!isPremium) {
+            CreditRuleRow("Watch a rewarded ad", "+${CreditConfig.REWARDED_AD_CREDITS} credits")
+            CreditRuleRow("Rewarded ads per day", "up to ${CreditConfig.MAX_REWARDED_ADS_PER_DAY}")
+        }
         CreditRuleRow("Premium subscription", "${CreditConfig.PREMIUM_DAILY_CREDITS} credits/day")
     }
 }

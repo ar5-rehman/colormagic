@@ -84,6 +84,7 @@ fun CreateSketchScreen(
     // Low-credits modal: shown when the user taps "Make My Sketch" without credits
     if (state.showLowCreditsModal) {
         LowCreditsModal(
+            isPremium = state.isPremium,
             onWatchAd = {
                 viewModel.onLowCreditsModalDismissed()
                 onGetCredits()
@@ -209,7 +210,7 @@ private fun CreateSketchTabletContent(
             // Right — ideas grid
             Column(modifier = Modifier.weight(0.55f)) {
                 Text(
-                    text = "Try these ideas!",
+                    text = "✨ Tap a fun idea!",
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = BrandTokens.HeadingInk
@@ -309,7 +310,7 @@ private fun CreateSketchContent(
             }
             item {
                 SectionTitle(
-                    text = "Need ideas?",
+                    text = "Need an idea? Tap one!",
                     icon = Icons.Filled.Lightbulb
                 )
                 Spacer(Modifier.height(14.dp))
@@ -347,7 +348,7 @@ private fun CategoryChipRow(
                 modifier = Modifier.height(34.dp)
             ) {
                 Text(
-                    text = CategoryIdeas.labels[key] ?: key,
+                    text = "${CategoryIdeas.emoji[key].orEmpty()} ${CategoryIdeas.labels[key] ?: key}".trim(),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = BrandTokens.HeadingInk,

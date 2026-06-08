@@ -9,18 +9,15 @@
  *   1. Authenticate the caller.
  *   2. Validate + safety-check the prompt.
  *   3. Pre-check credits; pick the model from the credit bucket.
- *   4. Generate the image (OpenAI) → upload to Storage.
+ *   4. Generate the image (Cloudflare Workers AI) → upload to Storage.
  *   5. Atomically deduct 1 credit + write the sketch document.
  */
 import {randomUUID} from "crypto";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import OpenAI from "openai";
 import {
   ENFORCE_APP_CHECK,
-  FORCE_FREE_PROVIDER,
   IMAGE_QUALITY,
   MAX_PROMPT_LENGTH,
-  OPENAI_API_KEY,
   REGION,
 } from "./config";
 import {
@@ -44,7 +41,6 @@ export const generateSketch = onCall(
   {
     region: REGION,
     enforceAppCheck: ENFORCE_APP_CHECK,
-    secrets: [OPENAI_API_KEY],
     timeoutSeconds: 120,
     memory: "512MiB",
   },
@@ -66,15 +62,10 @@ export const generateSketch = onCall(
       throw new HttpsError("invalid-argument", "That idea is a bit too long.");
     }
 
-    const openai = new OpenAI({apiKey: OPENAI_API_KEY.value()});
-
-    // 1. Safety — keyword blocklist + OpenAI moderation. Must clear both.
-    //    Distinguish a *real* content rejection from a server-side moderation
-    //    error: the first deserves the kid-friendly "try a safer idea"
-    //    message, but the second is our backend's problem and the child
-    //    should see a generic retry message — not an accusation that their
-    //    prompt was unsafe.
-    const safety = await checkPromptSafety(openai, prompt);
+    // 1. Safety — keyword blocklist (kid-specific risks: real people, brands,
+    //    scary/adult terms). OpenAI moderation is disabled for now; the prompt
+    //    template + blocklist are the safety net.
+    const safety = checkPromptSafety(prompt);
     if (!safety.safe) {
       console.warn(`Unsafe prompt from ${uid}: ${safety.reason}`);
       if (safety.reason === "moderation:error") {
@@ -97,15 +88,13 @@ export const generateSketch = onCall(
       );
     }
     const model = modelForSource(source);
-    // Provider follows the credit bucket: free → Cloudflare, paid → OpenAI.
-    // `FORCE_FREE_PROVIDER` overrides everything to Cloudflare while the
-    // OpenAI account has no billing.
-    const provider = FORCE_FREE_PROVIDER ? "cloudflare" : providerForSource(source);
+    // OpenAI is disabled — every credit is fulfilled by Cloudflare Workers AI.
+    const provider = providerForSource(source);
 
     // 3. Generate the line art. Failure here spends NO credit.
     let png: Buffer;
     try {
-      png = await generateColoringImage(openai, provider, model, buildColoringPrompt(prompt));
+      png = await generateColoringImage(provider, buildColoringPrompt(prompt));
     } catch (err) {
       // Full reason is logged server-side for diagnosis; the child only ever
       // sees the friendly message below (rendered on the "Hmm, that didn't

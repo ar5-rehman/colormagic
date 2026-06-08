@@ -31,10 +31,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.colormagic.kids.domain.model.AuthUser
 
 // Account panel for the Parent Area.
@@ -103,6 +105,21 @@ fun AccountCard(
             }
         } else {
             val isGuest = user.isAnonymous
+            // Name handling: prefer Google display name → email's local part →
+            // a friendly fallback, so the row is never blank.
+            val displayName = when {
+                isGuest -> "Guest account"
+                !user.displayName.isNullOrBlank() -> user.displayName!!
+                !user.email.isNullOrBlank() -> user.email!!.substringBefore("@")
+                else -> "Your account"
+            }
+            val subtitle = when {
+                isGuest -> "ID: ${user.uid.take(8)}"
+                !user.email.isNullOrBlank() -> user.email!!
+                else -> "Signed in with Google"
+            }
+            val initials = if (!isGuest) avatarInitials(user) else null
+
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
@@ -112,27 +129,44 @@ fun AccountCard(
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Person,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.size(26.dp)
-                        )
+                        when {
+                            // Real Google profile photo.
+                            !isGuest && user.photoUrl != null -> AsyncImage(
+                                model = user.photoUrl,
+                                contentDescription = "Profile photo",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize().clip(CircleShape)
+                            )
+                            // No photo but we have a name/email → show initials.
+                            initials != null -> Text(
+                                text = initials,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            // Guest or nothing → generic person icon.
+                            else -> Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
                     }
                     Spacer(Modifier.width(14.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isGuest) "Guest account"
-                            else (user.displayName ?: "Signed in"),
+                            text = displayName,
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = BrandTokens.HeadingInk
+                            color = BrandTokens.HeadingInk,
+                            maxLines = 1
                         )
                         Text(
-                            text = if (isGuest) "ID: ${user.uid.take(8)}"
-                            else (user.email ?: "Google account"),
+                            text = subtitle,
                             fontSize = 13.sp,
-                            color = BrandTokens.MutedInk
+                            color = BrandTokens.MutedInk,
+                            maxLines = 1
                         )
                     }
                 }
@@ -170,6 +204,19 @@ fun AccountCard(
                 }
             }
         }
+    }
+}
+
+/** 1–2 letter initials from the name (or email) for the photo-less avatar. */
+private fun avatarInitials(user: AuthUser): String? {
+    val source = user.displayName?.takeIf { it.isNotBlank() }
+        ?: user.email?.substringBefore("@")?.takeIf { it.isNotBlank() }
+        ?: return null
+    val parts = source.trim().split(" ", ".", "_", "-").filter { it.isNotBlank() }
+    return when {
+        parts.size >= 2 -> "${parts[0].first()}${parts[1].first()}".uppercase()
+        parts.isNotEmpty() -> parts[0].take(1).uppercase()
+        else -> null
     }
 }
 

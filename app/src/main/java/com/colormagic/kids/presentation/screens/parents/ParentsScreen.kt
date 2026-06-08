@@ -22,6 +22,7 @@ import javax.inject.Inject
 fun ParentsScreen(
     onManageSubscription: () -> Unit,
     onOpenSupport: () -> Unit,
+    onGetCredits: () -> Unit,
     onLeaveTab: () -> Unit,
     router: ParentsRouterViewModel = hiltViewModel()
 ) {
@@ -35,7 +36,8 @@ fun ParentsScreen(
     } else {
         ParentAreaScreen(
             onManageSubscription = onManageSubscription,
-            onOpenSupport = onOpenSupport
+            onOpenSupport = onOpenSupport,
+            onGetCredits = onGetCredits
         )
     }
 }

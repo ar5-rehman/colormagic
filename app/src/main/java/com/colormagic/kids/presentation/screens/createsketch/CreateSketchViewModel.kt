@@ -26,6 +26,9 @@ data class CreateSketchUiState(
     val categories: List<String> = CategoryIdeas.keys,
     /** Total credits left; null until the first quota fetch resolves. */
     val creditsLeft: Int? = null,
+    /** Whether the parent is subscribed — drives the premium-aware low-credits
+     *  popup (no ads / no upsell for premium). */
+    val isPremium: Boolean = false,
     /** Parent-set: when false the prompt input is read-only and the kid
      *  can only generate by tapping a category chip. */
     val allowFreeText: Boolean = true,
@@ -94,7 +97,12 @@ class CreateSketchViewModel @Inject constructor(
     fun refreshQuota() {
         viewModelScope.launch {
             sketchRepository.getQuota().onSuccess { quota ->
-                _uiState.update { it.copy(creditsLeft = quota.totalAvailableCredits) }
+                _uiState.update {
+                    it.copy(
+                        creditsLeft = quota.totalAvailableCredits,
+                        isPremium = quota.isPremium
+                    )
+                }
             }
         }
     }
@@ -133,18 +141,14 @@ class CreateSketchViewModel @Inject constructor(
     }
 }
 
-/** Picks 6 random prompts from the master pool, each tinted with a kid-
- *  friendly pastel background, to populate the "Need ideas?" cards. */
-private fun freshIdeas(): List<ColoringIdea> {
-    val tints = listOf(
-        0xFFE3F2FD, 0xFFE8F5E9, 0xFFFCE4EC,
-        0xFFFFF3E0, 0xFFEDE7F6, 0xFFE0F7FA
-    )
-    return CategoryIdeas.allIdeas.shuffled().take(6).mapIndexed { i, title ->
+/** Picks 10 random prompts (from a pool of 60+), each carrying its category's
+ *  emoji + pastel color, to populate the colorful "Need ideas?" cards. */
+private fun freshIdeas(): List<ColoringIdea> =
+    CategoryIdeas.allIdeaItems.shuffled().take(10).mapIndexed { i, item ->
         ColoringIdea(
-            id = "idea-$i-${title.hashCode()}",
-            title = title,
-            previewTint = tints[i % tints.size]
+            id = "idea-$i-${item.text.hashCode()}",
+            title = item.text,
+            emoji = CategoryIdeas.emoji[item.category] ?: "✨",
+            previewTint = CategoryIdeas.tint[item.category] ?: 0xFFEDE7F6
         )
     }
-}

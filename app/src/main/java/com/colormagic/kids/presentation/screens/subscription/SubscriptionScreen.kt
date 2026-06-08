@@ -80,6 +80,9 @@ fun SubscriptionScreen(
     onBack: () -> Unit,
     onPurchaseSuccessful: () -> Unit = onBack,
     dismissAsClose: Boolean = false,
+    /** Opens the Parent area when the header avatar is tapped. Null → the
+     *  avatar is hidden (e.g. the first-run paywall, before the main app). */
+    onProfile: (() -> Unit)? = null,
     viewModel: SubscriptionViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -130,6 +133,7 @@ fun SubscriptionScreen(
             onContinue = onContinue,
             onRestore = viewModel::onRestorePurchases,
             onManageSubscription = onManageSubscription,
+            onProfile = onProfile,
             dismissIcon = dismissIcon,
             dismissLabel = dismissLabel
         )
@@ -141,6 +145,7 @@ fun SubscriptionScreen(
             onContinue = onContinue,
             onRestore = viewModel::onRestorePurchases,
             onManageSubscription = onManageSubscription,
+            onProfile = onProfile,
             dismissIcon = dismissIcon,
             dismissLabel = dismissLabel
         )
@@ -155,6 +160,7 @@ private fun SubscriptionTabletContent(
     onContinue: () -> Unit,
     onRestore: () -> Unit = {},
     onManageSubscription: () -> Unit = {},
+    onProfile: (() -> Unit)? = null,
     dismissIcon: ImageVector,
     dismissLabel: String
 ) {
@@ -172,7 +178,9 @@ private fun SubscriptionTabletContent(
             ParentBrandHeader(
                 onBack = onBack,
                 backIcon = dismissIcon,
-                backContentDescription = dismissLabel
+                backContentDescription = dismissLabel,
+                onProfileClick = onProfile,
+                showProfile = onProfile != null
             )
             Spacer(Modifier.height(12.dp))
             ForParentsOnlyPill()
@@ -265,6 +273,7 @@ private fun SubscriptionContent(
     onContinue: () -> Unit,
     onRestore: () -> Unit = {},
     onManageSubscription: () -> Unit = {},
+    onProfile: (() -> Unit)? = null,
     dismissIcon: ImageVector,
     dismissLabel: String
 ) {
@@ -286,7 +295,9 @@ private fun SubscriptionContent(
                 ParentBrandHeader(
                     onBack = onBack,
                     backIcon = dismissIcon,
-                    backContentDescription = dismissLabel
+                    backContentDescription = dismissLabel,
+                    onProfileClick = onProfile,
+                    showProfile = onProfile != null
                 )
             }
 
@@ -578,18 +589,19 @@ private fun PlanCard(
                 Spacer(Modifier.height(14.dp))
 
                 Row(verticalAlignment = Alignment.Bottom) {
+                    // The actual amount the user pays (e.g. "$4.99", "$1.99", "Free").
                     Text(
                         text = plan.price,
-                        fontSize = 38.sp,
-                        lineHeight = 42.sp,
+                        fontSize = 32.sp,
+                        lineHeight = 34.sp,
                         fontWeight = FontWeight.Bold,
                         color = palette.titleInk
                     )
                     if (plan.priceSuffix != null) {
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text(
                             text = plan.priceSuffix,
-                            fontSize = 16.sp,
+                            fontSize = 15.sp,
                             color = palette.bodyInk,
                             modifier = Modifier.padding(bottom = 6.dp)
                         )

@@ -69,6 +69,7 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 fun ParentAreaScreen(
     onManageSubscription: () -> Unit,
     onOpenSupport: () -> Unit = {},
+    onGetCredits: () -> Unit = {},
     viewModel: ParentAreaViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
@@ -124,7 +125,7 @@ fun ParentAreaScreen(
         ParentAreaContent(
             state = state,
             onManageSubscription = onManageSubscription,
-            onBuyMore = onManageSubscription,
+            onBuyMore = onGetCredits,
             onSketchLimitChanged = viewModel::onSketchLimitChanged,
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
             onClearArtwork = viewModel::onClearArtwork,
@@ -137,7 +138,7 @@ fun ParentAreaScreen(
         ParentAreaTabletContent(
             state = state,
             onManageSubscription = onManageSubscription,
-            onBuyMore = onManageSubscription,
+            onBuyMore = onGetCredits,
             onSketchLimitChanged = viewModel::onSketchLimitChanged,
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
             onClearArtwork = viewModel::onClearArtwork,
@@ -394,7 +395,7 @@ private fun SparkleCreditsCard(
             }
             Spacer(Modifier.height(14.dp))
             BrandPrimaryButton(
-                label = "Buy More",
+                label = "Get Credits",
                 onClick = onBuyMore,
                 leadingIcon = Icons.Filled.Add,
                 height = 52.dp,
