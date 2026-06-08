@@ -2,6 +2,7 @@ package com.colormagic.kids.presentation.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.colormagic.kids.domain.model.UserQuota
 import com.colormagic.kids.domain.repository.CreditRepository
 import com.colormagic.kids.domain.repository.SketchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -55,7 +56,11 @@ class HomeViewModel @Inject constructor(
             creditRepository.quotaFlow.collect { quota ->
                 _uiState.update {
                     it.copy(
-                        sketchesLeft = quota.totalAvailableCredits,
+                        // UNKNOWN is the pre-load sentinel — keep credits null so
+                        // the pill shimmers until the real balance arrives from
+                        // Firebase (rather than flashing "Out of credits").
+                        sketchesLeft = if (quota === UserQuota.UNKNOWN) null
+                        else quota.totalAvailableCredits,
                         isPremium = quota.isPremium
                     )
                 }

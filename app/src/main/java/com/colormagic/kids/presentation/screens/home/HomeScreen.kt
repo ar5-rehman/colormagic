@@ -62,6 +62,7 @@ import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.CreditPill
 import com.colormagic.kids.presentation.components.CreditPillStyle
+import com.colormagic.kids.presentation.components.ShimmerBox
 import com.colormagic.kids.presentation.components.TactileSurface
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
@@ -503,11 +504,19 @@ private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) {
  */
 @Composable
 private fun CreditPillButton(sketchesLeft: Int?, onClick: () -> Unit) {
-    val label = when (sketchesLeft) {
-        null -> "Credits: …"
-        0 -> "Out of credits — tap to get more"
-        else -> "Credits: $sketchesLeft"
+    // Still loading the balance from Firebase → shimmer a pill-shaped placeholder
+    // instead of flashing a misleading "Out of credits".
+    if (sketchesLeft == null) {
+        ShimmerBox(
+            shape = RoundedCornerShape(50),
+            modifier = Modifier
+                .height(34.dp)
+                .width(128.dp)
+        )
+        return
     }
+    val label = if (sketchesLeft == 0) "Out of credits — tap to get more"
+    else "Credits: $sketchesLeft"
     val style = if (sketchesLeft == 0) CreditPillStyle.Primary else CreditPillStyle.Subtle
     CreditPill(
         text = label,
