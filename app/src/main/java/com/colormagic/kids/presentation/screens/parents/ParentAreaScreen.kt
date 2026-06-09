@@ -39,7 +39,11 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -565,47 +569,51 @@ private fun SettingsRowTitle(title: String, subtitle: String) {
     )
 }
 
+private const val SESSION_MIN = 5    // shortest custom screen-time, minutes
+private const val SESSION_MAX = 240  // longest custom screen-time (4 hours)
+
 @Composable
 private fun SessionLimitPicker(
     selected: Int?,
     onSelect: (Int?) -> Unit
 ) {
-    // null = Off; the rest are minute caps.
-    val options: List<Pair<Int?, String>> = listOf(
-        null to "Off",
-        15 to "15m",
-        30 to "30m",
-        60 to "60m"
-    )
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = BrandTokens.SubtleSurface
+    val presets = listOf(15, 30, 60) // minutes
+    // Custom = a non-null minute value that isn't one of the presets.
+    val isCustom = selected != null && selected !in presets
+    var showCustomDialog by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            options.forEach { (minutes, label) ->
-                val isSelected = minutes == selected
-                Surface(
-                    onClick = { onSelect(minutes) },
-                    shape = RoundedCornerShape(50),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isSelected) Color.White else BrandTokens.HeadingInk
-                        )
-                    }
-                }
-            }
+        LimitChip(text = "Off", selected = selected == null, onClick = { onSelect(null) })
+        presets.forEach { minutes ->
+            LimitChip(
+                text = "${minutes}m",
+                selected = !isCustom && selected == minutes,
+                onClick = { onSelect(minutes) }
+            )
         }
+        LimitChip(
+            text = if (isCustom) "✏️ ${selected}m" else "✏️ Custom",
+            selected = isCustom,
+            onClick = { showCustomDialog = true }
+        )
+    }
+
+    if (showCustomDialog) {
+        CustomNumberDialog(
+            title = "Custom screen-time",
+            prompt = "How many minutes per session? ($SESSION_MIN–$SESSION_MAX)",
+            initial = selected,
+            min = SESSION_MIN,
+            max = SESSION_MAX,
+            onDismiss = { showCustomDialog = false },
+            onConfirm = { minutes ->
+                onSelect(minutes)
+                showCustomDialog = false
+            }
+        )
     }
 }
 
@@ -614,45 +622,116 @@ private fun SketchLimitPicker(
     selected: SketchLimit,
     onSelect: (SketchLimit) -> Unit
 ) {
-    Surface(
-        shape = RoundedCornerShape(50),
-        color = BrandTokens.SubtleSurface
+    val presets = SketchLimit.presets
+    // The current value is "custom" if it's a number that isn't one of the presets.
+    val isCustom = selected.perDay != null && presets.none { it.perDay == selected.perDay }
+    var showCustomDialog by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier.horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier.padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            SketchLimit.entries.forEach { limit ->
-                val isSelected = limit == selected
-                Surface(
-                    onClick = { onSelect(limit) },
-                    shape = RoundedCornerShape(50),
-                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
-                ) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp)
-                    ) {
-                        if (limit == SketchLimit.Unlimited) {
-                            Icon(
-                                imageVector = Icons.Filled.AllInclusive,
-                                contentDescription = "Unlimited",
-                                tint = if (isSelected) Color.White else BrandTokens.HeadingInk,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        } else {
-                            Text(
-                                text = limit.label,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (isSelected) Color.White else BrandTokens.HeadingInk
-                            )
-                        }
-                    }
-                }
+        presets.forEach { limit ->
+            LimitChip(
+                text = limit.label,
+                selected = !isCustom && limit == selected,
+                onClick = { onSelect(limit) }
+            )
+        }
+        // Custom: shows the chosen number when active, else a "✏️ Custom" prompt.
+        LimitChip(
+            text = if (isCustom) "✏️ ${selected.perDay}" else "✏️ Custom",
+            selected = isCustom,
+            onClick = { showCustomDialog = true }
+        )
+    }
+
+    if (showCustomDialog) {
+        CustomNumberDialog(
+            title = "Custom daily limit",
+            prompt = "How many sketches per day? " +
+                "(${SketchLimit.MIN_CUSTOM}–${SketchLimit.MAX_CUSTOM})",
+            initial = selected.perDay,
+            min = SketchLimit.MIN_CUSTOM,
+            max = SketchLimit.MAX_CUSTOM,
+            onDismiss = { showCustomDialog = false },
+            onConfirm = { n ->
+                onSelect(SketchLimit(n))
+                showCustomDialog = false
             }
+        )
+    }
+}
+
+@Composable
+private fun LimitChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = if (selected) MaterialTheme.colorScheme.primary else Color.White,
+        border = if (selected) null
+        else androidx.compose.foundation.BorderStroke(1.5.dp, BrandTokens.SubtleOutline)
+    ) {
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp)
+        ) {
+            Text(
+                text = text,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (selected) Color.White else BrandTokens.HeadingInk
+            )
         }
     }
+}
+
+/** Reusable number-entry dialog for a custom limit (sketches or minutes). */
+@Composable
+private fun CustomNumberDialog(
+    title: String,
+    prompt: String,
+    initial: Int?,
+    min: Int,
+    max: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    val maxLen = max.toString().length
+    var text by remember {
+        mutableStateOf(initial?.takeIf { it in min..max }?.toString() ?: "")
+    }
+    val value = text.toIntOrNull()
+    val valid = value != null && value in min..max
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            Column {
+                Text(text = prompt, fontSize = 14.sp, color = BrandTokens.MutedInk)
+                Spacer(Modifier.height(12.dp))
+                androidx.compose.material3.OutlinedTextField(
+                    value = text,
+                    onValueChange = { new -> text = new.filter { it.isDigit() }.take(maxLen) },
+                    singleLine = true,
+                    isError = text.isNotEmpty() && !valid,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                onClick = { value?.let(onConfirm) },
+                enabled = valid
+            ) { Text("Set") }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable

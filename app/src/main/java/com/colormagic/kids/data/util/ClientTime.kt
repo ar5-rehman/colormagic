@@ -1,6 +1,6 @@
 package com.colormagic.kids.data.util
 
-import java.time.OffsetDateTime
+import java.util.Calendar
 
 /**
  * The device's current UTC offset in minutes — i.e. minutes to ADD to UTC to
@@ -10,5 +10,12 @@ import java.time.OffsetDateTime
  * server only uses this to position the day boundary; the actual "has a new day
  * started" check is anchored to the trusted server clock, so changing the
  * device clock can't farm extra credits.
+ *
+ * Uses Calendar (API 1+) — ZONE_OFFSET + DST_OFFSET, in millis — instead of
+ * java.time.OffsetDateTime (API 26+), so it runs on every supported device.
  */
-fun currentUtcOffsetMinutes(): Int = OffsetDateTime.now().offset.totalSeconds / 60
+fun currentUtcOffsetMinutes(): Int {
+    val cal = Calendar.getInstance()
+    val offsetMillis = cal.get(Calendar.ZONE_OFFSET) + cal.get(Calendar.DST_OFFSET)
+    return offsetMillis / 60_000
+}

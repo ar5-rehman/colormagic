@@ -2,6 +2,7 @@ package com.colormagic.kids.presentation.screens.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -545,10 +546,21 @@ private fun LazyGridScope.fullWidth(
 private fun StreakCard(streak: Int, best: Int) {
     Surface(
         shape = RoundedCornerShape(22.dp),
-        color = Color(0xFFFFE7C2),
+        color = Color(0xFFFFB74D),
+        shadowElevation = 3.dp,
         modifier = Modifier.fillMaxWidth()
     ) {
-        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+        Column(
+            modifier = Modifier
+                .background(
+                    Brush.linearGradient(
+                        // Warm, prominent amber → orange — reads as "fire" while
+                        // staying light enough for the flame strip to pop.
+                        listOf(Color(0xFFFFD27A), Color(0xFFFF9E4D))
+                    )
+                )
+                .padding(horizontal = 18.dp, vertical = 16.dp)
+        ) {
             // Header row: flame + "N-day streak!" + Best
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(text = "🔥", fontSize = 26.sp)
@@ -557,7 +569,7 @@ private fun StreakCard(streak: Int, best: Int) {
                     text = if (streak == 1) "1-Day Streak!" else "$streak-Day Streak!",
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF8A4B00),
+                    color = Color.White,
                     modifier = Modifier.weight(1f)
                 )
                 if (best > 1) {
@@ -566,24 +578,34 @@ private fun StreakCard(streak: Int, best: Int) {
                             text = "Best",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFB06A1F)
+                            color = Color(0xCCFFFFFF)
                         )
                         Text(
                             text = "$best",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF8A4B00)
+                            color = Color.White
                         )
                     }
                 }
             }
             Spacer(Modifier.height(14.dp))
-            StreakWeekStrip(streak = streak)
+            StreakWeekStrip(
+                streak = streak,
+                colors = com.colormagic.kids.presentation.components.StreakStripColors(
+                    active = Color.White,
+                    empty = Color(0x33FFFFFF),
+                    future = Color(0x22FFFFFF),
+                    letter = Color.White,
+                    futureLetter = Color(0x88FFFFFF),
+                    ring = Color.White
+                )
+            )
             Spacer(Modifier.height(12.dp))
             Text(
                 text = "Color tomorrow to reach ${streak + 1}! 🎨",
                 fontSize = 13.sp,
-                color = Color(0xFFB06A1F)
+                color = Color(0xE6FFFFFF)
             )
         }
     }

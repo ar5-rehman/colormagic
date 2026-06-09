@@ -37,7 +37,8 @@ class ParentControlsStore @Inject constructor(
     }
 
     fun setDailyLimit(limit: SketchLimit) {
-        prefs.edit().putString(K_DAILY_LIMIT, limit.name).apply()
+        // Stored as the per-day int (-1 = Unlimited) so any custom number works.
+        prefs.edit().putInt(K_DAILY_LIMIT_N, limit.perDay ?: UNLIMITED).apply()
         _state.update { it.copy(dailyLimit = limit) }
     }
 
@@ -63,9 +64,8 @@ class ParentControlsStore @Inject constructor(
 
     private fun load(): ParentControls {
         val allowFreeText = prefs.getBoolean(K_ALLOW_FREE_TEXT, true)
-        val limit = runCatching {
-            SketchLimit.valueOf(prefs.getString(K_DAILY_LIMIT, null) ?: SketchLimit.Unlimited.name)
-        }.getOrDefault(SketchLimit.Unlimited)
+        val limitPerDay = prefs.getInt(K_DAILY_LIMIT_N, UNLIMITED)
+        val limit = if (limitPerDay < 0) SketchLimit.Unlimited else SketchLimit(limitPerDay)
         val savedDay = prefs.getLong(K_DAY_STAMP, 0L)
         val today = todayStamp()
         // If the persisted counter is from a previous day, expose 0 — the
@@ -95,7 +95,8 @@ class ParentControlsStore @Inject constructor(
     private companion object {
         const val PREFS = "parent_controls"
         const val K_ALLOW_FREE_TEXT = "allow_free_text"
-        const val K_DAILY_LIMIT = "daily_limit"
+        const val K_DAILY_LIMIT_N = "daily_limit_per_day" // Int; -1 = Unlimited
+        const val UNLIMITED = -1
         const val K_TODAY_COUNT = "today_count"
         const val K_DAY_STAMP = "day_stamp"
         const val K_SESSION_LIMIT = "session_limit_minutes"

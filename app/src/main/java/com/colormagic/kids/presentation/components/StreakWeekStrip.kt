@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.time.LocalDate
+import java.util.Calendar
 
 /**
  * A Duolingo-style 7-day flame strip (Mon→Sun of the current week).
@@ -31,13 +31,27 @@ import java.time.LocalDate
  * so no per-day history is needed: the streak always ends "today" (Home records
  * the open), so the last [streak] days up to today are the flames.
  */
+/** Colour set for the strip, so it reads on both a light card and a warm
+ *  (orange) card. Defaults suit a light/white background. */
+data class StreakStripColors(
+    val active: Color = Color(0xFFFFB74D),
+    val empty: Color = Color(0xFFEFE2C8),
+    val future: Color = Color(0xFFF6EEDD),
+    val letter: Color = Color(0xFFB06A1F),
+    val futureLetter: Color = Color(0xFFD3C4A8),
+    val ring: Color = Color(0xFF8A4B00)
+)
+
 @Composable
 fun StreakWeekStrip(
     streak: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    colors: StreakStripColors = StreakStripColors()
 ) {
     val letters = listOf("M", "T", "W", "T", "F", "S", "S")
-    val todayIdx = LocalDate.now().dayOfWeek.value - 1 // Mon=0 … Sun=6
+    // Calendar (API 1+) instead of java.time.LocalDate (API 26+). DAY_OF_WEEK
+    // is 1=Sun..7=Sat; map to Mon=0 … Sun=6 so the strip starts on Monday.
+    val todayIdx = (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) + 5) % 7
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -48,19 +62,25 @@ fun StreakWeekStrip(
             val isFuture = i > todayIdx
             val daysAgo = todayIdx - i
             val active = !isFuture && daysAgo < streak
-            DayDot(letter = letters[i], active = active, isToday = isToday, isFuture = isFuture)
+            DayDot(letters[i], active, isToday, isFuture, colors)
         }
     }
 }
 
 @Composable
-private fun DayDot(letter: String, active: Boolean, isToday: Boolean, isFuture: Boolean) {
+private fun DayDot(
+    letter: String,
+    active: Boolean,
+    isToday: Boolean,
+    isFuture: Boolean,
+    colors: StreakStripColors
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = letter,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
-            color = if (isFuture) Color(0xFFD3C4A8) else Color(0xFFB06A1F)
+            color = if (isFuture) colors.futureLetter else colors.letter
         )
         Spacer(Modifier.height(6.dp))
         Box(
@@ -69,13 +89,13 @@ private fun DayDot(letter: String, active: Boolean, isToday: Boolean, isFuture: 
                 .clip(CircleShape)
                 .background(
                     when {
-                        active -> Color(0xFFFFB74D)      // lit flame day
-                        isFuture -> Color(0xFFF6EEDD)    // upcoming (faint)
-                        else -> Color(0xFFEFE2C8)        // missed / before streak
+                        active -> colors.active
+                        isFuture -> colors.future
+                        else -> colors.empty
                     }
                 )
                 .then(
-                    if (isToday) Modifier.border(2.dp, Color(0xFF8A4B00), CircleShape)
+                    if (isToday) Modifier.border(2.dp, colors.ring, CircleShape)
                     else Modifier
                 ),
             contentAlignment = Alignment.Center

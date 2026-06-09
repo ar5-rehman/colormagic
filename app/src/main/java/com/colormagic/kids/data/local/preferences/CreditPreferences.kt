@@ -12,7 +12,9 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -110,7 +112,9 @@ class CreditPreferences @Inject constructor(@ApplicationContext private val cont
         }
     }
 
-    private fun todayString(): String = LocalDate.now().toString()
+    // SimpleDateFormat (API 1+) instead of java.time.LocalDate (API 26+).
+    private fun todayString(): String =
+        SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
 
     companion object {
         private const val MAX_REWARDED_ADS_PER_DAY = 5
