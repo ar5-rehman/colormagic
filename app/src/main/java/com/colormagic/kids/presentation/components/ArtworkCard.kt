@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +46,7 @@ fun ArtworkCard(
     onOpen: () -> Unit,
     onDelete: () -> Unit,
     onShare: () -> Unit = {},
+    onPrint: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val shape = RoundedCornerShape(24.dp)
@@ -98,6 +100,17 @@ fun ArtworkCard(
                     tint = Color(0xFF01579B),
                     onClick = onShare
                 )
+                // Print is only meaningful when there's a saved PNG to print.
+                if (onPrint != null) {
+                    Spacer(Modifier.width(8.dp))
+                    CircleIconAction(
+                        icon = Icons.Filled.Print,
+                        contentDescription = "Print ${artwork.title}",
+                        backgroundColor = Color(0xFFE3DDF6),
+                        tint = Color(0xFF4A347E),
+                        onClick = onPrint
+                    )
+                }
                 Spacer(Modifier.width(8.dp))
                 CircleIconAction(
                     icon = Icons.Filled.DeleteOutline,

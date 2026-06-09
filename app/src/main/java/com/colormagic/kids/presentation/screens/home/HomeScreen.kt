@@ -63,6 +63,7 @@ import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.CreditPill
 import com.colormagic.kids.presentation.components.CreditPillStyle
 import com.colormagic.kids.presentation.components.ShimmerBox
+import com.colormagic.kids.presentation.components.StreakWeekStrip
 import com.colormagic.kids.presentation.components.TactileSurface
 import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 
@@ -76,6 +77,7 @@ fun HomeScreen(
     onOpenGallery: () -> Unit = {},
     onOpenParentArea: () -> Unit = {},
     onGetCredits: () -> Unit = {},
+    onDailyIdea: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -90,24 +92,42 @@ fun HomeScreen(
         viewModel.refreshQuota()
     }
 
-    if (info.isCompactWidth) {
-        HomeContent(
-            state = state,
-            onCreateNewSketch = onCreateNewSketch,
-            onCategoryClick = onCategoryClick,
-            onOpenGallery = onOpenGallery,
-            onOpenParentArea = onOpenParentArea,
-            onGetCredits = onGetCredits
-        )
-    } else {
-        HomeTabletContent(
-            state = state,
-            onCreateNewSketch = onCreateNewSketch,
-            onCategoryClick = onCategoryClick,
-            onOpenGallery = onOpenGallery,
-            onOpenParentArea = onOpenParentArea,
-            onGetCredits = onGetCredits
-        )
+    // Streak-advance celebration: confetti + chime, once per new day.
+    if (state.showStreakCelebration) {
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            com.colormagic.kids.presentation.util.CelebrationFx.playSuccess()
+            kotlinx.coroutines.delay(3200)
+            viewModel.streakCelebrationShown()
+        }
+    }
+
+    androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
+        if (info.isCompactWidth) {
+            HomeContent(
+                state = state,
+                onCreateNewSketch = onCreateNewSketch,
+                onCategoryClick = onCategoryClick,
+                onOpenGallery = onOpenGallery,
+                onOpenParentArea = onOpenParentArea,
+                onGetCredits = onGetCredits,
+                onDailyIdea = onDailyIdea
+            )
+        } else {
+            HomeTabletContent(
+                state = state,
+                onCreateNewSketch = onCreateNewSketch,
+                onCategoryClick = onCategoryClick,
+                onOpenGallery = onOpenGallery,
+                onOpenParentArea = onOpenParentArea,
+                onGetCredits = onGetCredits,
+                onDailyIdea = onDailyIdea
+            )
+        }
+        if (state.showStreakCelebration) {
+            com.colormagic.kids.presentation.components.ConfettiOverlay(
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
 
@@ -118,7 +138,8 @@ private fun HomeTabletContent(
     onCategoryClick: (HomeCategory) -> Unit,
     onOpenGallery: () -> Unit,
     onOpenParentArea: () -> Unit,
-    onGetCredits: () -> Unit = {}
+    onGetCredits: () -> Unit = {},
+    onDailyIdea: (String) -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -147,6 +168,10 @@ private fun HomeTabletContent(
                     lineHeight = 42.sp,
                     color = MaterialTheme.colorScheme.primary
                 )
+                if (state.streak > 0) {
+                    StreakCard(streak = state.streak, best = state.streakBest)
+                }
+                DailyIdeaCard(idea = state.dailyIdea, onClick = { onDailyIdea(state.dailyIdea) })
                 ChildIllustrationCard()
             }
 
@@ -319,7 +344,8 @@ private fun HomeContent(
     onCategoryClick: (HomeCategory) -> Unit,
     onOpenGallery: () -> Unit,
     onOpenParentArea: () -> Unit,
-    onGetCredits: () -> Unit = {}
+    onGetCredits: () -> Unit = {},
+    onDailyIdea: (String) -> Unit = {}
 ) {
     // Even with system bars hidden, devices still have a display cutout / camera
     // hole at the top. Pad for it so the heading never bleeds into the notch.
@@ -348,7 +374,13 @@ private fun HomeContent(
 
             fullWidth {
                 CreditPillButton(sketchesLeft = state.sketchesLeft, onClick = onGetCredits)
-                Spacer(Modifier.height(28.dp))
+                Spacer(Modifier.height(16.dp))
+                if (state.streak > 0) {
+                    StreakCard(streak = state.streak, best = state.streakBest)
+                    Spacer(Modifier.height(16.dp))
+                }
+                DailyIdeaCard(idea = state.dailyIdea, onClick = { onDailyIdea(state.dailyIdea) })
+                Spacer(Modifier.height(24.dp))
             }
 
             fullWidth {
@@ -497,8 +529,99 @@ private fun ActionTile(
     }
 }
 
-private fun LazyGridScope.fullWidth(content: @Composable () -> Unit) {
-    item(span = { GridItemSpan(maxLineSpan) }) { content() }
+private fun LazyGridScope.fullWidth(
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
+    // Wrap in a Column so multiple children (e.g. credit pill + streak card +
+    // daily-idea card) STACK vertically instead of overlapping in the cell.
+    item(span = { GridItemSpan(maxLineSpan) }) {
+        androidx.compose.foundation.layout.Column { content() }
+    }
+}
+
+/** Prominent weekly-flame streak card — a gentle daily-return reward. The
+ *  7-day strip shows which days were colored; today is highlighted. */
+@Composable
+private fun StreakCard(streak: Int, best: Int) {
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFFFFE7C2),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+            // Header row: flame + "N-day streak!" + Best
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "🔥", fontSize = 26.sp)
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = if (streak == 1) "1-Day Streak!" else "$streak-Day Streak!",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF8A4B00),
+                    modifier = Modifier.weight(1f)
+                )
+                if (best > 1) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "Best",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFB06A1F)
+                        )
+                        Text(
+                            text = "$best",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF8A4B00)
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            StreakWeekStrip(streak = streak)
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Color tomorrow to reach ${streak + 1}! 🎨",
+                fontSize = 13.sp,
+                color = Color(0xFFB06A1F)
+            )
+        }
+    }
+}
+
+/** "Today's magic word" card — a fresh suggested idea; tap to start it. */
+@Composable
+private fun DailyIdeaCard(idea: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFFEDE7F6),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 14.dp)
+        ) {
+            Text(text = "✨", fontSize = 26.sp)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Today's magic idea",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF7E6BA8)
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = idea.replaceFirstChar { it.uppercase() },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4A347E)
+                )
+            }
+            Text(text = "→", fontSize = 22.sp, color = Color(0xFF4A347E))
+        }
+    }
 }
 
 /**

@@ -15,7 +15,11 @@ data class ParentControls(
     val sketchesToday: Int = 0,
     /** Day stamp the counter belongs to. Days since 1970-01-01 in the device's
      *  local timezone — a new day's first sketch resets the counter. */
-    val dayStamp: Long = 0L
+    val dayStamp: Long = 0L,
+    /** Gentle per-session screen-time cap, in minutes. null = off. When a
+     *  session exceeds it, a friendly "time for a break" screen appears; a
+     *  grown-up can add more time. */
+    val sessionLimitMinutes: Int? = null
 ) {
     /** True when the kid has hit today's local cap. Unlimited never blocks. */
     val dailyLimitReached: Boolean

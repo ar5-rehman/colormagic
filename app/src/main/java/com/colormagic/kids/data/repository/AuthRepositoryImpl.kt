@@ -92,7 +92,14 @@ class AuthRepositoryImpl @Inject constructor(
                     current.linkWithCredential(credential).await()
                 } catch (collision: FirebaseAuthUserCollisionException) {
                     // This Google account already has its own Firebase user → sign
-                    // into that instead. (The anonymous uid is abandoned.)
+                    // into that instead. The throwaway guest would otherwise pile
+                    // up in Auth + Firestore on every logout→login, so DELETE its
+                    // Auth record first (best-effort). An `onUserDeleted` Cloud
+                    // Function removes its matching users/{uid} Firestore doc.
+                    runCatching { current.delete().await() }
+                        .onFailure {
+                            Log.w("AuthRepository", "Couldn't delete throwaway guest", it)
+                        }
                     firebaseAuth.signInWithCredential(credential).await()
                 }
             } else {

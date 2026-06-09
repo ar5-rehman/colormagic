@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.platform.LocalContext
 import com.colormagic.kids.domain.model.CategoryIdeas
@@ -70,6 +71,7 @@ fun GalleryScreen(
     val info = currentWindowAdaptiveInfo()
     val context = LocalContext.current
     val onShare: (GalleryArtwork) -> Unit = { artwork -> shareArtwork(context, artwork) }
+    val onPrint: (GalleryArtwork) -> Unit = { artwork -> printArtwork(context, artwork) }
 
     if (info.isCompactWidth) {
         GalleryContent(
@@ -78,6 +80,7 @@ fun GalleryScreen(
             onOpenArtwork = onOpenArtwork,
             onDelete = viewModel::onDelete,
             onShare = onShare,
+            onPrint = onPrint,
             onCategorySelected = viewModel::onCategorySelected,
             onOpenParents = onOpenParents
         )
@@ -88,6 +91,7 @@ fun GalleryScreen(
             onOpenArtwork = onOpenArtwork,
             onDelete = viewModel::onDelete,
             onShare = onShare,
+            onPrint = onPrint,
             onCategorySelected = viewModel::onCategorySelected
         )
     }
@@ -100,6 +104,7 @@ private fun GalleryTabletContent(
     onOpenArtwork: (GalleryArtwork) -> Unit,
     onDelete: (String) -> Unit,
     onShare: (GalleryArtwork) -> Unit,
+    onPrint: (GalleryArtwork) -> Unit,
     onCategorySelected: (String?) -> Unit
 ) {
     Surface(
@@ -137,7 +142,10 @@ private fun GalleryTabletContent(
                         artwork = artwork,
                         onOpen = { onOpenArtwork(artwork) },
                         onDelete = { onDelete(artwork.id) },
-                        onShare = { onShare(artwork) }
+                        onShare = { onShare(artwork) },
+                        onPrint = if (artwork.localUri != null) {
+                            { onPrint(artwork) }
+                        } else null
                     )
                 }
                 item(key = "start-new") {
@@ -153,7 +161,8 @@ private fun GalleryTabletCard(
     artwork: GalleryArtwork,
     onOpen: () -> Unit,
     onDelete: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onPrint: (() -> Unit)? = null
 ) {
     Surface(
         onClick = onOpen,
@@ -239,6 +248,27 @@ private fun GalleryTabletCard(
                         )
                     }
                 }
+                if (onPrint != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Surface(
+                        onClick = onPrint,
+                        shape = CircleShape,
+                        color = Color(0xFFE3DDF6),
+                        modifier = Modifier.size(34.dp)
+                    ) {
+                        androidx.compose.foundation.layout.Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Print,
+                                contentDescription = "Print",
+                                tint = Color(0xFF4A347E),
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.width(8.dp))
                 Surface(
                     onClick = onDelete,
@@ -314,6 +344,7 @@ private fun GalleryContent(
     onOpenArtwork: (GalleryArtwork) -> Unit,
     onDelete: (String) -> Unit,
     onShare: (GalleryArtwork) -> Unit,
+    onPrint: (GalleryArtwork) -> Unit,
     onCategorySelected: (String?) -> Unit,
     onOpenParents: () -> Unit
 ) {
@@ -360,6 +391,9 @@ private fun GalleryContent(
                     onOpen = { onOpenArtwork(artwork) },
                     onDelete = { onDelete(artwork.id) },
                     onShare = { onShare(artwork) },
+                    onPrint = if (artwork.localUri != null) {
+                        { onPrint(artwork) }
+                    } else null,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
@@ -480,6 +514,7 @@ private fun GalleryPreviewPhone() {
             onOpenArtwork = {},
             onDelete = {},
             onShare = {},
+            onPrint = {},
             onCategorySelected = {},
             onOpenParents = {}
         )

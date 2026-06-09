@@ -118,12 +118,15 @@ fun ColoringScreen(
     // exactly what the kid sees — strokes were recorded in this coordinate
     // space, so re-rendering at the same dimensions keeps everything aligned.
     var canvasSize by remember { mutableStateOf(IntSize.Zero) }
+    // Stroke widths on screen are density-scaled; the off-screen renderer needs
+    // the same scale so the saved PNG matches what the kid drew.
+    val densityScale = androidx.compose.ui.platform.LocalDensity.current.density
     val coroutineScope = androidx.compose.runtime.rememberCoroutineScope()
     val onSave = {
         // Don't double-fire while a previous save is still running.
         if (!state.isSaving && canvasSize.width > 0 && canvasSize.height > 0) {
             coroutineScope.launch {
-                val saved = viewModel.saveArtwork(canvasSize.width, canvasSize.height)
+                val saved = viewModel.saveArtwork(canvasSize.width, canvasSize.height, densityScale)
                 if (saved) onSaved()
             }
         }
@@ -681,7 +684,8 @@ private val BRUSHES: List<Pair<ColoringTool, Int>> = listOf(
     ColoringTool.Pencil to R.drawable.ic_brush_pencil,
     ColoringTool.Watercolor to R.drawable.ic_brush_watercolor,
     ColoringTool.Highlighter to R.drawable.ic_brush_highlighter,
-    ColoringTool.Magic to R.drawable.ic_brush_magic
+    ColoringTool.Magic to R.drawable.ic_brush_magic,
+    ColoringTool.Glitter to R.drawable.ic_brush_glitter
 )
 
 @Composable
@@ -924,6 +928,7 @@ private val ColoringTool.label: String
         ColoringTool.Watercolor -> "Watercolor"
         ColoringTool.Highlighter -> "Highlighter"
         ColoringTool.Magic -> "Magic"
+        ColoringTool.Glitter -> "Glitter"
         ColoringTool.Eraser -> "Eraser"
         ColoringTool.Fill -> "Fill"
     }

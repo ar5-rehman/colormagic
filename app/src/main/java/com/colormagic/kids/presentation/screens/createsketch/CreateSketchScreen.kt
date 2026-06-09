@@ -70,6 +70,43 @@ fun CreateSketchScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    // Voice-to-prompt: launches the system speech recognizer (no RECORD_AUDIO
+    // permission needed — the system UI handles capture) and drops the spoken
+    // words into the prompt. Great for 4–7 year-olds who can't type yet.
+    val speechLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            val spoken = result.data
+                ?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+            if (!spoken.isNullOrBlank()) viewModel.onPromptChanged(spoken)
+        }
+    }
+    val onVoice: () -> Unit = {
+        val intent = android.content.Intent(
+            android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH
+        ).apply {
+            putExtra(
+                android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM
+            )
+            putExtra(
+                android.speech.RecognizerIntent.EXTRA_PROMPT,
+                "Say what you want to color!"
+            )
+        }
+        val launched = runCatching { speechLauncher.launch(intent) }.isSuccess
+        if (!launched) {
+            android.widget.Toast.makeText(
+                context,
+                "Voice input isn't available on this device.",
+                android.widget.Toast.LENGTH_SHORT
+            ).show()
+        }
+    }
 
     // Refresh the credit count every time the screen resumes — a purchase
     // made on the Subscription screen should re-enable "Make My Sketch"
@@ -113,7 +150,8 @@ fun CreateSketchScreen(
             onMakeSketch = onMakeSketch,
             onIdeaSelected = viewModel::onIdeaSelected,
             onUpgrade = onUpgrade,
-            onGetCredits = onGetCredits
+            onGetCredits = onGetCredits,
+            onVoice = onVoice
         )
     } else {
         CreateSketchTabletContent(
@@ -124,7 +162,8 @@ fun CreateSketchScreen(
             onMakeSketch = onMakeSketch,
             onIdeaSelected = viewModel::onIdeaSelected,
             onUpgrade = onUpgrade,
-            onGetCredits = onGetCredits
+            onGetCredits = onGetCredits,
+            onVoice = onVoice
         )
     }
 }
@@ -138,7 +177,8 @@ private fun CreateSketchTabletContent(
     onMakeSketch: () -> Unit,
     onIdeaSelected: (ColoringIdea) -> Unit,
     onUpgrade: () -> Unit,
-    onGetCredits: () -> Unit = onUpgrade
+    onGetCredits: () -> Unit = onUpgrade,
+    onVoice: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -178,6 +218,10 @@ private fun CreateSketchTabletContent(
                         },
                         enabled = state.allowFreeText
                     )
+                    if (state.allowFreeText) {
+                        Spacer(Modifier.height(10.dp))
+                        VoiceInputButton(onClick = onVoice)
+                    }
                     Spacer(Modifier.height(24.dp))
                     Text(
                         text = "Categories",
@@ -248,7 +292,8 @@ private fun CreateSketchContent(
     onMakeSketch: () -> Unit,
     onIdeaSelected: (ColoringIdea) -> Unit,
     onUpgrade: () -> Unit,
-    onGetCredits: () -> Unit = onUpgrade
+    onGetCredits: () -> Unit = onUpgrade,
+    onVoice: () -> Unit = {}
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
 
@@ -278,6 +323,10 @@ private fun CreateSketchContent(
                     onValueChange = onPromptChanged,
                     placeholder = "A cute dinosaur eating an apple..."
                 )
+                if (state.allowFreeText) {
+                    Spacer(Modifier.height(10.dp))
+                    VoiceInputButton(onClick = onVoice)
+                }
                 Spacer(Modifier.height(20.dp))
             }
             item {
@@ -417,6 +466,32 @@ private fun OfflineBanner() {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 color = Color(0xFF8A4B00)
+            )
+        }
+    }
+}
+
+// Voice-to-prompt button — taps open the system speech recognizer; the spoken
+// words fill the prompt. A boon for kids who can't type yet.
+@Composable
+private fun VoiceInputButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(50),
+        color = Color(0xFFEDE7F6),
+        modifier = modifier
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
+        ) {
+            Text(text = "🎤", fontSize = 18.sp)
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "Tap to speak your idea",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF4A347E)
             )
         }
     }

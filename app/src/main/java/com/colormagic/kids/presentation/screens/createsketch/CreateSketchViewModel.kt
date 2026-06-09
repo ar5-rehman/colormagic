@@ -75,8 +75,13 @@ class CreateSketchViewModel @Inject constructor(
         // random idea from that category. Honoured even when free-text is
         // disabled — picking from a chip is the only way to start, and the
         // category route IS a chip-equivalent action.
+        // An exact prompt (e.g. Home's "Today's magic idea") wins; otherwise a
+        // category deep-link fills a random idea from that category.
+        val initialPrompt: String? = savedStateHandle[Screen.CreateSketch.ARG_PROMPT]
         val initialCategory: String? = savedStateHandle[Screen.CreateSketch.ARG_CATEGORY]
-        if (!initialCategory.isNullOrBlank()) {
+        if (!initialPrompt.isNullOrBlank()) {
+            _uiState.update { it.copy(prompt = initialPrompt) }
+        } else if (!initialCategory.isNullOrBlank()) {
             CategoryIdeas.randomIdeaFor(initialCategory)?.let { idea ->
                 _uiState.update { it.copy(prompt = idea) }
             }

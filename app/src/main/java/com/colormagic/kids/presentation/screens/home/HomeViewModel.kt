@@ -2,6 +2,7 @@ package com.colormagic.kids.presentation.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.colormagic.kids.domain.model.DailyTheme
 import com.colormagic.kids.domain.model.UserQuota
 import com.colormagic.kids.domain.repository.CreditRepository
 import com.colormagic.kids.domain.repository.SketchRepository
@@ -17,6 +18,15 @@ data class HomeUiState(
     /** Total credits left; null until the first quota fetch resolves. */
     val sketchesLeft: Int? = null,
     val isPremium: Boolean = false,
+    /** Consecutive-day coloring streak (0 = none yet). */
+    val streak: Int = 0,
+    /** Best streak ever reached. */
+    val streakBest: Int = 0,
+    /** One-shot: true right after the streak advanced today, so Home can fire
+     *  a confetti + chime celebration. Cleared by [HomeViewModel.streakCelebrationShown]. */
+    val showStreakCelebration: Boolean = false,
+    /** "Today's magic word" — a fresh suggested idea each day. */
+    val dailyIdea: String = DailyTheme.todaysIdea(),
     val categories: List<HomeCategory> = HomeCategory.defaults()
 )
 
@@ -68,6 +78,12 @@ class HomeViewModel @Inject constructor(
             creditRepository.quotaFlow.collect { quota ->
                 latestQuota = quota
                 if (quota !== UserQuota.UNKNOWN) creditsResolved = true
+                // Streak is server-tracked now (follows the account across
+                // devices). A response that advanced it to a new day flags a
+                // one-shot celebration.
+                if (quota.streakAdvancedToday) {
+                    _uiState.update { it.copy(showStreakCelebration = true) }
+                }
                 publishCredits()
             }
         }
@@ -77,6 +93,11 @@ class HomeViewModel @Inject constructor(
             creditRepository.seedFromCacheIfUnknown()
             loadQuota()
         }
+    }
+
+    /** Clears the one-shot streak celebration once Home has shown it. */
+    fun streakCelebrationShown() {
+        _uiState.update { it.copy(showStreakCelebration = false) }
     }
 
     /** Explicit refresh — called on every ON_RESUME from HomeScreen. */
@@ -97,7 +118,9 @@ class HomeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 sketchesLeft = if (creditsResolved) latestQuota.totalAvailableCredits else null,
-                isPremium = latestQuota.isPremium
+                isPremium = latestQuota.isPremium,
+                streak = latestQuota.streakCurrent,
+                streakBest = latestQuota.streakBest
             )
         }
     }

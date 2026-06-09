@@ -59,6 +59,10 @@ fun SaveSuccessScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val info = currentWindowAdaptiveInfo()
+    // Cheerful chime to go with the confetti — plays once when the screen opens.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.colormagic.kids.presentation.util.CelebrationFx.playSuccess()
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         if (info.isCompactWidth) {
             SaveSuccessContent(

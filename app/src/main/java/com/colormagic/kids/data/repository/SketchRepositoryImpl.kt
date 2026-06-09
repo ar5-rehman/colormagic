@@ -86,7 +86,10 @@ class SketchRepositoryImpl @Inject constructor(
             totalAvailableCredits = (data["totalAvailableCredits"] as? Number)?.toInt() ?: 0,
             rewardedAdsToday = (data["rewardedAdsToday"] as? Number)?.toInt() ?: 0,
             rewardedAdsRemaining = (data["rewardedAdsRemaining"] as? Number)?.toInt()
-                ?: CreditConfig.MAX_REWARDED_ADS_PER_DAY
+                ?: CreditConfig.MAX_REWARDED_ADS_PER_DAY,
+            streakCurrent = (data["streakCurrent"] as? Number)?.toInt() ?: 0,
+            streakBest = (data["streakBest"] as? Number)?.toInt() ?: 0,
+            streakAdvancedToday = data["streakAdvancedToday"] as? Boolean ?: false
         )
         // Keep CreditRepository's live flow in sync with this fetch.
         creditRepository.updateLocalQuota(quota)

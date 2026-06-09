@@ -31,6 +31,8 @@ class CreditPreferences @Inject constructor(@ApplicationContext private val cont
         val DAILY_CREDITS_DATE = stringPreferencesKey("daily_credits_date") // "YYYY-MM-DD"
         val DAILY_CREDITS_AVAILABLE = intPreferencesKey("daily_credits_available")
         val SUBSCRIPTION_ACTIVE = intPreferencesKey("subscription_active")  // 0 or 1
+        val STREAK_CURRENT = intPreferencesKey("streak_current")
+        val STREAK_BEST = intPreferencesKey("streak_best")
     }
 
     /** Emits the locally-cached total available credits. */
@@ -72,7 +74,9 @@ class CreditPreferences @Inject constructor(@ApplicationContext private val cont
             extraCredits = 0,
             totalAvailableCredits = total,
             rewardedAdsToday = adsToday,
-            rewardedAdsRemaining = (MAX_REWARDED_ADS_PER_DAY - adsToday).coerceAtLeast(0)
+            rewardedAdsRemaining = (MAX_REWARDED_ADS_PER_DAY - adsToday).coerceAtLeast(0),
+            streakCurrent = prefs[Keys.STREAK_CURRENT] ?: 0,
+            streakBest = prefs[Keys.STREAK_BEST] ?: 0
         )
     }
 
@@ -82,6 +86,8 @@ class CreditPreferences @Inject constructor(@ApplicationContext private val cont
             prefs[Keys.TOTAL_CREDITS] = quota.totalAvailableCredits
             prefs[Keys.PLAN] = quota.plan
             prefs[Keys.SUBSCRIPTION_ACTIVE] = if (quota.subscriptionActive) 1 else 0
+            prefs[Keys.STREAK_CURRENT] = quota.streakCurrent
+            prefs[Keys.STREAK_BEST] = quota.streakBest
             // Daily credits
             prefs[Keys.DAILY_CREDITS_DATE] = todayString()
             prefs[Keys.DAILY_CREDITS_AVAILABLE] = quota.remainingFreeSketches

@@ -9,6 +9,10 @@ import com.colormagic.kids.domain.model.GalleryArtwork
 import com.colormagic.kids.domain.repository.GalleryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -20,7 +24,16 @@ class GalleryRepositoryImpl @Inject constructor(
     private val telemetry: AppTelemetry
 ) : GalleryRepository {
 
-    override val artworks: Flow<List<GalleryArtwork>> = store.artworks
+    // The stored dateLabel used to be a frozen "Just now" string. We now derive
+    // a real "MMM d, yyyy · h:mm a" label from the saved timestamp at display
+    // time, so each card shows when it was actually made.
+    override val artworks: Flow<List<GalleryArtwork>> =
+        store.artworks.map { list ->
+            list.map { a ->
+                if (a.createdAtMillis > 0L) a.copy(dateLabel = formatTimestamp(a.createdAtMillis))
+                else a
+            }
+        }
 
     override suspend fun save(
         bitmap: Bitmap,
@@ -33,14 +46,15 @@ class GalleryRepositoryImpl @Inject constructor(
             ArtworkMediaSaver.saveToPictures(context, bitmap, displayName)
         }.onFailure(telemetry::recordNonFatal).getOrNull() ?: return null
 
+        val now = System.currentTimeMillis()
         val artwork = GalleryArtwork(
             id = id,
             title = titleFromPrompt(prompt),
-            dateLabel = "Just now",
+            dateLabel = formatTimestamp(now),
             placeholderTint = 0xFFEDE7F6,
             category = category,
             localUri = uri.toString(),
-            createdAtMillis = System.currentTimeMillis()
+            createdAtMillis = now
         )
         store.add(artwork)
         return artwork
@@ -56,6 +70,10 @@ class GalleryRepositoryImpl @Inject constructor(
     override suspend fun deleteAll() {
         store.clear()
     }
+
+    /** Formats a save timestamp as an absolute, readable date + time. */
+    private fun formatTimestamp(millis: Long): String =
+        SimpleDateFormat("MMM d, yyyy · h:mm a", Locale.getDefault()).format(Date(millis))
 
     /** Shorten a kid's prompt into a card title. Keeps the first four words. */
     private fun titleFromPrompt(prompt: String): String {

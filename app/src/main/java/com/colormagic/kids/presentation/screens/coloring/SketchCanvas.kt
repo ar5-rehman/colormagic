@@ -215,6 +215,7 @@ private fun ColoringTool.brushIconRes(): Int? = when (this) {
     ColoringTool.Watercolor -> R.drawable.ic_brush_watercolor
     ColoringTool.Highlighter -> R.drawable.ic_brush_highlighter
     ColoringTool.Magic -> R.drawable.ic_brush_magic
+    ColoringTool.Glitter -> R.drawable.ic_brush_glitter
     ColoringTool.Fill, ColoringTool.Eraser -> null
 }
 
@@ -359,6 +360,18 @@ private fun DrawScope.drawStroke(stroke: Stroke, densityScale: Float) {
             strokeWidth = w,
             colorFor = { index -> Color(MAGIC_HUES[index % MAGIC_HUES.size]) }
         )
+
+        // ─── Glitter ─── faint trail + deterministic twinkles along the path.
+        // Sparkle size/colour derive from the point index (NOT random) so the
+        // saved PNG reproduces it exactly.
+        ColoringTool.Glitter -> {
+            drawSegmented(stroke, w * 0.45f) { baseColor.copy(alpha = 0.35f) }
+            stroke.points.forEachIndexed { i, p ->
+                val r = if (i % 2 == 0) w * 0.38f else w * 0.22f
+                val c = if (i % 3 == 0) Color.White else baseColor
+                drawCircle(color = c, radius = r, center = Offset(p.x, p.y))
+            }
+        }
 
         // ─── Eraser ─── clears paint pixels (offscreen-layer blend).
         ColoringTool.Eraser -> drawSegmented(

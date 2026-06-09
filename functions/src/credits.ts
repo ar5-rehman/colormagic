@@ -72,6 +72,12 @@ export function localDayKey(epochMillis: number, offsetMinutes: number): string 
   return new Date(epochMillis + offsetMinutes * 60_000).toISOString().slice(0, 10);
 }
 
+/** The user's LOCAL day as an integer (days since epoch) — handy for streak
+ *  arithmetic (consecutive = today === lastDay + 1). Server-clock anchored. */
+export function localDayNumber(epochMillis: number, offsetMinutes: number): number {
+  return Math.floor((epochMillis + offsetMinutes * 60_000) / 86_400_000);
+}
+
 const userRef = (uid: string) => db.collection(Collections.users).doc(uid);
 
 /** Loads the user doc, creating a fresh free-tier doc on first access. */
@@ -100,6 +106,10 @@ export async function ensureUserDoc(uid: string, offsetMinutes = 0): Promise<Use
     lastDailyGrantAt: now,
     rewardedAdsDate: today,
     rewardedAdsToday: 0,
+    // First open counts as day-1 of the streak.
+    streakCurrent: 1,
+    streakBest: 1,
+    streakLastDay: localDayNumber(now.toMillis(), clampOffsetMinutes(offsetMinutes)),
     createdAt: now,
     updatedAt: now,
   };
@@ -187,6 +197,51 @@ export function computeQuota(user: UserDoc): UserQuotaResponse {
     totalAvailableCredits: daily + ad + remainingMonthly + extra,
     rewardedAdsToday: user.rewardedAdsToday ?? 0,
     rewardedAdsRemaining: Math.max(0, MAX_REWARDED_ADS_PER_DAY - (user.rewardedAdsToday ?? 0)),
+    streakCurrent: user.streakCurrent ?? 0,
+    streakBest: user.streakBest ?? 0,
+    // Default false; userQuota overrides with the real value after updateStreak.
+    streakAdvancedToday: false,
+  };
+}
+
+/**
+ * Updates the consecutive-day coloring streak for [uid] based on the trusted
+ * server clock + the client's timezone offset. Idempotent within a local day
+ * (a second call the same day is a no-op). Returns the updated doc and whether
+ * THIS call advanced the streak to a new day (for a one-time celebration).
+ */
+export async function updateStreakForUser(
+  uid: string,
+  offsetMinutes = 0
+): Promise<{user: UserDoc; advancedToday: boolean}> {
+  const ref = userRef(uid);
+  const snap = await ref.get();
+  if (!snap.exists) {
+    // ensureUserDoc already seeds streak=1 for a brand-new doc.
+    const created = await ensureUserDoc(uid, offsetMinutes);
+    return {user: created, advancedToday: true};
+  }
+
+  const user = snap.data() as UserDoc;
+  const today = localDayNumber(Date.now(), clampOffsetMinutes(offsetMinutes));
+  const last = user.streakLastDay ?? null;
+
+  if (last === today) {
+    // Already counted today — no change.
+    return {user, advancedToday: false};
+  }
+
+  const current = last === today - 1 ? (user.streakCurrent ?? 0) + 1 : 1;
+  const best = Math.max(current, user.streakBest ?? 0);
+  await ref.update({
+    streakCurrent: current,
+    streakBest: best,
+    streakLastDay: today,
+    updatedAt: Timestamp.now(),
+  });
+  return {
+    user: {...user, streakCurrent: current, streakBest: best, streakLastDay: today},
+    advancedToday: true,
   };
 }
 

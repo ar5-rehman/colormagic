@@ -39,6 +39,11 @@ export interface UserDoc {
   // Rewarded-ad rate limiting — resets on the same local-day boundary
   rewardedAdsDate: string | null;    // "YYYY-MM-DD" local day
   rewardedAdsToday: number;          // ads watched today
+  // ── Coloring streak (consecutive local days the app was opened) ──
+  // Stored on the user doc so it follows a Google account across devices.
+  streakCurrent?: number;            // current consecutive-day streak
+  streakBest?: number;               // best streak ever reached
+  streakLastDay?: number | null;     // local day-number of last activity
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -84,6 +89,11 @@ export interface UserQuotaResponse {
   totalAvailableCredits: number;
   rewardedAdsToday: number;
   rewardedAdsRemaining: number;
+  // Coloring streak — current/best consecutive days, and whether THIS call
+  // advanced it to a new day (so the client can fire a one-time celebration).
+  streakCurrent: number;
+  streakBest: number;
+  streakAdvancedToday: boolean;
 }
 
 // ── Callable: verifyPurchase ───────────────────────────────────────────

@@ -81,7 +81,11 @@ fun AppRoot(
                 dismissAsClose = true
             )
         }
-        composable(RootDestination.MAIN) { MainScaffold() }
+        composable(RootDestination.MAIN) {
+            // Wrap the whole app shell so the parent's screen-time limit can
+            // overlay a gentle "time for a break" screen anywhere in the app.
+            ScreenTimeGuard(modifier = Modifier.fillMaxSize()) { MainScaffold() }
+        }
     }
 }
 

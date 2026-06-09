@@ -15,6 +15,7 @@ import {
   ensureUserDoc,
   grantDailyCreditsIfNeeded,
   setSubscriptionState,
+  updateStreakForUser,
 } from "./credits";
 import {fetchSubscriptionState} from "./playApi";
 import {UserDoc, UserQuotaResponse} from "./types";
@@ -70,6 +71,8 @@ export const userQuota = onCall(
     await ensureUserDoc(uid, offset);
     let user = await grantDailyCreditsIfNeeded(uid, offset);
     user = await revalidateSubscriptionIfExpired(uid, user, offset);
-    return computeQuota(user);
+    // Advance the consecutive-day coloring streak (idempotent within a day).
+    const {user: withStreak, advancedToday} = await updateStreakForUser(uid, offset);
+    return {...computeQuota(withStreak), streakAdvancedToday: advancedToday};
   }
 );

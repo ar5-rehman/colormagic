@@ -21,6 +21,7 @@ enum class ColoringTool {
     Watercolor,
     Highlighter,
     Magic,
+    Glitter,    // sparkly trail of twinkles along the stroke
     Fill,
     Eraser
 }
@@ -34,7 +35,8 @@ val ColoringTool.isBrush: Boolean
         ColoringTool.Pencil,
         ColoringTool.Watercolor,
         ColoringTool.Highlighter,
-        ColoringTool.Magic
+        ColoringTool.Magic,
+        ColoringTool.Glitter
     )
 
 enum class BrushSize { XSmall, Small, Medium, Large }

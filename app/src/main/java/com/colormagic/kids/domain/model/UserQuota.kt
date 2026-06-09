@@ -13,7 +13,13 @@ data class UserQuota(
     val extraCredits: Int,
     val totalAvailableCredits: Int,
     val rewardedAdsToday: Int = 0,
-    val rewardedAdsRemaining: Int = CreditConfig.MAX_REWARDED_ADS_PER_DAY
+    val rewardedAdsRemaining: Int = CreditConfig.MAX_REWARDED_ADS_PER_DAY,
+    /** Consecutive-day coloring streak (server-tracked, follows the account). */
+    val streakCurrent: Int = 0,
+    val streakBest: Int = 0,
+    /** True only on the fetch that advanced the streak to a new day — drives a
+     *  one-time Home celebration. Not persisted (transient per response). */
+    val streakAdvancedToday: Boolean = false
 ) {
     val isPremium: Boolean get() = plan == "pro" && subscriptionActive
 

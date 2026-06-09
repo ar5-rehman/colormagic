@@ -41,6 +41,12 @@ class ParentControlsStore @Inject constructor(
         _state.update { it.copy(dailyLimit = limit) }
     }
 
+    /** Sets the per-session screen-time cap in minutes; null turns it off. */
+    fun setSessionLimit(minutes: Int?) {
+        prefs.edit().putInt(K_SESSION_LIMIT, minutes ?: SESSION_OFF).apply()
+        _state.update { it.copy(sessionLimitMinutes = minutes) }
+    }
+
     /** Records one successful sketch toward today's counter, rolling the
      *  counter over to 1 if the previous use was on a different day. */
     fun recordSketch() {
@@ -65,11 +71,14 @@ class ParentControlsStore @Inject constructor(
         // If the persisted counter is from a previous day, expose 0 — the
         // first new sketch will write the rollover atomically.
         val count = if (savedDay == today) prefs.getInt(K_TODAY_COUNT, 0) else 0
+        val sessionLimit = prefs.getInt(K_SESSION_LIMIT, SESSION_OFF)
+            .takeIf { it != SESSION_OFF }
         return ParentControls(
             allowFreeText = allowFreeText,
             dailyLimit = limit,
             sketchesToday = count,
-            dayStamp = today
+            dayStamp = today,
+            sessionLimitMinutes = sessionLimit
         )
     }
 
@@ -89,6 +98,8 @@ class ParentControlsStore @Inject constructor(
         const val K_DAILY_LIMIT = "daily_limit"
         const val K_TODAY_COUNT = "today_count"
         const val K_DAY_STAMP = "day_stamp"
+        const val K_SESSION_LIMIT = "session_limit_minutes"
+        const val SESSION_OFF = -1
         const val DAY_MS = 24L * 60L * 60L * 1000L
     }
 }

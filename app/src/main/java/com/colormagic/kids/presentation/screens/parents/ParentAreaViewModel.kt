@@ -21,7 +21,12 @@ data class ParentAreaUiState(
      *  Null until the first quota fetch resolves. */
     val sparkleCredits: Int? = null,
     val sketchLimit: SketchLimit = SketchLimit.Unlimited,
-    val allowFreeTextPrompts: Boolean = true
+    val allowFreeTextPrompts: Boolean = true,
+    /** Per-session screen-time cap in minutes; null = off. */
+    val sessionLimitMinutes: Int? = null,
+    /** Child's coloring streak — current + best (server-tracked). */
+    val streakCurrent: Int = 0,
+    val streakBest: Int = 0
 )
 
 @HiltViewModel
@@ -43,7 +48,8 @@ class ParentAreaViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         sketchLimit = controls.dailyLimit,
-                        allowFreeTextPrompts = controls.allowFreeText
+                        allowFreeTextPrompts = controls.allowFreeText,
+                        sessionLimitMinutes = controls.sessionLimitMinutes
                     )
                 }
             }
@@ -59,7 +65,9 @@ class ParentAreaViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         sparkleCredits = quota.totalAvailableCredits,
-                        planName = labelForPlan(quota.plan, quota.subscriptionActive)
+                        planName = labelForPlan(quota.plan, quota.subscriptionActive),
+                        streakCurrent = quota.streakCurrent,
+                        streakBest = quota.streakBest
                     )
                 }
             }
@@ -72,6 +80,10 @@ class ParentAreaViewModel @Inject constructor(
 
     fun onAllowFreeTextPromptsChanged(allow: Boolean) {
         parentControls.setAllowFreeText(allow)
+    }
+
+    fun onSessionLimitChanged(minutes: Int?) {
+        parentControls.setSessionLimit(minutes)
     }
 
     /** Wipes every entry in the in-app gallery. The MediaStore PNGs in the

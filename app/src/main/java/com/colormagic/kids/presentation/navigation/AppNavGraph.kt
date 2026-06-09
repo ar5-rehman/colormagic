@@ -64,7 +64,11 @@ fun AppNavGraph(
                 },
                 onOpenGallery = { navController.navigateToTopLevel(TopLevelDestination.GALLERY) },
                 onOpenParentArea = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) },
-                onGetCredits = { navController.navigate(Screen.GetCredits.route) }
+                onGetCredits = { navController.navigate(Screen.GetCredits.route) },
+                // "Today's magic idea" → open Create with the exact idea filled in.
+                onDailyIdea = { idea ->
+                    navController.navigate(Screen.CreateSketch.routeFor(prompt = idea))
+                }
             )
         }
         composable(TopLevelDestination.GALLERY.route) {
@@ -135,6 +139,10 @@ fun AppNavGraph(
             route = Screen.CreateSketch.ROUTE_PATTERN,
             arguments = listOf(
                 navArgument(Screen.CreateSketch.ARG_CATEGORY) {
+                    type = NavType.StringType
+                    defaultValue = ""
+                },
+                navArgument(Screen.CreateSketch.ARG_PROMPT) {
                     type = NavType.StringType
                     defaultValue = ""
                 }

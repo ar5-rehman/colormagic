@@ -7,13 +7,22 @@ import android.net.Uri
 sealed class Screen(val route: String) {
     // CreateSketch optionally carries a category key (see CategoryIdeas) so
     // Home → category card can deep-link in with a random prompt prefilled.
-    data object CreateSketch : Screen("create-sketch?category={category}") {
+    data object CreateSketch : Screen("create-sketch?category={category}&prompt={prompt}") {
         const val ARG_CATEGORY = "category"
-        const val ROUTE_PATTERN = "create-sketch?category={category}"
+        const val ARG_PROMPT = "prompt"
+        const val ROUTE_PATTERN = "create-sketch?category={category}&prompt={prompt}"
         const val ROUTE_PLAIN = "create-sketch"
-        fun routeFor(category: String? = null): String =
-            if (category.isNullOrBlank()) ROUTE_PLAIN
-            else "create-sketch?category=${Uri.encode(category)}"
+
+        /** [category] deep-links a category card; [prompt] prefills an exact
+         *  idea (e.g. Home's "Today's magic idea"). */
+        fun routeFor(category: String? = null, prompt: String? = null): String {
+            val params = buildList {
+                if (!category.isNullOrBlank()) add("category=${Uri.encode(category)}")
+                if (!prompt.isNullOrBlank()) add("prompt=${Uri.encode(prompt)}")
+            }
+            return if (params.isEmpty()) ROUTE_PLAIN
+            else "create-sketch?" + params.joinToString("&")
+        }
     }
 
     // Loading carries the kid's prompt as a (URL-encoded) query argument so

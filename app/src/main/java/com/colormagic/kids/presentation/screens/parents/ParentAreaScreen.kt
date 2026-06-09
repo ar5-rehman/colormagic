@@ -128,6 +128,7 @@ fun ParentAreaScreen(
             onBuyMore = onGetCredits,
             onSketchLimitChanged = viewModel::onSketchLimitChanged,
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
+            onSessionLimitChanged = viewModel::onSessionLimitChanged,
             onClearArtwork = viewModel::onClearArtwork,
             onOpenSupport = onOpenSupport,
             onTerms = onTerms,
@@ -141,6 +142,7 @@ fun ParentAreaScreen(
             onBuyMore = onGetCredits,
             onSketchLimitChanged = viewModel::onSketchLimitChanged,
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
+            onSessionLimitChanged = viewModel::onSessionLimitChanged,
             onClearArtwork = viewModel::onClearArtwork,
             onOpenSupport = onOpenSupport,
             onTerms = onTerms,
@@ -157,6 +159,7 @@ private fun ParentAreaTabletContent(
     onBuyMore: () -> Unit,
     onSketchLimitChanged: (SketchLimit) -> Unit,
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
+    onSessionLimitChanged: (Int?) -> Unit,
     onClearArtwork: () -> Unit,
     onOpenSupport: () -> Unit,
     onTerms: () -> Unit,
@@ -201,6 +204,7 @@ private fun ParentAreaTabletContent(
                     accountCard(Modifier)
                     CurrentPlanCard(planName = state.planName, onManage = onManageSubscription)
                     SparkleCreditsCard(credits = state.sparkleCredits, onBuyMore = onBuyMore)
+                    ProgressCard(streakCurrent = state.streakCurrent, streakBest = state.streakBest)
                     PrivacyCard()
                 }
                 Column(
@@ -211,7 +215,9 @@ private fun ParentAreaTabletContent(
                         sketchLimit = state.sketchLimit,
                         onSketchLimitChanged = onSketchLimitChanged,
                         allowFreeTextPrompts = state.allowFreeTextPrompts,
-                        onAllowFreeTextPromptsChanged = onAllowFreeTextPromptsChanged
+                        onAllowFreeTextPromptsChanged = onAllowFreeTextPromptsChanged,
+                        sessionLimitMinutes = state.sessionLimitMinutes,
+                        onSessionLimitChanged = onSessionLimitChanged
                     )
                     HelpSupportCard(onOpenSupport = onOpenSupport)
                     ClearArtworkCard(onDelete = onClearArtwork)
@@ -229,6 +235,7 @@ private fun ParentAreaContent(
     onBuyMore: () -> Unit,
     onSketchLimitChanged: (SketchLimit) -> Unit,
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
+    onSessionLimitChanged: (Int?) -> Unit,
     onClearArtwork: () -> Unit,
     onOpenSupport: () -> Unit,
     onTerms: () -> Unit,
@@ -270,11 +277,21 @@ private fun ParentAreaContent(
             }
 
             item {
+                ProgressCard(
+                    streakCurrent = state.streakCurrent,
+                    streakBest = state.streakBest,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+
+            item {
                 ChildSafetyCard(
                     sketchLimit = state.sketchLimit,
                     onSketchLimitChanged = onSketchLimitChanged,
                     allowFreeTextPrompts = state.allowFreeTextPrompts,
                     onAllowFreeTextPromptsChanged = onAllowFreeTextPromptsChanged,
+                    sessionLimitMinutes = state.sessionLimitMinutes,
+                    onSessionLimitChanged = onSessionLimitChanged,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -405,6 +422,65 @@ private fun SparkleCreditsCard(
     }
 }
 
+// ─── Card: Coloring Progress (streak) ──────────────────────────────
+
+@Composable
+private fun ProgressCard(
+    streakCurrent: Int,
+    streakBest: Int,
+    modifier: Modifier = Modifier
+) {
+    SettingsCard(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = "🔥", fontSize = 22.sp)
+            Spacer(Modifier.width(10.dp))
+            Text(
+                text = "Coloring Progress",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(modifier = Modifier.fillMaxWidth()) {
+            ProgressStat(
+                label = "Current streak",
+                value = if (streakCurrent == 1) "1 day" else "$streakCurrent days",
+                modifier = Modifier.weight(1f)
+            )
+            ProgressStat(
+                label = "Best streak",
+                value = if (streakBest == 1) "1 day" else "$streakBest days",
+                modifier = Modifier.weight(1f)
+            )
+        }
+        if (streakCurrent > 0) {
+            Spacer(Modifier.height(16.dp))
+            com.colormagic.kids.presentation.components.StreakWeekStrip(streak = streakCurrent)
+        }
+        Spacer(Modifier.height(10.dp))
+        Text(
+            text = "Days in a row your child opened the app to color.",
+            fontSize = 13.sp,
+            color = BrandTokens.MutedInk
+        )
+    }
+}
+
+@Composable
+private fun ProgressStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = value,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = BrandTokens.HeadingInk
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(text = label, fontSize = 13.sp, color = BrandTokens.MutedInk)
+    }
+}
+
 // ─── Card: Child Safety ────────────────────────────────────────────
 
 @Composable
@@ -413,6 +489,8 @@ private fun ChildSafetyCard(
     onSketchLimitChanged: (SketchLimit) -> Unit,
     allowFreeTextPrompts: Boolean,
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
+    sessionLimitMinutes: Int?,
+    onSessionLimitChanged: (Int?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     SettingsCard(modifier = modifier) {
@@ -450,6 +528,17 @@ private fun ChildSafetyCard(
         Divider()
         Spacer(Modifier.height(20.dp))
 
+        SettingsRowTitle(
+            title = "Screen-Time Limit",
+            subtitle = "After this much play in one session, a gentle \"time for a break\" screen appears."
+        )
+        Spacer(Modifier.height(10.dp))
+        SessionLimitPicker(selected = sessionLimitMinutes, onSelect = onSessionLimitChanged)
+
+        Spacer(Modifier.height(20.dp))
+        Divider()
+        Spacer(Modifier.height(20.dp))
+
         ToggleRow(
             title = "Allow Free Text Prompts",
             subtitle = "If off, only picture-buttons can be used to create art.",
@@ -474,6 +563,50 @@ private fun SettingsRowTitle(title: String, subtitle: String) {
         lineHeight = 19.sp,
         color = BrandTokens.MutedInk
     )
+}
+
+@Composable
+private fun SessionLimitPicker(
+    selected: Int?,
+    onSelect: (Int?) -> Unit
+) {
+    // null = Off; the rest are minute caps.
+    val options: List<Pair<Int?, String>> = listOf(
+        null to "Off",
+        15 to "15m",
+        30 to "30m",
+        60 to "60m"
+    )
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = BrandTokens.SubtleSurface
+    ) {
+        Row(
+            modifier = Modifier.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            options.forEach { (minutes, label) ->
+                val isSelected = minutes == selected
+                Surface(
+                    onClick = { onSelect(minutes) },
+                    shape = RoundedCornerShape(50),
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    ) {
+                        Text(
+                            text = label,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isSelected) Color.White else BrandTokens.HeadingInk
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -798,6 +931,7 @@ private fun ParentAreaPreviewPhone() {
             onBuyMore = {},
             onSketchLimitChanged = {},
             onAllowFreeTextPromptsChanged = {},
+            onSessionLimitChanged = {},
             onClearArtwork = {},
             onOpenSupport = {},
             onTerms = {},

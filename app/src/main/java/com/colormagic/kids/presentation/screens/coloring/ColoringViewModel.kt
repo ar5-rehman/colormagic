@@ -186,7 +186,11 @@ class ColoringViewModel @Inject constructor(
      * captured in, so re-rendering at that size keeps the lines perfectly
      * aligned with the line-art.
      */
-    suspend fun saveArtwork(canvasWidthPx: Int, canvasHeightPx: Int): Boolean {
+    suspend fun saveArtwork(
+        canvasWidthPx: Int,
+        canvasHeightPx: Int,
+        densityScale: Float
+    ): Boolean {
         val state = _uiState.value
         val sketchImage = state.sketchImage ?: return false
         if (canvasWidthPx <= 0 || canvasHeightPx <= 0) return false
@@ -198,7 +202,8 @@ class ColoringViewModel @Inject constructor(
                 fillableMask = state.fillableMask,
                 strokes = state.strokes,
                 canvasWidthPx = canvasWidthPx,
-                canvasHeightPx = canvasHeightPx
+                canvasHeightPx = canvasHeightPx,
+                densityScale = densityScale
             )
             val saved = galleryRepository.save(
                 bitmap = bitmap,
