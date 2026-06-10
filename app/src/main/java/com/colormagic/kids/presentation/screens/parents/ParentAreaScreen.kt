@@ -207,7 +207,7 @@ private fun ParentAreaTabletContent(
                 ) {
                     accountCard(Modifier)
                     CurrentPlanCard(planName = state.planName, onManage = onManageSubscription)
-                    SparkleCreditsCard(credits = state.sparkleCredits, onBuyMore = onBuyMore)
+                    SparkleCreditsCard(credits = state.sparkleCredits, dailyCreditsLeft = state.dailyCreditsLeft, onBuyMore = onBuyMore)
                     ProgressCard(streakCurrent = state.streakCurrent, streakBest = state.streakBest)
                     PrivacyCard()
                 }
@@ -275,6 +275,7 @@ private fun ParentAreaContent(
             item {
                 SparkleCreditsCard(
                     credits = state.sparkleCredits,
+                    dailyCreditsLeft = state.dailyCreditsLeft,
                     onBuyMore = onBuyMore,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
@@ -381,6 +382,7 @@ private fun CurrentPlanCard(
 @Composable
 private fun SparkleCreditsCard(
     credits: Int?,
+    dailyCreditsLeft: Int = 0,
     onBuyMore: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -414,6 +416,18 @@ private fun SparkleCreditsCard(
                     modifier = Modifier.padding(bottom = 6.dp)
                 )
             }
+            // Daily credit breakdown
+            if (credits != null) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = if (dailyCreditsLeft > 0)
+                        "🎨 $dailyCreditsLeft daily credit${if (dailyCreditsLeft == 1) "" else "s"} remaining today"
+                    else
+                        "Daily credits used — earn more by watching ads",
+                    fontSize = 13.sp,
+                    color = Color(0xFF4A2E85)
+                )
+            }
             Spacer(Modifier.height(14.dp))
             BrandPrimaryButton(
                 label = "Get Credits",
@@ -434,54 +448,78 @@ private fun ProgressCard(
     streakBest: Int,
     modifier: Modifier = Modifier
 ) {
-    SettingsCard(modifier = modifier) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "🔥", fontSize = 22.sp)
-            Spacer(Modifier.width(10.dp))
-            Text(
-                text = "Coloring Progress",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        Spacer(Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            ProgressStat(
-                label = "Current streak",
-                value = if (streakCurrent == 1) "1 day" else "$streakCurrent days",
-                modifier = Modifier.weight(1f)
-            )
-            ProgressStat(
-                label = "Best streak",
-                value = if (streakBest == 1) "1 day" else "$streakBest days",
-                modifier = Modifier.weight(1f)
-            )
-        }
-        if (streakCurrent > 0) {
-            Spacer(Modifier.height(16.dp))
-            com.colormagic.kids.presentation.components.StreakWeekStrip(streak = streakCurrent)
-        }
-        Spacer(Modifier.height(10.dp))
-        Text(
-            text = "Days in a row your child opened the app to color.",
-            fontSize = 13.sp,
-            color = BrandTokens.MutedInk
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFFFFF3E0),               // warm cream background
+        modifier = modifier.fillMaxWidth(),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp, Color(0xFFFFCC80)               // soft amber border
         )
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFF7043)),   // coral dot
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "🔥", fontSize = 18.sp)
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = "Coloring Progress",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFBF360C)              // deep burnt orange
+                )
+            }
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                ProgressStat(
+                    label = "Current streak",
+                    value = if (streakCurrent == 1) "1 day" else "$streakCurrent days",
+                    valueColor = Color(0xFFE65100),         // bright orange number
+                    modifier = Modifier.weight(1f)
+                )
+                ProgressStat(
+                    label = "Best streak",
+                    value = if (streakBest == 1) "1 day" else "$streakBest days",
+                    valueColor = Color(0xFFE65100),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            if (streakCurrent > 0) {
+                Spacer(Modifier.height(16.dp))
+                com.colormagic.kids.presentation.components.StreakWeekStrip(streak = streakCurrent)
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = "Days in a row your child opened the app to color.",
+                fontSize = 13.sp,
+                color = Color(0xFF8D6E63)                   // warm muted brown
+            )
+        }
     }
 }
 
 @Composable
-private fun ProgressStat(label: String, value: String, modifier: Modifier = Modifier) {
+private fun ProgressStat(
+    label: String,
+    value: String,
+    valueColor: Color = BrandTokens.HeadingInk,
+    modifier: Modifier = Modifier
+) {
     Column(modifier = modifier) {
         Text(
             text = value,
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = BrandTokens.HeadingInk
+            color = valueColor
         )
         Spacer(Modifier.height(2.dp))
-        Text(text = label, fontSize = 13.sp, color = BrandTokens.MutedInk)
+        Text(text = label, fontSize = 13.sp, color = Color(0xFF8D6E63))
     }
 }
 
@@ -665,22 +703,28 @@ private fun SketchLimitPicker(
 
 @Composable
 private fun LimitChip(text: String, selected: Boolean, onClick: () -> Unit) {
+    val chipBg = if (selected) MaterialTheme.colorScheme.primary else Color.White
+    val chipBorder = if (selected)
+        androidx.compose.foundation.BorderStroke(1.5.dp, MaterialTheme.colorScheme.primary)
+    else
+        androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFFD8D4DE))
+
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(50),
-        color = if (selected) MaterialTheme.colorScheme.primary else Color.White,
-        border = if (selected) null
-        else androidx.compose.foundation.BorderStroke(1.5.dp, BrandTokens.SubtleOutline)
+        color = chipBg,
+        border = chipBorder,
+        shadowElevation = if (selected) 2.dp else 0.dp
     ) {
         Box(
             contentAlignment = Alignment.Center,
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp)
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
         ) {
             Text(
                 text = text,
                 fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = if (selected) Color.White else BrandTokens.HeadingInk
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.SemiBold,
+                color = if (selected) Color.White else Color(0xFF49454F)
             )
         }
     }
@@ -706,30 +750,103 @@ private fun CustomNumberDialog(
 
     androidx.compose.material3.AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        containerColor = Color.White,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandTokens.HeadingInk
+                )
+            }
+        },
         text = {
             Column {
-                Text(text = prompt, fontSize = 14.sp, color = BrandTokens.MutedInk)
-                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = prompt,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = BrandTokens.MutedInk
+                )
+                Spacer(Modifier.height(16.dp))
                 androidx.compose.material3.OutlinedTextField(
                     value = text,
                     onValueChange = { new -> text = new.filter { it.isDigit() }.take(maxLen) },
                     singleLine = true,
                     isError = text.isNotEmpty() && !valid,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = BrandTokens.SubtleOutline,
+                        cursorColor = MaterialTheme.colorScheme.primary,
+                        errorBorderColor = Color(0xFFE53935)
+                    ),
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = BrandTokens.HeadingInk
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Number
                     )
                 )
+                if (text.isNotEmpty() && !valid) {
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Please enter a number between $min and $max",
+                        fontSize = 12.sp,
+                        color = Color(0xFFE53935)
+                    )
+                }
             }
         },
         confirmButton = {
-            androidx.compose.material3.TextButton(
+            Surface(
                 onClick = { value?.let(onConfirm) },
-                enabled = valid
-            ) { Text("Set") }
+                shape = RoundedCornerShape(50),
+                color = if (valid) MaterialTheme.colorScheme.primary else BrandTokens.SubtleSurface
+            ) {
+                Text(
+                    text = "Set",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (valid) Color.White else BrandTokens.MutedInk,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 10.dp)
+                )
+            }
         },
         dismissButton = {
-            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+            Surface(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(50),
+                color = Color.Transparent
+            ) {
+                Text(
+                    text = "Cancel",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = BrandTokens.MutedInk,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                )
+            }
         }
     )
 }

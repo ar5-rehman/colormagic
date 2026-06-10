@@ -1,6 +1,6 @@
 # Terms & Conditions — Color Magic Kids
 
-**Last updated: June 8, 2026**
+**Last updated: June 10, 2026**
 
 These Terms & Conditions ("Terms") are a legal agreement between you and
 **[Your Legal Company / Developer Name]** ("we", "us", or "our") governing your use of
@@ -52,11 +52,37 @@ viewing previously saved pages) may work offline.
 
 ## 4. Credits, subscriptions, and purchases
 
-The App uses a credit system to generate images. Credits may be obtained by:
+The App uses a **credit system** to generate coloring pages. Each coloring page costs
+**1 credit** to create. Credits are available through the following sources:
 
-- earning them (e.g., optional rewarded ads, where available);
-- a one-time purchase of additional credits; or
-- a recurring subscription.
+### a) Daily free credits
+Every user receives a small number of **free credits each day** (currently 1 credit for
+free users; 30 for Pro subscribers). Daily credits reset at the start of each new
+calendar day (based on your device's time zone) and do not roll over — unused daily
+credits expire at the end of the day.
+
+### b) Rewarded-ad credits
+Users may optionally **watch a short video ad** to earn bonus credits (currently 3
+credits per video). There is a daily limit on the number of rewarded ads available
+(currently 5 per day). Rewarded-ad credits do not expire once earned.
+
+### c) Purchased credit packs
+Parents may purchase **one-time credit packs** (e.g., 20 credits). Purchased credits
+are added to the account and **never expire**. Purchased credits are consumed only after
+daily and rewarded-ad credits are used.
+
+### d) Subscriptions (Pro)
+A Pro subscription provides an elevated daily credit allowance (currently 30 per day)
+plus a monthly credit bonus (currently 50 per billing cycle). Monthly credits reset each
+billing period and do not roll over.
+
+**Credit consumption order.** When you create a coloring page, credits are consumed in
+this priority: daily → rewarded-ad → monthly (Pro only) → purchased.
+
+**Credit amounts may change.** We reserve the right to adjust the number of free daily
+credits, rewarded-ad credits, purchased credit pack sizes, and subscription credit
+allowances at any time. Changes will not retroactively reduce credits you have already
+earned or purchased.
 
 **Billing.** All purchases are processed by **Google Play Billing**. By purchasing, you
 also agree to the Google Play Terms of Service. Prices are shown in the App before
@@ -93,7 +119,32 @@ filter is perfect. We may refuse, block, or remove prompts or content at our dis
 
 ---
 
-## 6. AI-generated content
+## 6. Parent controls & streaks
+
+### a) Parent controls
+The App provides optional controls for parents, including:
+
+- **Daily sketch limit** — restrict the number of coloring pages a child can create per
+  day (1–99, or unlimited).
+- **Screen-time limit** — set a session timer (5–240 minutes) after which the child
+  receives a reminder. Only a parent can extend the session.
+- **Free-text toggle** — enable or disable the child's ability to type custom prompts
+  (when disabled, the child can only use preset categories/ideas).
+
+Parent control settings are stored locally on the device and, if signed in with Google,
+synced to our servers so they apply across devices. Parent controls are advisory
+tools — they do not replace active parental supervision.
+
+### b) Coloring streaks
+The App tracks a daily **coloring streak** — consecutive days on which the child creates
+at least one coloring page. Streaks are designed to encourage regular creative activity.
+Streak data (current streak and best streak) is stored on our servers and syncs across
+devices when signed in with Google. Streaks have no monetary value and do not entitle the
+user to credits or rewards.
+
+---
+
+## 7. AI-generated content
 
 - Images are generated automatically by AI based on prompts and may be unexpected,
   inaccurate, or imperfect. They are provided "as is" for personal, non-commercial,
@@ -108,7 +159,7 @@ filter is perfect. We may refuse, block, or remove prompts or content at our dis
 
 ---
 
-## 7. Your content (prompts & feedback)
+## 8. Your content (prompts & feedback)
 
 You retain whatever rights you have in the prompts and feedback you submit. By
 submitting them, you grant us a worldwide, royalty-free license to use, process, and
@@ -118,7 +169,7 @@ personal information.
 
 ---
 
-## 8. Intellectual property
+## 9. Intellectual property
 
 The App, including its software, design, branding, text, and graphics (excluding
 user-generated coloring pages), is owned by us or our licensors and is protected by
@@ -128,7 +179,7 @@ copy, modify, distribute, sell, or lease any part of the App except as allowed b
 
 ---
 
-## 9. Advertising
+## 10. Advertising
 
 The App may show **optional rewarded ads** to earn credits. Ads are delivered by Google
 AdMob and are configured for child-directed treatment (non-personalized). See the
@@ -137,7 +188,7 @@ rewarded ads.
 
 ---
 
-## 10. Third-party services
+## 11. Third-party services
 
 The App relies on third-party services (including Google Firebase, Google Play, Google
 AdMob, and Cloudflare). Your use of those services may be subject to their own terms.
@@ -145,7 +196,7 @@ We are not responsible for third-party services we do not control.
 
 ---
 
-## 11. Disclaimers
+## 12. Disclaimers
 
 THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER
 EXPRESS OR IMPLIED, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
@@ -156,7 +207,7 @@ TO YOU.
 
 ---
 
-## 12. Limitation of liability
+## 13. Limitation of liability
 
 TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE WILL NOT BE LIABLE FOR ANY INDIRECT,
 INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA,
@@ -168,7 +219,7 @@ CONSUMER RIGHTS).
 
 ---
 
-## 13. Indemnification
+## 14. Indemnification
 
 You agree to indemnify and hold us harmless from claims, damages, and expenses
 (including reasonable legal fees) arising from your misuse of the App or violation of
@@ -176,7 +227,7 @@ these Terms, to the extent permitted by law.
 
 ---
 
-## 14. Termination
+## 15. Termination
 
 You may stop using the App at any time and uninstall it. We may suspend or terminate
 access if you violate these Terms or if necessary to protect the App or its users.
@@ -185,7 +236,7 @@ disclaimers, limitation of liability) will survive.
 
 ---
 
-## 15. Changes to the App or Terms
+## 16. Changes to the App or Terms
 
 We may modify or discontinue features, and we may update these Terms from time to time.
 For material changes we will update the "Last updated" date and, where appropriate,
@@ -194,7 +245,7 @@ accept the updated Terms.
 
 ---
 
-## 16. Governing law
+## 17. Governing law
 
 These Terms are governed by the laws of **[Your Country / State]**, without regard to
 its conflict-of-laws rules. Disputes will be subject to the courts of
@@ -203,7 +254,7 @@ right to bring proceedings in your place of residence.
 
 ---
 
-## 17. Contact us
+## 18. Contact us
 
 **[Your Legal Company / Developer Name]**
 Email: **[your-support-email@example.com]**

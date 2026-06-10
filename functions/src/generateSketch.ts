@@ -117,8 +117,10 @@ export const generateSketch = onCall(
     }
 
     // 5. Only now: deduct 1 credit AND record the sketch, atomically.
+    //    Also advances the coloring streak (only real sketches count).
+    let streakAdvancedToday = false;
     try {
-      await commitSketchAndDeduct(uid, {
+      const result = await commitSketchAndDeduct(uid, {
         sketchId,
         userId: uid,
         prompt,
@@ -127,6 +129,7 @@ export const generateSketch = onCall(
         imageUrl: uploaded.imageUrl,
         storagePath: uploaded.storagePath,
       }, offset);
+      streakAdvancedToday = result.streakAdvancedToday;
     } catch (err) {
       if (err instanceof NoCreditError) {
         // Lost a race for the last credit — no sketch is recorded.
@@ -138,6 +141,6 @@ export const generateSketch = onCall(
       throw err;
     }
 
-    return {success: true, sketchId, imageUrl: uploaded.imageUrl};
+    return {success: true, sketchId, imageUrl: uploaded.imageUrl, streakAdvancedToday};
   }
 );

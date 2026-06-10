@@ -34,6 +34,14 @@ class AuthViewModel @Inject constructor(
     /** True while a Google sign-in is in progress (disable the button). */
     val isWorking: StateFlow<Boolean> = _isWorking.asStateFlow()
 
+    /** True during a Google sign-in flow. Suppresses the auto-recovery
+     *  collectors from minting a throwaway guest between the old guest's
+     *  deletion and the Google credential sign-in completing. Without this
+     *  guard, the brief null-auth window causes the network/auth collectors
+     *  to race and create an orphan anonymous account. */
+    @Volatile
+    private var signingInWithGoogle = false
+
     private val _message = MutableStateFlow<String?>(null)
     /** One-shot feedback to show as a toast/snackbar, then cleared. */
     val message: StateFlow<String?> = _message.asStateFlow()
@@ -50,12 +58,18 @@ class AuthViewModel @Inject constructor(
         // re-sign-in failed, or a transient launch error), recover by
         // re-establishing a guest. The 1.5s wait lets the normal re-sign-in
         // win first; this only kicks in if it didn't.
+        //
+        // IMPORTANT: suppressed while signingInWithGoogle — the brief null-auth
+        // window between deleting the old guest and completing the Google
+        // sign-in must NOT trigger a new guest creation (race → orphan docs).
         viewModelScope.launch {
             authState.collect { current ->
-                if (current == null) {
+                if (current == null && !signingInWithGoogle) {
                     delay(1500)
-                    if (authRepository.currentUser == null) ensureGuest()
-                } else {
+                    if (authRepository.currentUser == null && !signingInWithGoogle) {
+                        ensureGuest()
+                    }
+                } else if (current != null) {
                     _authError.value = null
                 }
             }
@@ -66,7 +80,9 @@ class AuthViewModel @Inject constructor(
         // retry the moment a connection appears — no Retry tap needed.
         viewModelScope.launch {
             networkMonitor.isOnline.collect { online ->
-                if (online && authRepository.currentUser == null) ensureGuest()
+                if (online && authRepository.currentUser == null && !signingInWithGoogle) {
+                    ensureGuest()
+                }
             }
         }
     }
@@ -103,28 +119,33 @@ class AuthViewModel @Inject constructor(
         if (_isWorking.value) return
         viewModelScope.launch {
             _isWorking.value = true
-            googleSignInHelper.getGoogleIdToken(activity)
-                .onSuccess { idToken ->
-                    authRepository.signInWithGoogle(idToken)
-                        .onSuccess {
-                            _message.value = "Signed in with Google."
-                            // Same uid after linking → same Firestore doc; this
-                            // just refreshes the cached balance for the (now
-                            // Google) account so the UI is instantly correct.
-                            creditRepository.refreshQuota()
-                        }
-                        .onFailure {
-                            _message.value = "Couldn't sign in with Google. Please try again."
-                        }
-                }
-                .onFailure { t ->
-                    // Only show "cancelled" for an actual user cancel — other
-                    // failures (no account, transient errors, misconfig) get a
-                    // message that tells the parent what to do, instead of
-                    // wrongly blaming them for cancelling.
-                    _message.value = googleSignInMessage(t)
-                }
-            _isWorking.value = false
+            signingInWithGoogle = true
+            try {
+                googleSignInHelper.getGoogleIdToken(activity)
+                    .onSuccess { idToken ->
+                        authRepository.signInWithGoogle(idToken)
+                            .onSuccess {
+                                _message.value = "Signed in with Google."
+                                // Same uid after linking → same Firestore doc; this
+                                // just refreshes the cached balance for the (now
+                                // Google) account so the UI is instantly correct.
+                                creditRepository.refreshQuota()
+                            }
+                            .onFailure {
+                                _message.value = "Couldn't sign in with Google. Please try again."
+                            }
+                    }
+                    .onFailure { t ->
+                        // Only show "cancelled" for an actual user cancel — other
+                        // failures (no account, transient errors, misconfig) get a
+                        // message that tells the parent what to do, instead of
+                        // wrongly blaming them for cancelling.
+                        _message.value = googleSignInMessage(t)
+                    }
+            } finally {
+                signingInWithGoogle = false
+                _isWorking.value = false
+            }
         }
     }
 

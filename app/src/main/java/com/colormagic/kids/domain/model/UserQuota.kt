@@ -19,7 +19,11 @@ data class UserQuota(
     val streakBest: Int = 0,
     /** True only on the fetch that advanced the streak to a new day — drives a
      *  one-time Home celebration. Not persisted (transient per response). */
-    val streakAdvancedToday: Boolean = false
+    val streakAdvancedToday: Boolean = false,
+    // Parent controls — synced to Firestore, returned with every quota fetch.
+    val parentDailySketchLimit: Int? = null,   // null = unlimited
+    val parentAllowFreeText: Boolean = true,
+    val parentSessionLimitMinutes: Int? = null  // null = off
 ) {
     val isPremium: Boolean get() = plan == "pro" && subscriptionActive
 

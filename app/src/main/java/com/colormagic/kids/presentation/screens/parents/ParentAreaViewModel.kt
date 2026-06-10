@@ -20,6 +20,8 @@ data class ParentAreaUiState(
     /** Total credits the kid can spend (free + monthly + extra).
      *  Null until the first quota fetch resolves. */
     val sparkleCredits: Int? = null,
+    /** Today's daily credits remaining (subset of total). */
+    val dailyCreditsLeft: Int = 0,
     val sketchLimit: SketchLimit = SketchLimit.Unlimited,
     val allowFreeTextPrompts: Boolean = true,
     /** Per-session screen-time cap in minutes; null = off. */
@@ -65,6 +67,7 @@ class ParentAreaViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         sparkleCredits = quota.totalAvailableCredits,
+                        dailyCreditsLeft = quota.remainingFreeSketches,
                         planName = labelForPlan(quota.plan, quota.subscriptionActive),
                         streakCurrent = quota.streakCurrent,
                         streakBest = quota.streakBest

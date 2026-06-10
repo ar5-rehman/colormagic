@@ -41,11 +41,14 @@ class SketchRepositoryImpl @Inject constructor(
             if (sketchId == null || imageUrl == null) {
                 return SketchGenerationResult.Failed(GENERIC_ERROR)
             }
+            val streakAdvanced = data["streakAdvancedToday"] as? Boolean ?: false
             val result = SketchGenerationResult.Success(
-                Sketch(id = sketchId, prompt = prompt, imageUrl = imageUrl)
+                Sketch(id = sketchId, prompt = prompt, imageUrl = imageUrl),
+                streakAdvancedToday = streakAdvanced
             )
             telemetry.logCreditEvent("credits_spent", CreditConfig.Costs.GENERATE_COLORING_PAGE)
-            // Refresh the shared credit flow so every screen sees the deducted balance.
+            // Refresh the shared credit flow so every screen sees the deducted balance
+            // and the updated streak.
             creditRepository.refreshQuota()
             result
         } catch (e: FirebaseFunctionsException) {
@@ -89,7 +92,10 @@ class SketchRepositoryImpl @Inject constructor(
                 ?: CreditConfig.MAX_REWARDED_ADS_PER_DAY,
             streakCurrent = (data["streakCurrent"] as? Number)?.toInt() ?: 0,
             streakBest = (data["streakBest"] as? Number)?.toInt() ?: 0,
-            streakAdvancedToday = data["streakAdvancedToday"] as? Boolean ?: false
+            streakAdvancedToday = data["streakAdvancedToday"] as? Boolean ?: false,
+            parentDailySketchLimit = (data["parentDailySketchLimit"] as? Number)?.toInt(),
+            parentAllowFreeText = data["parentAllowFreeText"] as? Boolean ?: true,
+            parentSessionLimitMinutes = (data["parentSessionLimitMinutes"] as? Number)?.toInt()
         )
         // Keep CreditRepository's live flow in sync with this fetch.
         creditRepository.updateLocalQuota(quota)

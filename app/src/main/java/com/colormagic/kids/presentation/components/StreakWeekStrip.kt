@@ -34,12 +34,12 @@ import java.util.Calendar
 /** Colour set for the strip, so it reads on both a light card and a warm
  *  (orange) card. Defaults suit a light/white background. */
 data class StreakStripColors(
-    val active: Color = Color(0xFFFFB74D),
-    val empty: Color = Color(0xFFEFE2C8),
-    val future: Color = Color(0xFFF6EEDD),
-    val letter: Color = Color(0xFFB06A1F),
-    val futureLetter: Color = Color(0xFFD3C4A8),
-    val ring: Color = Color(0xFF8A4B00)
+    val active: Color = Color(0xFFFF7043),      // vibrant coral-orange
+    val empty: Color = Color(0xFFF3ECE7),       // warm neutral off-white
+    val future: Color = Color(0xFFF8F4F0),      // very faint warm
+    val letter: Color = Color(0xFF4E342E),      // clean warm-dark
+    val futureLetter: Color = Color(0xFFBCAAA4), // muted warm
+    val ring: Color = Color(0xFFE64A19)         // deep orange accent ring
 )
 
 @Composable

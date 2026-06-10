@@ -1,12 +1,14 @@
 package com.colormagic.kids.data.repository
 
 import com.colormagic.kids.data.local.preferences.CreditPreferences
+import com.colormagic.kids.data.parents.ParentControlsStore
 import com.colormagic.kids.data.telemetry.AppTelemetry
 import com.colormagic.kids.data.util.currentUtcOffsetMinutes
 import com.colormagic.kids.domain.model.UserQuota
 import com.colormagic.kids.domain.repository.CreditRepository
 import com.colormagic.kids.domain.repository.RewardedAdGrantResult
 import com.colormagic.kids.monetization.CreditConfig
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.functions.FirebaseFunctions
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -18,7 +20,9 @@ import javax.inject.Singleton
 @Singleton
 class CreditRepositoryImpl @Inject constructor(
     private val functions: FirebaseFunctions,
+    private val firebaseAuth: FirebaseAuth,
     private val creditPrefs: CreditPreferences,
+    private val parentControlsStore: ParentControlsStore,
     private val telemetry: AppTelemetry
 ) : CreditRepository {
 
@@ -26,9 +30,22 @@ class CreditRepositoryImpl @Inject constructor(
     override val quotaFlow: Flow<UserQuota> = _quotaFlow.asStateFlow()
 
     override suspend fun refreshQuota(): Result<UserQuota> = runCatching {
+        // Send the user's profile info so the backend can store it on the
+        // Firestore doc — makes users searchable by name/email in the console.
+        val currentUser = firebaseAuth.currentUser
+        val google = currentUser?.providerData?.firstOrNull { it.providerId == "google.com" }
+        val params = mutableMapOf<String, Any?>(
+            "utcOffsetMinutes" to currentUtcOffsetMinutes()
+        )
+        // Only send profile fields for Google-signed-in users (guests have no name).
+        if (google != null) {
+            google.displayName?.let { params["displayName"] = it }
+            google.email?.let { params["email"] = it }
+            (google.photoUrl ?: currentUser.photoUrl)?.let { params["photoUrl"] = it.toString() }
+        }
         val response = functions
             .getHttpsCallable(FN_USER_QUOTA)
-            .call(mapOf("utcOffsetMinutes" to currentUtcOffsetMinutes()))
+            .call(params)
             .await()
 
         @Suppress("UNCHECKED_CAST")
@@ -45,9 +62,18 @@ class CreditRepositoryImpl @Inject constructor(
                 ?: CreditConfig.MAX_REWARDED_ADS_PER_DAY,
             streakCurrent = (data["streakCurrent"] as? Number)?.toInt() ?: 0,
             streakBest = (data["streakBest"] as? Number)?.toInt() ?: 0,
-            streakAdvancedToday = data["streakAdvancedToday"] as? Boolean ?: false
+            streakAdvancedToday = data["streakAdvancedToday"] as? Boolean ?: false,
+            parentDailySketchLimit = (data["parentDailySketchLimit"] as? Number)?.toInt(),
+            parentAllowFreeText = data["parentAllowFreeText"] as? Boolean ?: true,
+            parentSessionLimitMinutes = (data["parentSessionLimitMinutes"] as? Number)?.toInt()
         )
         updateLocalQuota(quota)
+        // Seed parent controls from the server so settings sync across devices.
+        parentControlsStore.seedFromServer(
+            dailySketchLimit = quota.parentDailySketchLimit,
+            allowFreeText = quota.parentAllowFreeText,
+            sessionLimitMinutes = quota.parentSessionLimitMinutes
+        )
         quota
     }.onFailure { telemetry.recordNonFatal(it) }
 

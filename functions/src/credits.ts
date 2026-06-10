@@ -106,10 +106,11 @@ export async function ensureUserDoc(uid: string, offsetMinutes = 0): Promise<Use
     lastDailyGrantAt: now,
     rewardedAdsDate: today,
     rewardedAdsToday: 0,
-    // First open counts as day-1 of the streak.
-    streakCurrent: 1,
-    streakBest: 1,
-    streakLastDay: localDayNumber(now.toMillis(), clampOffsetMinutes(offsetMinutes)),
+    // Streak starts at 0 — it only advances when the child creates their
+    // first sketch (commitSketchAndDeduct calls updateStreakForUser).
+    streakCurrent: 0,
+    streakBest: 0,
+    streakLastDay: null,
     createdAt: now,
     updatedAt: now,
   };
@@ -199,8 +200,12 @@ export function computeQuota(user: UserDoc): UserQuotaResponse {
     rewardedAdsRemaining: Math.max(0, MAX_REWARDED_ADS_PER_DAY - (user.rewardedAdsToday ?? 0)),
     streakCurrent: user.streakCurrent ?? 0,
     streakBest: user.streakBest ?? 0,
-    // Default false; userQuota overrides with the real value after updateStreak.
+    // Default false; commitSketchAndDeduct sets the real value after updateStreak.
     streakAdvancedToday: false,
+    // Parent controls — synced to Firestore so they follow the Google account.
+    parentDailySketchLimit: user.parentDailySketchLimit ?? null,
+    parentAllowFreeText: user.parentAllowFreeText ?? true,
+    parentSessionLimitMinutes: user.parentSessionLimitMinutes ?? null,
   };
 }
 
@@ -217,9 +222,14 @@ export async function updateStreakForUser(
   const ref = userRef(uid);
   const snap = await ref.get();
   if (!snap.exists) {
-    // ensureUserDoc already seeds streak=1 for a brand-new doc.
-    const created = await ensureUserDoc(uid, offsetMinutes);
-    return {user: created, advancedToday: true};
+    // Shouldn't normally happen (commitSketchAndDeduct already ensured the doc),
+    // but just in case — create the doc and then advance the streak.
+    await ensureUserDoc(uid, offsetMinutes);
+    // Fall through to the streak logic below (doc now exists with streak=0).
+    const freshSnap = await ref.get();
+    const freshUser = freshSnap.data() as UserDoc;
+    await ref.update({streakCurrent: 1, streakBest: 1, streakLastDay: localDayNumber(Date.now(), clampOffsetMinutes(offsetMinutes)), updatedAt: Timestamp.now()});
+    return {user: {...freshUser, streakCurrent: 1, streakBest: 1}, advancedToday: true};
   }
 
   const user = snap.data() as UserDoc;
@@ -418,12 +428,19 @@ export async function setSubscriptionState(
  * Atomically deducts one credit AND writes the sketch document in a single
  * transaction — a sketch is recorded if and only if a credit is spent.
  * Call this only AFTER the image is generated and uploaded.
+ *
+ * Also advances the coloring streak (idempotent per day). The streak only
+ * counts days where the child ACTUALLY created a sketch, not just opened
+ * the app.
+ *
+ * Returns whether the streak advanced to a new day on this call (so the
+ * client can fire a one-time celebration).
  */
 export async function commitSketchAndDeduct(
   uid: string,
   sketch: Omit<SketchDoc, "createdAt">,
   offsetMinutes = 0
-): Promise<void> {
+): Promise<{streakAdvancedToday: boolean}> {
   await db.runTransaction(async (tx) => {
     const ref = userRef(uid);
     const snap = await tx.get(ref);
@@ -466,4 +483,12 @@ export async function commitSketchAndDeduct(
       createdAt: Timestamp.now(),
     });
   });
+
+  // Advance the streak AFTER the sketch transaction succeeds. This is
+  // outside the transaction because updateStreakForUser does its own
+  // read-then-write, and nesting would complicate things. Worst case
+  // (crash between commit and streak update) the child loses one day
+  // of streak — acceptable vs. risking transaction contention.
+  const {advancedToday} = await updateStreakForUser(uid, offsetMinutes);
+  return {streakAdvancedToday: advancedToday};
 }

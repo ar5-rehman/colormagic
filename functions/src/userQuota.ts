@@ -9,14 +9,15 @@
  */
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {ENFORCE_APP_CHECK, REGION} from "./config";
+import {Timestamp} from "firebase-admin/firestore";
 import {
   clampOffsetMinutes,
   computeQuota,
   ensureUserDoc,
   grantDailyCreditsIfNeeded,
   setSubscriptionState,
-  updateStreakForUser,
 } from "./credits";
+import {db, Collections} from "./firebase";
 import {fetchSubscriptionState} from "./playApi";
 import {UserDoc, UserQuotaResponse} from "./types";
 
@@ -63,16 +64,39 @@ export const userQuota = onCall(
     console.log(`userQuota: invoked for uid=${uid} (appCheck=${request.app != null})`);
     // The client sends its timezone offset so daily credits reset at the
     // user's LOCAL midnight (anchored to the server clock — not gameable).
-    const offset = clampOffsetMinutes(
-      (request.data as {utcOffsetMinutes?: number} | undefined)?.utcOffsetMinutes
-    );
+    const data = request.data as Record<string, unknown> | undefined;
+    const offset = clampOffsetMinutes(data?.utcOffsetMinutes);
+
     // ensureUserDoc creates the doc on first access; grantDailyCreditsIfNeeded
     // applies any pending daily/monthly resets and persists them.
     await ensureUserDoc(uid, offset);
     let user = await grantDailyCreditsIfNeeded(uid, offset);
     user = await revalidateSubscriptionIfExpired(uid, user, offset);
-    // Advance the consecutive-day coloring streak (idempotent within a day).
-    const {user: withStreak, advancedToday} = await updateStreakForUser(uid, offset);
-    return {...computeQuota(withStreak), streakAdvancedToday: advancedToday};
+
+    // Sync profile fields (name, email, photo) if the client sent them.
+    // This lets us search users by name/email in the Firestore console.
+    // Only written when the value actually changed (avoids unnecessary writes).
+    const profileName = typeof data?.displayName === "string" ? data.displayName : null;
+    const profileEmail = typeof data?.email === "string" ? data.email : null;
+    const profilePhoto = typeof data?.photoUrl === "string" ? data.photoUrl : null;
+    const profileUpdates: Record<string, unknown> = {};
+    if (profileName && profileName !== user.displayName) {
+      profileUpdates.displayName = profileName;
+    }
+    if (profileEmail && profileEmail !== user.email) {
+      profileUpdates.email = profileEmail;
+    }
+    if (profilePhoto && profilePhoto !== user.photoUrl) {
+      profileUpdates.photoUrl = profilePhoto;
+    }
+    if (Object.keys(profileUpdates).length > 0) {
+      profileUpdates.updatedAt = Timestamp.now();
+      await db.collection(Collections.users).doc(uid).update(profileUpdates);
+    }
+
+    // Streak is READ here (not advanced). It only advances when the child
+    // actually creates a sketch — see commitSketchAndDeduct in credits.ts.
+    // This prevents "just opening the app" from counting as a streak day.
+    return {...computeQuota(user), streakAdvancedToday: false};
   }
 );

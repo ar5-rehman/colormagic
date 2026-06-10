@@ -171,16 +171,39 @@ fun AccountCard(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-                Text(
-                    text = if (isGuest)
-                        "Sign in with Google to save your credits and art — and " +
-                            "keep them if you reinstall or switch phones."
-                    else
-                        "Your credits and art are safely saved to your Google account.",
-                    fontSize = 13.sp,
-                    lineHeight = 18.sp,
-                    color = BrandTokens.MutedInk
-                )
+                if (isGuest) {
+                    // Amber warning banner for guest users
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFFFFF3E0),
+                        border = BorderStroke(1.dp, Color(0xFFFFCC80))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.Top
+                        ) {
+                            Text(text = "⚠️", fontSize = 16.sp)
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "You will lose your credits, settings and art " +
+                                    "if you uninstall or switch phones. Sign in with " +
+                                    "Google to keep everything safe!",
+                                fontSize = 13.sp,
+                                lineHeight = 18.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFFE65100)
+                            )
+                        }
+                    }
+                } else {
+                    Text(
+                        text = "Your credits, settings and art are safely saved " +
+                            "to your Google account.",
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp,
+                        color = BrandTokens.MutedInk
+                    )
+                }
                 Spacer(Modifier.height(14.dp))
 
                 if (isGuest) {

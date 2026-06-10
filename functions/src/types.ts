@@ -44,6 +44,14 @@ export interface UserDoc {
   streakCurrent?: number;            // current consecutive-day streak
   streakBest?: number;               // best streak ever reached
   streakLastDay?: number | null;     // local day-number of last activity
+  // ── User profile (populated from Google sign-in, null for guests) ──
+  displayName?: string | null;
+  email?: string | null;
+  photoUrl?: string | null;
+  // ── Parent controls (synced across devices for Google users) ──
+  parentDailySketchLimit?: number | null;   // null = unlimited
+  parentAllowFreeText?: boolean;
+  parentSessionLimitMinutes?: number | null; // null = off
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -76,6 +84,8 @@ export interface GenerateSketchResponse {
   success: true;
   sketchId: string;
   imageUrl: string;
+  /** True when this sketch advanced the coloring streak to a new day. */
+  streakAdvancedToday: boolean;
 }
 
 // ── Callable: userQuota ────────────────────────────────────────────────
@@ -94,6 +104,10 @@ export interface UserQuotaResponse {
   streakCurrent: number;
   streakBest: number;
   streakAdvancedToday: boolean;
+  // Parent controls — synced to Firestore so they follow the Google account.
+  parentDailySketchLimit: number | null;    // null = unlimited
+  parentAllowFreeText: boolean;
+  parentSessionLimitMinutes: number | null; // null = off
 }
 
 // ── Callable: verifyPurchase ───────────────────────────────────────────

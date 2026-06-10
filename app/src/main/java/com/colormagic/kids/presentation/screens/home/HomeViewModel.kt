@@ -17,6 +17,8 @@ import javax.inject.Inject
 data class HomeUiState(
     /** Total credits left; null until the first quota fetch resolves. */
     val sketchesLeft: Int? = null,
+    /** Today's daily free credits remaining (subset of sketchesLeft). */
+    val dailyCreditsLeft: Int = 0,
     val isPremium: Boolean = false,
     /** Consecutive-day coloring streak (0 = none yet). */
     val streak: Int = 0,
@@ -118,6 +120,7 @@ class HomeViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 sketchesLeft = if (creditsResolved) latestQuota.totalAvailableCredits else null,
+                dailyCreditsLeft = latestQuota.remainingFreeSketches,
                 isPremium = latestQuota.isPremium,
                 streak = latestQuota.streakCurrent,
                 streakBest = latestQuota.streakBest

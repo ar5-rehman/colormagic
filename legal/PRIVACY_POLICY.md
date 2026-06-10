@@ -1,6 +1,6 @@
 # Privacy Policy — Color Magic Kids
 
-**Last updated: June 8, 2026**
+**Last updated: June 10, 2026**
 
 This Privacy Policy explains how **[Your Legal Company / Developer Name]** ("we", "us",
 or "our") collects, uses, and protects information when you and your child use the
@@ -58,8 +58,13 @@ you would like to review or delete your child's information, contact us at
 - **Anonymous user identifier** — when the App first runs, we create an anonymous
   account via Firebase Authentication so we can save your credits and settings. This
   identifier is a random ID and is not, by itself, linked to a real-world identity.
-- **App usage & credit data** — your credit balance, whether you have a subscription,
-  purchase status, and similar app-state needed to operate the service.
+- **App usage & credit data** — your credit balance (daily credits, rewarded-ad credits,
+  purchased credits, subscription credits), whether you have a subscription, purchase
+  status, coloring streak progress, and similar app-state needed to operate the service.
+- **Parent control settings** — if a parent sets screen-time limits, daily sketch limits,
+  or content filters (e.g., free-text toggle), these settings are stored on our servers
+  (Firebase Cloud Firestore) so they sync across devices when signed in with Google.
+  These settings do not include personal information.
 - **Device & technical data** — limited technical information (such as device type,
   operating-system version, app version, and approximate connection status) used to
   operate, secure, and troubleshoot the App.
@@ -67,8 +72,10 @@ you would like to review or delete your child's information, contact us at
 ### c) Information collected only if a parent chooses to use optional features
 
 - **Google account information** — if a parent signs in with Google, we receive the
-  account's email address, display name, and profile photo (as provided by Google) to
-  link the account.
+  account's email address, display name, and profile photo URL (as provided by Google) to
+  link the account. This information is stored on our servers (Firebase Cloud Firestore)
+  to identify the account and enable cross-device syncing of credits, settings, and
+  streak progress.
 - **Purchase information** — if you buy a subscription or credits, Google Play
   processes the payment. We receive a purchase token and entitlement status to unlock
   the purchase. **We never receive or store your full payment-card details.**
@@ -84,8 +91,13 @@ We use the information above to:
 
 - generate coloring pages from prompts;
 - create and maintain the anonymous (or, if chosen, Google-linked) account;
-- track and apply credits, subscriptions, and purchases;
+- track and apply credits (daily, rewarded-ad, purchased, and subscription credits),
+  subscriptions, and purchases;
+- reset daily credits each calendar day and manage credit consumption priority;
 - provide rewarded-ad credits where applicable (see Section 6);
+- enforce parent-configured limits (daily sketch limits, screen-time limits, content
+  filters) and sync them across devices;
+- track coloring streaks to encourage daily creative activity;
 - respond to feedback and support requests;
 - keep the App secure, prevent abuse and fraud (e.g., App Check, purchase
   verification); and
@@ -152,8 +164,11 @@ Users with an active subscription do not see rewarded ads.
 
 ## 7. Data retention
 
-- **Account & app-state data** (anonymous ID, credits, subscription status) is retained
-  while the App is in use and for as long as needed to provide the service.
+- **Account & app-state data** (anonymous ID, credits, subscription status, streak
+  progress, parent control settings) is retained while the App is in use and for as long
+  as needed to provide the service.
+- **Profile data** (display name, email, profile photo URL for Google-linked accounts) is
+  retained as long as the account exists and is deleted upon account deletion.
 - **Prompts** are processed to generate an image and are not used to identify a child.
 - **Generated coloring pages** are stored **locally on the device** in your gallery; we
   do not require a copy on our servers to provide the core feature.

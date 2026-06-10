@@ -162,7 +162,11 @@ private fun HomeTabletContent(
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                CreditPillButton(sketchesLeft = state.sketchesLeft, onClick = onGetCredits)
+                CreditPillButton(
+                    sketchesLeft = state.sketchesLeft,
+                    dailyCreditsLeft = state.dailyCreditsLeft,
+                    onClick = onGetCredits
+                )
                 BrandHeading(
                     text = "What shall we\ncolor today?",
                     fontSize = 34.sp,
@@ -374,7 +378,11 @@ private fun HomeContent(
             }
 
             fullWidth {
-                CreditPillButton(sketchesLeft = state.sketchesLeft, onClick = onGetCredits)
+                CreditPillButton(
+                    sketchesLeft = state.sketchesLeft,
+                    dailyCreditsLeft = state.dailyCreditsLeft,
+                    onClick = onGetCredits
+                )
                 Spacer(Modifier.height(16.dp))
                 if (state.streak > 0) {
                     StreakCard(streak = state.streak, best = state.streakBest)
@@ -546,66 +554,74 @@ private fun LazyGridScope.fullWidth(
 private fun StreakCard(streak: Int, best: Int) {
     Surface(
         shape = RoundedCornerShape(22.dp),
-        color = Color(0xFFFFB74D),
-        shadowElevation = 3.dp,
+        shadowElevation = 6.dp,
+        color = Color.Transparent,
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .background(
                     Brush.linearGradient(
-                        // Warm, prominent amber → orange — reads as "fire" while
-                        // staying light enough for the flame strip to pop.
-                        listOf(Color(0xFFFFD27A), Color(0xFFFF9E4D))
+                        // Rich sunset: deep coral → warm golden amber
+                        listOf(Color(0xFFFF6D3F), Color(0xFFFFB347))
                     )
                 )
-                .padding(horizontal = 18.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 18.dp)
         ) {
             // Header row: flame + "N-day streak!" + Best
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = "🔥", fontSize = 26.sp)
+                Text(text = "🔥", fontSize = 28.sp)
                 Spacer(Modifier.width(10.dp))
                 Text(
                     text = if (streak == 1) "1-Day Streak!" else "$streak-Day Streak!",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.ExtraBold,
                     color = Color.White,
                     modifier = Modifier.weight(1f)
                 )
                 if (best > 1) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "Best",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xCCFFFFFF)
-                        )
-                        Text(
-                            text = "$best",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0x33FFFFFF)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "Best",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xDDFFFFFF)
+                            )
+                            Text(
+                                text = "$best",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
                     }
                 }
             }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
             StreakWeekStrip(
                 streak = streak,
                 colors = com.colormagic.kids.presentation.components.StreakStripColors(
                     active = Color.White,
-                    empty = Color(0x33FFFFFF),
-                    future = Color(0x22FFFFFF),
-                    letter = Color.White,
-                    futureLetter = Color(0x88FFFFFF),
+                    empty = Color(0x30FFFFFF),
+                    future = Color(0x18FFFFFF),
+                    letter = Color(0xF0FFFFFF),
+                    futureLetter = Color(0x77FFFFFF),
                     ring = Color.White
                 )
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
             Text(
                 text = "Color tomorrow to reach ${streak + 1}! 🎨",
-                fontSize = 13.sp,
-                color = Color(0xE6FFFFFF)
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xEEFFFFFF)
             )
         }
     }
@@ -647,11 +663,16 @@ private fun DailyIdeaCard(idea: String, onClick: () -> Unit) {
 }
 
 /**
- * Tappable credit balance pill. Tapping opens the Get Credits screen so the
- * parent can top up. Shows "…" while the first server fetch is in-flight.
+ * Tappable credit balance pill + daily credit indicator. Tapping opens the
+ * Get Credits screen so the parent can top up. Shows "…" while the first
+ * server fetch is in-flight.
  */
 @Composable
-private fun CreditPillButton(sketchesLeft: Int?, onClick: () -> Unit) {
+private fun CreditPillButton(
+    sketchesLeft: Int?,
+    dailyCreditsLeft: Int = 0,
+    onClick: () -> Unit
+) {
     // Still loading the balance from Firebase → shimmer a pill-shaped placeholder
     // instead of flashing a misleading "Out of credits".
     if (sketchesLeft == null) {
@@ -663,14 +684,30 @@ private fun CreditPillButton(sketchesLeft: Int?, onClick: () -> Unit) {
         )
         return
     }
-    val label = if (sketchesLeft == 0) "Out of credits — tap to get more"
-    else "Credits: $sketchesLeft"
-    val style = if (sketchesLeft == 0) CreditPillStyle.Primary else CreditPillStyle.Subtle
-    CreditPill(
-        text = label,
-        style = style,
-        modifier = Modifier.clickable(onClick = onClick)
-    )
+
+    Column {
+        val label = if (sketchesLeft == 0) "Out of credits — tap to get more"
+        else "Credits: $sketchesLeft"
+        val style = if (sketchesLeft == 0) CreditPillStyle.Primary else CreditPillStyle.Subtle
+        CreditPill(
+            text = label,
+            style = style,
+            modifier = Modifier.clickable(onClick = onClick)
+        )
+        // Show daily credit count beneath the pill
+        if (sketchesLeft > 0) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = if (dailyCreditsLeft > 0)
+                    "🎨 $dailyCreditsLeft daily credit${if (dailyCreditsLeft == 1) "" else "s"} left today"
+                else
+                    "Daily credits used — watch ads for more!",
+                fontSize = 12.sp,
+                color = if (dailyCreditsLeft > 0) Color(0xFF6F6E76) else Color(0xFFE65100),
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
 }
 
 @Preview(name = "Home – phone", showBackground = true, widthDp = 360, heightDp = 880)

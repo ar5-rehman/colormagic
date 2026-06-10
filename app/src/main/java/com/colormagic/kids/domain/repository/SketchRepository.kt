@@ -8,7 +8,12 @@ import com.colormagic.kids.domain.model.UserQuota
 // to a distinct UI state — without inspecting exceptions.
 sealed interface SketchGenerationResult {
     /** Backend generated the sketch and a credit was spent. */
-    data class Success(val sketch: Sketch) : SketchGenerationResult
+    data class Success(
+        val sketch: Sketch,
+        /** True when this sketch advanced the streak to a new day (first sketch
+         *  of the day). Drives a one-time celebration on the coloring screen. */
+        val streakAdvancedToday: Boolean = false
+    ) : SketchGenerationResult
 
     /** Account is out of credits — show the "ask a grown-up" message. */
     data object NoCredits : SketchGenerationResult

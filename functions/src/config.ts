@@ -37,7 +37,7 @@ export const EXTRA_PACK_CREDITS = 20;     // credits granted by one extra pack
 export const MONTHLY_PERIOD_DAYS = 30;    // approximate billing-cycle length
 
 // ── Daily credit economy (hybrid free / rewarded-ad / premium model) ───
-export const FREE_DAILY_CREDITS = 0;          // free tier earns via rewarded ads only (no daily freebie)
+export const FREE_DAILY_CREDITS = 1;          // one free sketch per day for free-tier users
 export const PREMIUM_DAILY_CREDITS = 30;      // premium-tier daily grant
 export const REWARDED_AD_CREDITS = 3;         // credits per completed rewarded ad
 export const MAX_REWARDED_ADS_PER_DAY = 5;    // cap per calendar day
