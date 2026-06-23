@@ -71,6 +71,10 @@ class GalleryRepositoryImpl @Inject constructor(
         store.clear()
     }
 
+    override suspend fun updateAnimation(id: String, animationType: String) {
+        store.updateAnimation(id, animationType)
+    }
+
     /** Formats a save timestamp as an absolute, readable date + time. */
     private fun formatTimestamp(millis: Long): String =
         SimpleDateFormat("MMM d, yyyy · h:mm a", Locale.getDefault()).format(Date(millis))

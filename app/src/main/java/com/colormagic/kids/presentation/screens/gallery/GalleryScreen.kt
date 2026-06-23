@@ -1,5 +1,11 @@
 package com.colormagic.kids.presentation.screens.gallery
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +36,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.ui.platform.LocalContext
@@ -41,10 +48,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -64,6 +75,7 @@ import com.colormagic.kids.ui.theme.ColorMagicKidsTheme
 fun GalleryScreen(
     onStartNewArt: () -> Unit = {},
     onOpenArtwork: (GalleryArtwork) -> Unit = {},
+    onEditArtwork: (GalleryArtwork) -> Unit = {},
     onOpenParents: () -> Unit = {},
     viewModel: GalleryViewModel = hiltViewModel()
 ) {
@@ -73,27 +85,52 @@ fun GalleryScreen(
     val onShare: (GalleryArtwork) -> Unit = { artwork -> shareArtwork(context, artwork) }
     val onPrint: (GalleryArtwork) -> Unit = { artwork -> printArtwork(context, artwork) }
 
-    if (info.isCompactWidth) {
-        GalleryContent(
-            state = state,
-            onStartNewArt = onStartNewArt,
-            onOpenArtwork = onOpenArtwork,
-            onDelete = viewModel::onDelete,
-            onShare = onShare,
-            onPrint = onPrint,
-            onCategorySelected = viewModel::onCategorySelected,
-            onOpenParents = onOpenParents
-        )
-    } else {
-        GalleryTabletContent(
-            state = state,
-            onStartNewArt = onStartNewArt,
-            onOpenArtwork = onOpenArtwork,
-            onDelete = viewModel::onDelete,
-            onShare = onShare,
-            onPrint = onPrint,
-            onCategorySelected = viewModel::onCategorySelected
-        )
+    var animatingArtwork by remember { mutableStateOf<GalleryArtwork?>(null) }
+
+    val handleEdit: (GalleryArtwork) -> Unit = { artwork ->
+        viewModel.prepareEdit(artwork)
+        onEditArtwork(artwork)
+    }
+
+    Box(Modifier.fillMaxSize()) {
+        if (info.isCompactWidth) {
+            GalleryContent(
+                state = state,
+                onStartNewArt = onStartNewArt,
+                onOpenArtwork = onOpenArtwork,
+                onEditArtwork = handleEdit,
+                onDelete = viewModel::onDelete,
+                onShare = onShare,
+                onPrint = onPrint,
+                onAnimate = { animatingArtwork = it },
+                onCategorySelected = viewModel::onCategorySelected,
+                onOpenParents = onOpenParents
+            )
+        } else {
+            GalleryTabletContent(
+                state = state,
+                onStartNewArt = onStartNewArt,
+                onOpenArtwork = onOpenArtwork,
+                onEditArtwork = handleEdit,
+                onDelete = viewModel::onDelete,
+                onShare = onShare,
+                onPrint = onPrint,
+                onAnimate = { animatingArtwork = it },
+                onCategorySelected = viewModel::onCategorySelected
+            )
+        }
+
+        val target = animatingArtwork
+        if (target != null) {
+            GalleryAnimationPicker(
+                selected = target.animationType,
+                onSelect = { type ->
+                    viewModel.onUpdateAnimation(target.id, type)
+                    animatingArtwork = null
+                },
+                onDismiss = { animatingArtwork = null }
+            )
+        }
     }
 }
 
@@ -102,9 +139,11 @@ private fun GalleryTabletContent(
     state: GalleryUiState,
     onStartNewArt: () -> Unit,
     onOpenArtwork: (GalleryArtwork) -> Unit,
+    onEditArtwork: (GalleryArtwork) -> Unit,
     onDelete: (String) -> Unit,
     onShare: (GalleryArtwork) -> Unit,
     onPrint: (GalleryArtwork) -> Unit,
+    onAnimate: (GalleryArtwork) -> Unit,
     onCategorySelected: (String?) -> Unit
 ) {
     Surface(
@@ -141,11 +180,13 @@ private fun GalleryTabletContent(
                     GalleryTabletCard(
                         artwork = artwork,
                         onOpen = { onOpenArtwork(artwork) },
+                        onEdit = { onEditArtwork(artwork) },
                         onDelete = { onDelete(artwork.id) },
                         onShare = { onShare(artwork) },
                         onPrint = if (artwork.localUri != null) {
                             { onPrint(artwork) }
-                        } else null
+                        } else null,
+                        onAnimate = { onAnimate(artwork) }
                     )
                 }
                 item(key = "start-new") {
@@ -160,9 +201,11 @@ private fun GalleryTabletContent(
 private fun GalleryTabletCard(
     artwork: GalleryArtwork,
     onOpen: () -> Unit,
+    onEdit: () -> Unit = {},
     onDelete: () -> Unit,
     onShare: () -> Unit,
-    onPrint: (() -> Unit)? = null
+    onPrint: (() -> Unit)? = null,
+    onAnimate: () -> Unit = {}
 ) {
     Surface(
         onClick = onOpen,
@@ -172,26 +215,10 @@ private fun GalleryTabletCard(
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(0.85f)
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(artwork.placeholderTint)),
-                contentAlignment = Alignment.Center
-            ) {
-                val uri = artwork.localUri ?: artwork.thumbnailUrl
-                if (uri != null) {
-                    coil.compose.AsyncImage(
-                        model = uri,
-                        contentDescription = artwork.title,
-                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                } else {
-                    Text(text = "🎨", fontSize = 56.sp)
-                }
-            }
+            AnimatedThumbnailBox(
+                artwork = artwork,
+                aspectRatio = 0.85f
+            )
             Spacer(Modifier.height(10.dp))
             Text(
                 text = artwork.title,
@@ -206,87 +233,38 @@ private fun GalleryTabletCard(
                 color = BrandTokens.MutedInk
             )
             Spacer(Modifier.height(10.dp))
-            androidx.compose.foundation.layout.Row(
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Surface(
-                    onClick = onOpen,
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(34.dp)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    androidx.compose.foundation.layout.Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        Text(
-                            text = "Open",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
-                        )
+                    TabletActionButton(icon = Icons.Filled.Edit, label = "Edit", bg = Color(0xFFE3F2FD), tint = Color(0xFF1565C0), onClick = onEdit, modifier = Modifier.weight(1f))
+                    TabletActionButton(icon = Icons.Filled.Share, label = "Share", bg = Color(0xFFD0EBFF), tint = Color(0xFF01579B), onClick = onShare, modifier = Modifier.weight(1f))
+                    if (onPrint != null) {
+                        TabletActionButton(icon = Icons.Filled.Print, label = "Print", bg = Color(0xFFE3DDF6), tint = Color(0xFF4A347E), onClick = onPrint, modifier = Modifier.weight(1f))
                     }
                 }
-                Spacer(Modifier.width(8.dp))
-                Surface(
-                    onClick = onShare,
-                    shape = CircleShape,
-                    color = Color(0xFFD0EBFF),
-                    modifier = Modifier.size(34.dp)
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    androidx.compose.foundation.layout.Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Share,
-                            contentDescription = "Share",
-                            tint = Color(0xFF01579B),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
-                }
-                if (onPrint != null) {
-                    Spacer(Modifier.width(8.dp))
                     Surface(
-                        onClick = onPrint,
-                        shape = CircleShape,
-                        color = Color(0xFFE3DDF6),
-                        modifier = Modifier.size(34.dp)
+                        onClick = onAnimate,
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (artwork.animationType != "None") Color(0xFFE8F5E9) else Color(0xFFF0ECFF),
+                        modifier = Modifier.weight(1f)
                     ) {
-                        androidx.compose.foundation.layout.Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Print,
-                                contentDescription = "Print",
-                                tint = Color(0xFF4A347E),
-                                modifier = Modifier.size(16.dp)
-                            )
+                        Column(Modifier.fillMaxWidth().padding(vertical = 7.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Text("✨", fontSize = 14.sp)
+                            Spacer(Modifier.height(2.dp))
+                            Text(if (artwork.animationType != "None") "On" else "Animate", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = if (artwork.animationType != "None") Color(0xFF2E7D32) else Color(0xFF5E35B1))
                         }
                     }
-                }
-                Spacer(Modifier.width(8.dp))
-                Surface(
-                    onClick = onDelete,
-                    shape = CircleShape,
-                    color = Color(0xFFFADADA),
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    androidx.compose.foundation.layout.Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.DeleteOutline,
-                            contentDescription = "Delete",
-                            tint = Color(0xFFC62828),
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
+                    TabletActionButton(icon = Icons.Filled.DeleteOutline, label = "Delete", bg = Color(0xFFFADADA), tint = Color(0xFFC62828), onClick = onDelete, modifier = Modifier.weight(1f))
                 }
             }
         }
@@ -342,9 +320,11 @@ private fun GalleryContent(
     state: GalleryUiState,
     onStartNewArt: () -> Unit,
     onOpenArtwork: (GalleryArtwork) -> Unit,
+    onEditArtwork: (GalleryArtwork) -> Unit,
     onDelete: (String) -> Unit,
     onShare: (GalleryArtwork) -> Unit,
     onPrint: (GalleryArtwork) -> Unit,
+    onAnimate: (GalleryArtwork) -> Unit,
     onCategorySelected: (String?) -> Unit,
     onOpenParents: () -> Unit
 ) {
@@ -389,11 +369,13 @@ private fun GalleryContent(
                 ArtworkCard(
                     artwork = artwork,
                     onOpen = { onOpenArtwork(artwork) },
+                    onEdit = { onEditArtwork(artwork) },
                     onDelete = { onDelete(artwork.id) },
                     onShare = { onShare(artwork) },
                     onPrint = if (artwork.localUri != null) {
                         { onPrint(artwork) }
                     } else null,
+                    onAnimate = { onAnimate(artwork) },
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
             }
@@ -504,6 +486,175 @@ private fun FilterChip(
     }
 }
 
+@Composable
+private fun TabletActionButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    bg: Color,
+    tint: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(10.dp),
+        color = bg,
+        modifier = modifier
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(vertical = 7.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(icon, label, tint = tint, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.height(2.dp))
+            Text(label, fontSize = 10.sp, fontWeight = FontWeight.Medium, color = tint)
+        }
+    }
+}
+
+@Composable
+private fun AnimatedThumbnailBox(artwork: GalleryArtwork, aspectRatio: Float = 1.05f) {
+    val animType = artwork.animationType
+    val hasAnim = animType != "None"
+    val infiniteTransition = rememberInfiniteTransition(label = "gal_anim")
+    val animProgress by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = when (animType) {
+                    "Spin" -> 2000; "Heartbeat" -> 800; "Wiggle" -> 600; else -> 1200
+                },
+                easing = LinearEasing
+            ),
+            repeatMode = if (animType == "Spin") RepeatMode.Restart else RepeatMode.Reverse
+        ),
+        label = "gal_anim_prog"
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .aspectRatio(aspectRatio)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(artwork.placeholderTint))
+            .then(
+                if (hasAnim) Modifier.graphicsLayer {
+                    when (animType) {
+                        "Bounce" -> translationY = -20f * animProgress
+                        "Float" -> {
+                            translationY = -14f * animProgress
+                            scaleX = 1f + 0.02f * animProgress
+                            scaleY = 1f + 0.02f * animProgress
+                        }
+                        "Wiggle" -> rotationZ = 3f * (animProgress * 2f - 1f)
+                        "Spin" -> rotationY = 360f * animProgress
+                        "Heartbeat" -> {
+                            val s = 1f + 0.06f * animProgress
+                            scaleX = s; scaleY = s
+                        }
+                        "Jelly" -> {
+                            scaleX = 1f + 0.04f * animProgress
+                            scaleY = 1f - 0.03f * animProgress
+                        }
+                    }
+                } else Modifier
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        val uri = artwork.localUri ?: artwork.thumbnailUrl
+        if (uri != null) {
+            coil.compose.AsyncImage(
+                model = uri,
+                contentDescription = artwork.title,
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            Text(text = "🎨", fontSize = 56.sp)
+        }
+    }
+}
+
+private data class AnimOption(val key: String, val label: String, val emoji: String)
+private val animOptions = listOf(
+    AnimOption("None", "None", "⏹"),
+    AnimOption("Bounce", "Bounce", "🏀"),
+    AnimOption("Float", "Float", "🎈"),
+    AnimOption("Wiggle", "Wiggle", "🐛"),
+    AnimOption("Spin", "Spin", "🌀"),
+    AnimOption("Heartbeat", "Heartbeat", "💓"),
+    AnimOption("Jelly", "Jelly", "🍮")
+)
+
+@Composable
+private fun GalleryAnimationPicker(
+    selected: String,
+    onSelect: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)),
+        contentAlignment = Alignment.BottomCenter
+    ) {
+        Surface(
+            onClick = onDismiss,
+            modifier = Modifier.fillMaxSize(),
+            color = Color.Transparent
+        ) {}
+        Surface(
+            shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+            color = Color.White,
+            shadowElevation = 24.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier.width(40.dp).height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0xFFDDDDDD))
+                )
+                Spacer(Modifier.height(16.dp))
+                Text("Animate Your Art!", fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = MaterialTheme.colorScheme.primary)
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    animOptions.forEach { anim ->
+                        val isSelected = anim.key == selected
+                        Surface(
+                            onClick = { onSelect(anim.key) },
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color(0xFFF5F0FF),
+                            modifier = Modifier.size(width = 80.dp, height = 80.dp)
+                        ) {
+                            Column(
+                                Modifier.fillMaxSize(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center
+                            ) {
+                                Text(anim.emoji, fontSize = 26.sp)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    anim.label,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isSelected) Color.White else Color(0xFF5E35B1)
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+            }
+        }
+    }
+}
+
 @Preview(name = "Gallery – phone", showBackground = true, widthDp = 360, heightDp = 1300)
 @Composable
 private fun GalleryPreviewPhone() {
@@ -512,9 +663,11 @@ private fun GalleryPreviewPhone() {
             state = GalleryUiState(),
             onStartNewArt = {},
             onOpenArtwork = {},
+            onEditArtwork = {},
             onDelete = {},
             onShare = {},
             onPrint = {},
+            onAnimate = {},
             onCategorySelected = {},
             onOpenParents = {}
         )

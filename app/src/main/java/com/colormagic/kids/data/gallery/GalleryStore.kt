@@ -48,6 +48,14 @@ class GalleryStore @Inject constructor(
         persist(updated)
     }
 
+    suspend fun updateAnimation(id: String, animationType: String) = writeLock.withLock {
+        val updated = _artworks.value.map {
+            if (it.id == id) it.copy(animationType = animationType) else it
+        }
+        _artworks.value = updated
+        persist(updated)
+    }
+
     suspend fun remove(id: String) = writeLock.withLock {
         val updated = _artworks.value.filterNot { it.id == id }
         _artworks.value = updated
@@ -82,6 +90,7 @@ class GalleryStore @Inject constructor(
         a.category?.let { put("category", it) }
         a.localUri?.let { put("localUri", it) }
         put("createdAtMillis", a.createdAtMillis)
+        put("animationType", a.animationType)
     }
 
     private fun deserialize(o: JSONObject): GalleryArtwork = GalleryArtwork(
@@ -92,7 +101,8 @@ class GalleryStore @Inject constructor(
         placeholderTint = o.optLong("placeholderTint", 0xFFEDE7F6),
         category = o.optString("category").ifBlank { null },
         localUri = o.optString("localUri").ifBlank { null },
-        createdAtMillis = o.optLong("createdAtMillis", 0L)
+        createdAtMillis = o.optLong("createdAtMillis", 0L),
+        animationType = o.optString("animationType", "None")
     )
 
     private companion object {

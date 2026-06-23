@@ -79,6 +79,7 @@ fun HomeScreen(
     onOpenParentArea: () -> Unit = {},
     onGetCredits: () -> Unit = {},
     onDailyIdea: (String) -> Unit = {},
+    onDailyChallenge: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -111,7 +112,8 @@ fun HomeScreen(
                 onOpenGallery = onOpenGallery,
                 onOpenParentArea = onOpenParentArea,
                 onGetCredits = onGetCredits,
-                onDailyIdea = onDailyIdea
+                onDailyIdea = onDailyIdea,
+                onDailyChallenge = onDailyChallenge
             )
         } else {
             HomeTabletContent(
@@ -121,7 +123,8 @@ fun HomeScreen(
                 onOpenGallery = onOpenGallery,
                 onOpenParentArea = onOpenParentArea,
                 onGetCredits = onGetCredits,
-                onDailyIdea = onDailyIdea
+                onDailyIdea = onDailyIdea,
+                onDailyChallenge = onDailyChallenge
             )
         }
         if (state.showStreakCelebration) {
@@ -140,7 +143,8 @@ private fun HomeTabletContent(
     onOpenGallery: () -> Unit,
     onOpenParentArea: () -> Unit,
     onGetCredits: () -> Unit = {},
-    onDailyIdea: (String) -> Unit = {}
+    onDailyIdea: (String) -> Unit = {},
+    onDailyChallenge: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -177,6 +181,7 @@ private fun HomeTabletContent(
                     StreakCard(streak = state.streak, best = state.streakBest)
                 }
                 DailyIdeaCard(idea = state.dailyIdea, onClick = { onDailyIdea(state.dailyIdea) })
+                DailyChallengeCard(onClick = onDailyChallenge)
                 ChildIllustrationCard()
             }
 
@@ -350,7 +355,8 @@ private fun HomeContent(
     onOpenGallery: () -> Unit,
     onOpenParentArea: () -> Unit,
     onGetCredits: () -> Unit = {},
-    onDailyIdea: (String) -> Unit = {}
+    onDailyIdea: (String) -> Unit = {},
+    onDailyChallenge: () -> Unit = {}
 ) {
     // Even with system bars hidden, devices still have a display cutout / camera
     // hole at the top. Pad for it so the heading never bleeds into the notch.
@@ -389,6 +395,8 @@ private fun HomeContent(
                     Spacer(Modifier.height(16.dp))
                 }
                 DailyIdeaCard(idea = state.dailyIdea, onClick = { onDailyIdea(state.dailyIdea) })
+                Spacer(Modifier.height(12.dp))
+                DailyChallengeCard(onClick = onDailyChallenge)
                 Spacer(Modifier.height(24.dp))
             }
 
@@ -706,6 +714,58 @@ private fun CreditPillButton(
                 color = if (dailyCreditsLeft > 0) Color(0xFF6F6E76) else Color(0xFFE65100),
                 fontWeight = FontWeight.Medium
             )
+        }
+    }
+}
+
+@Composable
+private fun DailyChallengeCard(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(22.dp),
+        shadowElevation = 6.dp,
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFF7C4DFF), Color(0xFFAB47BC))
+                    )
+                )
+                .padding(horizontal = 18.dp, vertical = 16.dp)
+        ) {
+            Text(text = "🏆", fontSize = 30.sp)
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Daily Challenge",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.85f)
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = com.colormagic.kids.domain.model.DailyChallengeProvider.today().theme,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0x33FFFFFF)
+            ) {
+                Text(
+                    text = "Play →",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                )
+            }
         }
     }
 }

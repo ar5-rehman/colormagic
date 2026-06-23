@@ -19,11 +19,16 @@ class SketchSession @Inject constructor() {
     private val _currentSketch = MutableStateFlow<Sketch?>(null)
     val currentSketch: StateFlow<Sketch?> = _currentSketch.asStateFlow()
 
-    fun setCurrentSketch(sketch: Sketch) {
+    var isChallenge: Boolean = false
+        private set
+
+    fun setCurrentSketch(sketch: Sketch, challenge: Boolean = false) {
         _currentSketch.value = sketch
+        isChallenge = challenge
     }
 
     fun clear() {
         _currentSketch.value = null
+        isChallenge = false
     }
 }

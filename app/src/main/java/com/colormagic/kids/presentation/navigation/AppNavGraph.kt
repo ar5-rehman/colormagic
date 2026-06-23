@@ -25,6 +25,7 @@ import com.colormagic.kids.presentation.screens.settings.SettingsScreen
 import com.colormagic.kids.presentation.screens.support.SupportScreen
 import com.colormagic.kids.presentation.screens.sketchpreview.SketchPreviewScreen
 import com.colormagic.kids.presentation.screens.credits.GetCreditsScreen
+import com.colormagic.kids.presentation.screens.challenge.DailyChallengeScreen
 import com.colormagic.kids.presentation.screens.subscription.SubscriptionScreen
 
 // Inner navigation graph rendered inside MainScaffold.
@@ -57,24 +58,23 @@ fun AppNavGraph(
         composable(TopLevelDestination.HOME.route) {
             HomeScreen(
                 onCreateNewSketch = { navController.navigate(Screen.CreateSketch.routeFor()) },
-                // Category card on Home deep-links into CreateSketch with a
-                // random prompt from that category pre-filled.
                 onCategoryClick = { cat ->
                     navController.navigate(Screen.CreateSketch.routeFor(cat.id))
                 },
                 onOpenGallery = { navController.navigateToTopLevel(TopLevelDestination.GALLERY) },
                 onOpenParentArea = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) },
                 onGetCredits = { navController.navigate(Screen.GetCredits.route) },
-                // "Today's magic idea" → open Create with the exact idea filled in.
                 onDailyIdea = { idea ->
                     navController.navigate(Screen.CreateSketch.routeFor(prompt = idea))
-                }
+                },
+                onDailyChallenge = { navController.navigate(Screen.DailyChallenge.route) }
             )
         }
         composable(TopLevelDestination.GALLERY.route) {
             GalleryScreen(
                 onStartNewArt = { navController.navigate(Screen.CreateSketch.routeFor()) },
-                onOpenParents = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) }
+                onOpenParents = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) },
+                onEditArtwork = { navController.navigate(Screen.Coloring.route) }
             )
         }
         composable(TopLevelDestination.PARENTS.route) {
@@ -88,6 +88,20 @@ fun AppNavGraph(
 
         composable(Screen.Support.route) {
             SupportScreen(onBack = { navController.popBackStack() })
+        }
+
+        composable(Screen.DailyChallenge.route) {
+            val challengePrefs: com.colormagic.kids.data.local.preferences.ChallengePreferences =
+                androidx.compose.ui.platform.LocalContext.current.let { ctx ->
+                    remember { com.colormagic.kids.data.local.preferences.ChallengePreferences(ctx) }
+                }
+            DailyChallengeScreen(
+                onBack = { navController.popBackStack() },
+                onStartChallenge = { prompt ->
+                    navController.navigate(Screen.Loading.routeFor(prompt, isChallenge = true))
+                },
+                challengePrefs = challengePrefs
+            )
         }
 
         composable(Screen.GetCredits.route) {
@@ -104,10 +118,7 @@ fun AppNavGraph(
                     navController.navigate(Screen.PurchaseSuccess.route) {
                         popUpTo(Screen.Subscription.route) { inclusive = true }
                     }
-                },
-                // Header avatar → Parent area (gated). Available here because
-                // this Subscription instance lives inside the main app graph.
-                onProfile = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) }
+                }
             )
         }
 
@@ -164,6 +175,10 @@ fun AppNavGraph(
                 navArgument(Screen.Loading.ARG_PROMPT) {
                     type = NavType.StringType
                     defaultValue = ""
+                },
+                navArgument(Screen.Loading.ARG_IS_CHALLENGE) {
+                    type = NavType.StringType
+                    defaultValue = "false"
                 }
             )
         ) {

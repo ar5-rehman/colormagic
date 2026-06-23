@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.colormagic.kids.domain.model.CategoryIdeas
 import com.colormagic.kids.domain.model.GalleryArtwork
+import com.colormagic.kids.domain.model.Sketch
 import com.colormagic.kids.domain.repository.GalleryRepository
+import com.colormagic.kids.presentation.sketch.SketchSession
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,7 +31,8 @@ data class GalleryUiState(
 
 @HiltViewModel
 class GalleryViewModel @Inject constructor(
-    private val galleryRepository: GalleryRepository
+    private val galleryRepository: GalleryRepository,
+    private val sketchSession: SketchSession
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GalleryUiState())
@@ -53,5 +56,18 @@ class GalleryViewModel @Inject constructor(
     /** Apply a category filter — null clears the filter ("All"). */
     fun onCategorySelected(category: String?) {
         _uiState.update { it.copy(selectedCategory = category) }
+    }
+
+    fun onUpdateAnimation(artworkId: String, animationType: String) {
+        viewModelScope.launch { galleryRepository.updateAnimation(artworkId, animationType) }
+    }
+
+    fun prepareEdit(artwork: GalleryArtwork) {
+        val sketch = Sketch(
+            id = artwork.id,
+            prompt = artwork.title,
+            imageUrl = artwork.localUri
+        )
+        sketchSession.setCurrentSketch(sketch)
     }
 }

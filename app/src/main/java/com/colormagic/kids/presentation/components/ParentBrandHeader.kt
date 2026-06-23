@@ -44,42 +44,45 @@ fun ParentBrandHeader(
      *  Gallery shows it as a shortcut. */
     showProfile: Boolean = true
 ) {
-    Row(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(horizontal = 16.dp, vertical = 12.dp)
     ) {
         if (onBack != null) {
             CircleIconButton(
                 icon = backIcon,
                 contentDescription = backContentDescription,
-                onClick = onBack
+                onClick = onBack,
+                modifier = Modifier.align(Alignment.CenterStart)
             )
-            Spacer(Modifier.width(10.dp))
         }
-        Icon(
-            imageVector = Icons.Filled.AutoAwesome,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(22.dp)
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = "ColorMagic",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary,
-            fontFamily = MaterialTheme.typography.headlineLarge.fontFamily,
-            modifier = Modifier.weight(1f)
-        )
+        Row(
+            modifier = Modifier.align(Alignment.Center),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Filled.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(22.dp)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = "ColorMagic",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                fontFamily = MaterialTheme.typography.headlineLarge.fontFamily
+            )
+        }
         if (showProfile) {
             Surface(
                 onClick = onProfileClick ?: {},
                 enabled = onProfileClick != null,
                 shape = CircleShape,
                 color = MaterialTheme.colorScheme.primaryContainer,
-                modifier = Modifier.size(36.dp)
+                modifier = Modifier.size(36.dp).align(Alignment.CenterEnd)
             ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -101,13 +104,14 @@ fun ParentBrandHeader(
 private fun CircleIconButton(
     icon: ImageVector,
     contentDescription: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Surface(
         onClick = onClick,
         shape = CircleShape,
         color = BrandTokens.SubtleSurface,
-        modifier = Modifier.size(40.dp)
+        modifier = modifier.size(40.dp)
     ) {
         Box(
             modifier = Modifier.fillMaxSize(),

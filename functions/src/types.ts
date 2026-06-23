@@ -79,6 +79,7 @@ export interface SketchDoc {
 // ── Callable: generateSketch ───────────────────────────────────────────
 export interface GenerateSketchRequest {
   prompt: string;
+  isChallenge?: boolean;
 }
 export interface GenerateSketchResponse {
   success: true;

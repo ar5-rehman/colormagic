@@ -29,8 +29,10 @@ sealed class Screen(val route: String) {
     // the LoadingViewModel can run the real backend generation.
     data object Loading : Screen("loading") {
         const val ARG_PROMPT = "prompt"
-        const val ROUTE_PATTERN = "loading?prompt={prompt}"
-        fun routeFor(prompt: String): String = "loading?prompt=${Uri.encode(prompt)}"
+        const val ARG_IS_CHALLENGE = "isChallenge"
+        const val ROUTE_PATTERN = "loading?prompt={prompt}&isChallenge={isChallenge}"
+        fun routeFor(prompt: String, isChallenge: Boolean = false): String =
+            "loading?prompt=${Uri.encode(prompt)}&isChallenge=$isChallenge"
     }
 
     data object SketchPreview : Screen("sketch-preview")
@@ -41,4 +43,5 @@ sealed class Screen(val route: String) {
     data object Settings : Screen("settings")
     data object GetCredits : Screen("get-credits")
     data object Support : Screen("support")
+    data object DailyChallenge : Screen("daily-challenge")
 }

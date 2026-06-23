@@ -17,5 +17,7 @@ data class GalleryArtwork(
      *  both in-app rendering (AsyncImage) and system sharing. */
     val localUri: String? = null,
     /** Epoch millis the artwork was saved — used for sort + the date label. */
-    val createdAtMillis: Long = 0L
+    val createdAtMillis: Long = 0L,
+    /** Animation style applied to this artwork in the gallery. */
+    val animationType: String = "None"
 )

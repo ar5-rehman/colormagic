@@ -37,9 +37,10 @@ class LoadingViewModel @Inject constructor(
     private val parentControls: ParentControlsStore
 ) : ViewModel() {
 
-    // Prompt arrives as a (URL-decoded) nav argument from the Prompt screen.
     private val prompt: String =
         savedStateHandle.get<String>(ARG_PROMPT).orEmpty()
+    val isChallenge: Boolean =
+        savedStateHandle.get<String>(ARG_IS_CHALLENGE)?.toBooleanStrictOrNull() ?: false
 
     private val _uiState = MutableStateFlow<LoadingUiState>(LoadingUiState.Generating)
     val uiState: StateFlow<LoadingUiState> = _uiState.asStateFlow()
@@ -56,11 +57,11 @@ class LoadingViewModel @Inject constructor(
         }
         _uiState.value = LoadingUiState.Generating
         viewModelScope.launch {
-            _uiState.value = when (val result = sketchRepository.generateSketch(prompt)) {
+            _uiState.value = when (val result = sketchRepository.generateSketch(prompt, isChallenge)) {
                 is SketchGenerationResult.Success -> {
                     // Hand the sketch to the session so SketchPreview / Coloring
                     // can pick it up after navigation.
-                    sketchSession.setCurrentSketch(result.sketch)
+                    sketchSession.setCurrentSketch(result.sketch, challenge = isChallenge)
                     // Tick today's local sketch counter — drives the
                     // parent-set daily limit gate in CreateSketch.
                     parentControls.recordSketch()
@@ -75,5 +76,6 @@ class LoadingViewModel @Inject constructor(
 
     companion object {
         const val ARG_PROMPT = "prompt"
+        const val ARG_IS_CHALLENGE = "isChallenge"
     }
 }

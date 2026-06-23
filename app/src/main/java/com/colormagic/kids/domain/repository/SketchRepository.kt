@@ -32,7 +32,7 @@ sealed interface SketchGenerationResult {
 interface SketchRepository {
 
     /** Calls `generateSketch`. Never throws — every outcome is a result case. */
-    suspend fun generateSketch(prompt: String): SketchGenerationResult
+    suspend fun generateSketch(prompt: String, isChallenge: Boolean = false): SketchGenerationResult
 
     /** Calls `userQuota`. Returns the credit snapshot, or failure on network error. */
     suspend fun getQuota(): Result<UserQuota>

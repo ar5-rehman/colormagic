@@ -21,13 +21,13 @@ enum class ColoringTool {
     Watercolor,
     Highlighter,
     Magic,
-    Glitter,    // sparkly trail of twinkles along the stroke
+    Glitter,
     Fill,
-    Eraser
+    Eraser,
+    Eyedropper,
+    TextTool
 }
 
-// True for every tool that puts pigment down by tracking a finger path.
-// Used by the UI to group brush variants separately from action tools.
 val ColoringTool.isBrush: Boolean
     get() = this in setOf(
         ColoringTool.Crayon,

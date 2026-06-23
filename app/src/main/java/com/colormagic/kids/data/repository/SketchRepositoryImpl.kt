@@ -24,14 +24,16 @@ class SketchRepositoryImpl @Inject constructor(
     private val creditRepository: CreditRepository
 ) : SketchRepository {
 
-    override suspend fun generateSketch(prompt: String): SketchGenerationResult {
+    override suspend fun generateSketch(prompt: String, isChallenge: Boolean): SketchGenerationResult {
         return try {
+            val params = mutableMapOf<String, Any>(
+                "prompt" to prompt,
+                "utcOffsetMinutes" to currentUtcOffsetMinutes()
+            )
+            if (isChallenge) params["isChallenge"] = true
             val response = functions
                 .getHttpsCallable(FN_GENERATE_SKETCH)
-                .call(mapOf(
-                    "prompt" to prompt,
-                    "utcOffsetMinutes" to currentUtcOffsetMinutes()
-                ))
+                .call(params)
                 .await()
 
             @Suppress("UNCHECKED_CAST")

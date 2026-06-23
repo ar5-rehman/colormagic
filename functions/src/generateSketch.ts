@@ -18,9 +18,11 @@ import {
   ENFORCE_APP_CHECK,
   IMAGE_QUALITY,
   MAX_PROMPT_LENGTH,
+  MODEL_FREE,
   REGION,
 } from "./config";
 import {
+  type ImageProvider,
   clampOffsetMinutes,
   commitSketchAndDeduct,
   ensureUserDoc,
@@ -52,9 +54,10 @@ export const generateSketch = onCall(
 
     const reqData = (request.data ?? {}) as GenerateSketchRequest &
       {utcOffsetMinutes?: number};
-    const {prompt: rawPrompt} = reqData;
+    const {prompt: rawPrompt, isChallenge} = reqData;
     const offset = clampOffsetMinutes(reqData.utcOffsetMinutes);
     const prompt = (rawPrompt ?? "").trim();
+    const challenge = isChallenge === true;
     if (!prompt) {
       throw new HttpsError("invalid-argument", "Please describe a picture first.");
     }
@@ -78,18 +81,25 @@ export const generateSketch = onCall(
     }
 
     // 2. Credit pre-check. Fast-fail before spending an OpenAI call.
-    //    The model is chosen by the bucket the credit will come from.
+    //    Challenges are free — skip credit checks entirely.
     const user = await ensureUserDoc(uid, offset);
-    const source = pickCreditSource(user);
-    if (!source) {
-      throw new HttpsError(
-        "resource-exhausted",
-        "No sketch credits left. Ask a grown-up to unlock more."
-      );
+    let source: ReturnType<typeof pickCreditSource> = null;
+    let model: string;
+    let provider: ImageProvider;
+    if (challenge) {
+      model = MODEL_FREE;
+      provider = "cloudflare";
+    } else {
+      source = pickCreditSource(user);
+      if (!source) {
+        throw new HttpsError(
+          "resource-exhausted",
+          "No sketch credits left. Ask a grown-up to unlock more."
+        );
+      }
+      model = modelForSource(source);
+      provider = providerForSource(source);
     }
-    const model = modelForSource(source);
-    // OpenAI is disabled — every credit is fulfilled by Cloudflare Workers AI.
-    const provider = providerForSource(source);
 
     // 3. Generate the line art. Failure here spends NO credit.
     let png: Buffer;
@@ -117,28 +127,29 @@ export const generateSketch = onCall(
     }
 
     // 5. Only now: deduct 1 credit AND record the sketch, atomically.
-    //    Also advances the coloring streak (only real sketches count).
+    //    Challenges skip credit deduction — they're free.
     let streakAdvancedToday = false;
-    try {
-      const result = await commitSketchAndDeduct(uid, {
-        sketchId,
-        userId: uid,
-        prompt,
-        model,
-        quality: IMAGE_QUALITY,
-        imageUrl: uploaded.imageUrl,
-        storagePath: uploaded.storagePath,
-      }, offset);
-      streakAdvancedToday = result.streakAdvancedToday;
-    } catch (err) {
-      if (err instanceof NoCreditError) {
-        // Lost a race for the last credit — no sketch is recorded.
-        throw new HttpsError(
-          "resource-exhausted",
-          "No sketch credits left. Ask a grown-up to unlock more."
-        );
+    if (!challenge) {
+      try {
+        const result = await commitSketchAndDeduct(uid, {
+          sketchId,
+          userId: uid,
+          prompt,
+          model,
+          quality: IMAGE_QUALITY,
+          imageUrl: uploaded.imageUrl,
+          storagePath: uploaded.storagePath,
+        }, offset);
+        streakAdvancedToday = result.streakAdvancedToday;
+      } catch (err) {
+        if (err instanceof NoCreditError) {
+          throw new HttpsError(
+            "resource-exhausted",
+            "No sketch credits left. Ask a grown-up to unlock more."
+          );
+        }
+        throw err;
       }
-      throw err;
     }
 
     return {success: true, sketchId, imageUrl: uploaded.imageUrl, streakAdvancedToday};

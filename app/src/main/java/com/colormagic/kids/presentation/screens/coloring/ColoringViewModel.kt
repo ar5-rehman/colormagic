@@ -2,6 +2,7 @@ package com.colormagic.kids.presentation.screens.coloring
 
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.lifecycle.ViewModel
@@ -10,6 +11,7 @@ import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.colormagic.kids.data.gallery.ArtworkRenderer
+import com.colormagic.kids.data.local.preferences.ChallengePreferences
 import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColorPalettes
 import com.colormagic.kids.domain.model.ColoringTool
@@ -35,20 +37,25 @@ data class ColoringUiState(
     val brushSize: BrushSize = BrushSize.Medium,
     val strokes: List<Stroke> = emptyList(),
     val redoStack: List<Stroke> = emptyList(),
-    /**
-     * The line-art the kid is colouring. Null until the backend sketch has
-     * downloaded — the canvas falls back to the bundled sample meanwhile.
-     */
     val sketchImage: ImageBitmap? = null,
-    /**
-     * Per-pixel mask of where paint is allowed.
-     *   Opaque  → fillable paper
-     *   Clear   → boundary line (paint is clipped out here)
-     * Null while the mask is still being computed on first load.
-     */
     val fillableMask: ImageBitmap? = null,
-    /** A save is in progress (render + MediaStore write). */
-    val isSaving: Boolean = false
+    val isSaving: Boolean = false,
+    val symmetryEnabled: Boolean = false,
+    val colorByNumberEnabled: Boolean = false,
+    val colorRegions: List<ColorRegion> = emptyList(),
+    val canvasWidthPx: Int = 0,
+    val canvasHeightPx: Int = 0,
+    val strokeWidthBase: Float = 18f,
+    val opacity: Float = 1f,
+    val zoomScale: Float = 1f,
+    val zoomOffset: Offset = Offset.Zero,
+    val showTextDialog: Boolean = false,
+    val pendingTextPosition: Offset = Offset.Zero,
+    val selectedTextFont: TextFont = TextFont.Normal,
+    val draggingTextIndex: Int = -1,
+    val isChallenge: Boolean = false,
+    val challengeScore: ChallengeScore? = null,
+    val showChallengeResult: Boolean = false,
 ) {
     val canUndo: Boolean get() = strokes.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
@@ -63,6 +70,8 @@ class ColoringViewModel @Inject constructor(
     private val galleryRepository: GalleryRepository
 ) : ViewModel() {
 
+    private val challengePrefs by lazy { ChallengePreferences(context) }
+
     private val _uiState = MutableStateFlow(ColoringUiState())
     val uiState: StateFlow<ColoringUiState> = _uiState.asStateFlow()
 
@@ -70,21 +79,11 @@ class ColoringViewModel @Inject constructor(
         loadSketch()
     }
 
-    /**
-     * Loads the line-art the kid will colour, then computes its fillable mask
-     * off the main thread. The kid can paint freely while the mask resolves
-     * (mask null → no clipping); strokes start respecting boundaries the
-     * moment it lands.
-     *
-     *  • Real flow → download the backend sketch from its image URL.
-     *  • Fallback  → the bundled sample sketch (e.g. opened out of order, or
-     *               the download failed).
-     */
     private fun loadSketch() {
         viewModelScope.launch {
             val sketch = sketchSession.currentSketch.value
             if (sketch != null) {
-                _uiState.update { it.copy(sketch = sketch) }
+                _uiState.update { it.copy(sketch = sketch, isChallenge = sketchSession.isChallenge) }
             }
 
             val bitmap = sketch?.imageUrl?.let { url ->
@@ -99,17 +98,9 @@ class ColoringViewModel @Inject constructor(
                     )
                 }
             }
-            // No bitmap → leave both null so the canvas keeps shimmering
-            // rather than swapping in a misleading bundled drawable. A
-            // proper "offline / failed fetch" fallback that rotates through
-            // sample sketches ships when the sample library is added.
         }
     }
 
-    /**
-     * Downloads the sketch image via Coil. `allowHardware(false)` is required:
-     * computeFillableMask reads pixels, which a hardware bitmap forbids.
-     */
     private suspend fun downloadBitmap(url: String): android.graphics.Bitmap? {
         val loader = ImageLoader.Builder(context).build()
         val request = ImageRequest.Builder(context)
@@ -122,11 +113,23 @@ class ColoringViewModel @Inject constructor(
             ?.bitmap
     }
 
-    fun onColorSelected(id: String) = _uiState.update { it.copy(selectedColorId = id) }
+    // ── Color ────────────────────────────────────────────────────────
+
+    fun onColorSelected(id: String) {
+        if (id.startsWith("cbn_")) {
+            val regionNum = id.removePrefix("cbn_").toIntOrNull() ?: return
+            val region = _uiState.value.colorRegions.firstOrNull { it.number == regionNum } ?: return
+            val cbnColor = PaintColor(id, "Color $regionNum", region.assignedColor)
+            _uiState.update {
+                it.copy(palette = it.palette + cbnColor, selectedColorId = id)
+            }
+            return
+        }
+        _uiState.update { it.copy(selectedColorId = id) }
+    }
+
     fun onToolSelected(tool: ColoringTool) = _uiState.update { it.copy(tool = tool) }
 
-    /** Switches the whole color theme (Classic / Pastel / Neon / Ocean) and
-     *  selects that palette's first swatch so the active color stays valid. */
     fun onPaletteSelected(paletteId: String) {
         val palette = ColorPalettes.byId(paletteId)
         _uiState.update {
@@ -137,17 +140,259 @@ class ColoringViewModel @Inject constructor(
             )
         }
     }
-    fun onBrushSizeSelected(size: BrushSize) = _uiState.update { it.copy(brushSize = size) }
+
+    // ── Brush size (presets + slider) ────────────────────────────────
+
+    fun onBrushSizeSelected(size: BrushSize) = _uiState.update {
+        it.copy(brushSize = size, strokeWidthBase = size.baseWidthPx)
+    }
+
+    fun onStrokeWidthChanged(width: Float) = _uiState.update {
+        it.copy(strokeWidthBase = width)
+    }
+
+    // ── Opacity ─────────────────────────────────────────────────────
+
+    fun onOpacityChanged(opacity: Float) = _uiState.update {
+        it.copy(opacity = opacity.coerceIn(0.1f, 1f))
+    }
+
+    // ── Mode toggles ────────────────────────────────────────────────
+
+    fun onToggleSymmetry() = _uiState.update { it.copy(symmetryEnabled = !it.symmetryEnabled) }
+
+    fun onToggleColorByNumber() {
+        val current = _uiState.value
+        if (!current.colorByNumberEnabled && current.colorRegions.isEmpty() && current.fillableMask != null) {
+            viewModelScope.launch {
+                val regions = RegionDetector.detect(current.fillableMask)
+                _uiState.update { it.copy(colorByNumberEnabled = true, colorRegions = regions) }
+            }
+        } else {
+            _uiState.update { it.copy(colorByNumberEnabled = !it.colorByNumberEnabled) }
+        }
+    }
+
+    fun onCanvasWidthChanged(widthPx: Int) {
+        if (widthPx > 0) _uiState.update { it.copy(canvasWidthPx = widthPx) }
+    }
+
+    fun onCanvasSizeChanged(width: Int, height: Int) {
+        if (width > 0 && height > 0) {
+            _uiState.update { it.copy(canvasWidthPx = width, canvasHeightPx = height) }
+        }
+    }
+
+    // ── Zoom & Pan ──────────────────────────────────────────────────
+
+    fun onZoomChanged(scale: Float, offset: Offset) = _uiState.update {
+        it.copy(
+            zoomScale = scale.coerceIn(1f, 5f),
+            zoomOffset = offset
+        )
+    }
+
+    fun onZoomIn() = _uiState.update {
+        it.copy(zoomScale = (it.zoomScale + 0.5f).coerceAtMost(5f))
+    }
+
+    fun onZoomOut() = _uiState.update {
+        val newScale = (it.zoomScale - 0.5f).coerceAtLeast(1f)
+        it.copy(
+            zoomScale = newScale,
+            zoomOffset = if (newScale <= 1.01f) Offset.Zero else it.zoomOffset
+        )
+    }
+
+    fun onPanLeft() = pan(-PAN_STEP, 0f)
+    fun onPanRight() = pan(PAN_STEP, 0f)
+    fun onPanUp() = pan(0f, -PAN_STEP)
+    fun onPanDown() = pan(0f, PAN_STEP)
+
+    private fun pan(dx: Float, dy: Float) = _uiState.update {
+        if (it.zoomScale <= 1.01f) return@update it
+        it.copy(zoomOffset = Offset(it.zoomOffset.x + dx, it.zoomOffset.y + dy))
+    }
+
+    fun onResetZoom() = _uiState.update {
+        it.copy(zoomScale = 1f, zoomOffset = Offset.Zero)
+    }
+
+    companion object {
+        private const val PAN_STEP = 80f
+    }
+
+    // ── Eyedropper ──────────────────────────────────────────────────
+
+    fun onEyedropperPick(x: Float, y: Float) {
+        val state = _uiState.value
+        // Search strokes in reverse (top-most first) for the color at (x, y)
+        for (stroke in state.strokes.asReversed()) {
+            if (stroke.tool == ColoringTool.Eraser) continue
+            val w = stroke.effectiveWidthPx(1f) * 2f
+            for (p in stroke.points) {
+                val dx = p.x - x
+                val dy = p.y - y
+                if (dx * dx + dy * dy <= w * w) {
+                    val picked = PaintColor("picked", "Picked", stroke.colorArgb)
+                    _uiState.update {
+                        it.copy(
+                            palette = it.palette + picked,
+                            selectedColorId = "picked",
+                            tool = ColoringTool.Crayon
+                        )
+                    }
+                    return
+                }
+            }
+        }
+        // Nothing found in strokes — read from sketch image if available
+        val img = state.sketchImage
+        if (img != null && state.canvasWidthPx > 0 && state.canvasHeightPx > 0) {
+            val px = ((x / state.canvasWidthPx) * img.width).toInt().coerceIn(0, img.width - 1)
+            val py = ((y / state.canvasHeightPx) * img.height).toInt().coerceIn(0, img.height - 1)
+            val buffer = IntArray(1)
+            img.readPixels(buffer, startX = px, startY = py, width = 1, height = 1)
+            val argb = buffer[0].toLong() and 0xFFFFFFFFL
+            if ((argb ushr 24) > 32) {
+                val picked = PaintColor("picked", "Picked", argb or (0xFFL shl 24))
+                _uiState.update {
+                    it.copy(
+                        palette = it.palette + picked,
+                        selectedColorId = "picked",
+                        tool = ColoringTool.Crayon
+                    )
+                }
+            }
+        }
+    }
+
+    // ── Text Tool ───────────────────────────────────────────────────
+
+    fun onTextButtonClicked() {
+        val state = _uiState.value
+        val cx = state.canvasWidthPx / 2f
+        val cy = state.canvasHeightPx / 2f
+        _uiState.update {
+            it.copy(tool = ColoringTool.TextTool, showTextDialog = true, pendingTextPosition = Offset(cx, cy))
+        }
+    }
+
+    fun onTextToolTap(x: Float, y: Float) {
+        _uiState.update {
+            it.copy(showTextDialog = true, pendingTextPosition = Offset(x, y))
+        }
+    }
+
+    fun onTextDialogDismiss() = _uiState.update { it.copy(showTextDialog = false) }
+
+    fun onTextFontSelected(font: TextFont) = _uiState.update { it.copy(selectedTextFont = font) }
+
+    fun onTextConfirmed(text: String) {
+        if (text.isBlank()) {
+            _uiState.update { it.copy(showTextDialog = false) }
+            return
+        }
+        val state = _uiState.value
+        val pos = state.pendingTextPosition
+        val textStroke = Stroke(
+            tool = ColoringTool.TextTool,
+            colorArgb = state.selectedColor.argb,
+            size = state.brushSize,
+            points = listOf(StrokePoint(pos.x, pos.y)),
+            strokeWidthBase = state.strokeWidthBase,
+            opacity = state.opacity,
+            text = text,
+            textSizeSp = state.strokeWidthBase.coerceIn(14f, 48f),
+            textFont = state.selectedTextFont
+        )
+        _uiState.update { s ->
+            val newStrokes = buildList {
+                addAll(s.strokes)
+                add(textStroke)
+            }
+            s.copy(strokes = newStrokes, redoStack = emptyList(), showTextDialog = false)
+        }
+    }
+
+    // ── Draggable text ──────────────────────────────────────────────
+
+    fun onTextDragStart(x: Float, y: Float): Boolean {
+        val state = _uiState.value
+        val threshold = 40f * (state.canvasWidthPx.toFloat() / 360f).coerceAtLeast(1f)
+        val thresholdSq = threshold * threshold
+        for (i in state.strokes.indices.reversed()) {
+            val s = state.strokes[i]
+            if (s.tool != ColoringTool.TextTool || s.text == null) continue
+            val p = s.points.firstOrNull() ?: continue
+            val dx = p.x - x
+            val dy = p.y - y
+            if (dx * dx + dy * dy <= thresholdSq) {
+                _uiState.update { it.copy(draggingTextIndex = i) }
+                return true
+            }
+        }
+        return false
+    }
+
+    fun onTextDragMove(x: Float, y: Float) {
+        val idx = _uiState.value.draggingTextIndex
+        if (idx < 0) return
+        _uiState.update { state ->
+            val strokes = state.strokes.toMutableList()
+            if (idx < strokes.size) {
+                strokes[idx] = strokes[idx].copy(points = listOf(StrokePoint(x, y)))
+            }
+            state.copy(strokes = strokes)
+        }
+    }
+
+    fun onTextDragEnd() = _uiState.update { it.copy(draggingTextIndex = -1) }
+
+    // ── Challenge ───────────────────────────────────────────────────
+
+    fun setIsChallenge(isChallenge: Boolean) = _uiState.update { it.copy(isChallenge = isChallenge) }
+
+    fun submitChallenge() {
+        val state = _uiState.value
+        viewModelScope.launch {
+            val score = ChallengeScorer.score(
+                fillableMask = state.fillableMask,
+                strokes = state.strokes,
+                canvasWidth = state.canvasWidthPx,
+                canvasHeight = state.canvasHeightPx,
+                densityScale = 1f
+            )
+            challengePrefs.saveResult(score.totalScore, score.stars)
+            _uiState.update { it.copy(challengeScore = score, showChallengeResult = true) }
+        }
+    }
+
+    fun dismissChallengeResult() = _uiState.update { it.copy(showChallengeResult = false) }
+
+    // ── Strokes ─────────────────────────────────────────────────────
 
     fun onStrokeFinished(stroke: Stroke) {
         if (stroke.points.isEmpty()) return
-        _uiState.update {
-            it.copy(
-                strokes = it.strokes + stroke,
-                redoStack = emptyList()
-            )
+        val enriched = stroke.copy(
+            strokeWidthBase = _uiState.value.strokeWidthBase,
+            opacity = _uiState.value.opacity
+        )
+        _uiState.update { state ->
+            val newStrokes = buildList {
+                addAll(state.strokes)
+                add(enriched)
+                if (state.symmetryEnabled && state.canvasWidthPx > 0) {
+                    add(enriched.mirroredHorizontally(state.canvasWidthPx.toFloat()))
+                }
+            }
+            state.copy(strokes = newStrokes, redoStack = emptyList())
         }
     }
+
+    private fun Stroke.mirroredHorizontally(canvasWidth: Float): Stroke = copy(
+        points = points.map { StrokePoint(canvasWidth - it.x, it.y) }
+    )
 
     fun onUndo() {
         _uiState.update { state ->
@@ -173,19 +418,8 @@ class ColoringViewModel @Inject constructor(
         _uiState.update { it.copy(strokes = emptyList(), redoStack = emptyList()) }
     }
 
-    /**
-     * Render the current canvas into a PNG and persist it.
-     *
-     * Returns true if the save reached MediaStore + the in-app gallery store,
-     * false otherwise (no sketch loaded, render failure, MediaStore rejected
-     * the write, etc.). The screen uses the result to decide whether to
-     * navigate to SaveSuccess.
-     *
-     * [canvasWidthPx]/[canvasHeightPx] come from the rendered SketchCanvas's
-     * actual on-screen size — that's the coordinate space the strokes were
-     * captured in, so re-rendering at that size keeps the lines perfectly
-     * aligned with the line-art.
-     */
+    // ── Save ────────────────────────────────────────────────────────
+
     suspend fun saveArtwork(
         canvasWidthPx: Int,
         canvasHeightPx: Int,
@@ -208,7 +442,7 @@ class ColoringViewModel @Inject constructor(
             val saved = galleryRepository.save(
                 bitmap = bitmap,
                 prompt = state.sketch.prompt,
-                category = null  // backend doesn't tag sketches with a category yet
+                category = null
             )
             saved != null
         } finally {

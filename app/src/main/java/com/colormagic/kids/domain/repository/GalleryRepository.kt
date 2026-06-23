@@ -32,4 +32,7 @@ interface GalleryRepository {
     /** Clears every metadata entry. Same caveat as [delete] — the underlying
      *  MediaStore PNGs are left alone; only the in-app gallery is wiped. */
     suspend fun deleteAll()
+
+    /** Updates the animation style for a saved artwork. */
+    suspend fun updateAnimation(id: String, animationType: String)
 }
