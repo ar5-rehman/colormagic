@@ -11,10 +11,13 @@ import coil.ImageLoader
 import coil.request.ImageRequest
 import coil.request.SuccessResult
 import com.colormagic.kids.data.gallery.ArtworkRenderer
+import com.colormagic.kids.data.local.preferences.Badge
 import com.colormagic.kids.data.local.preferences.ChallengePreferences
+import com.colormagic.kids.data.local.preferences.RewardsPreferences
 import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColorPalettes
 import com.colormagic.kids.domain.model.ColoringTool
+import com.colormagic.kids.domain.model.isBrush
 import com.colormagic.kids.domain.model.PaintColor
 import com.colormagic.kids.domain.model.Sketch
 import com.colormagic.kids.domain.repository.GalleryRepository
@@ -53,9 +56,13 @@ data class ColoringUiState(
     val pendingTextPosition: Offset = Offset.Zero,
     val selectedTextFont: TextFont = TextFont.Normal,
     val draggingTextIndex: Int = -1,
+    val showStickerPicker: Boolean = false,
+    val draggingStickerIndex: Int = -1,
     val isChallenge: Boolean = false,
     val challengeScore: ChallengeScore? = null,
     val showChallengeResult: Boolean = false,
+    val newlyEarnedBadges: List<Badge> = emptyList(),
+    val showBadgeCelebration: Boolean = false,
 ) {
     val canUndo: Boolean get() = strokes.isNotEmpty()
     val canRedo: Boolean get() = redoStack.isNotEmpty()
@@ -67,7 +74,8 @@ data class ColoringUiState(
 class ColoringViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sketchSession: SketchSession,
-    private val galleryRepository: GalleryRepository
+    private val galleryRepository: GalleryRepository,
+    private val rewardsPreferences: RewardsPreferences
 ) : ViewModel() {
 
     private val challengePrefs by lazy { ChallengePreferences(context) }
@@ -349,6 +357,71 @@ class ColoringViewModel @Inject constructor(
 
     fun onTextDragEnd() = _uiState.update { it.copy(draggingTextIndex = -1) }
 
+    // ── Sticker Tool ─────────────────────────────────────────────────
+
+    fun onStickerButtonClicked() {
+        _uiState.update {
+            it.copy(tool = ColoringTool.StickerTool, showStickerPicker = true)
+        }
+    }
+
+    fun onStickerPickerDismiss() = _uiState.update { it.copy(showStickerPicker = false) }
+
+    fun onStickerSelected(emoji: String) {
+        val state = _uiState.value
+        val cx = state.canvasWidthPx / 2f
+        val cy = state.canvasHeightPx / 2f
+        val stickerStroke = Stroke(
+            tool = ColoringTool.StickerTool,
+            colorArgb = 0xFFFFFFFF,
+            size = state.brushSize,
+            points = listOf(StrokePoint(cx, cy)),
+            strokeWidthBase = 48f,
+            opacity = 1f,
+            stickerEmoji = emoji,
+            stickerScale = 1f
+        )
+        _uiState.update { s ->
+            s.copy(
+                strokes = s.strokes + stickerStroke,
+                redoStack = emptyList(),
+                showStickerPicker = false
+            )
+        }
+    }
+
+    fun onStickerDragStart(x: Float, y: Float): Boolean {
+        val state = _uiState.value
+        val threshold = 50f * (state.canvasWidthPx.toFloat() / 360f).coerceAtLeast(1f)
+        val thresholdSq = threshold * threshold
+        for (i in state.strokes.indices.reversed()) {
+            val s = state.strokes[i]
+            if (s.tool != ColoringTool.StickerTool || s.stickerEmoji == null) continue
+            val p = s.points.firstOrNull() ?: continue
+            val dx = p.x - x
+            val dy = p.y - y
+            if (dx * dx + dy * dy <= thresholdSq) {
+                _uiState.update { it.copy(draggingStickerIndex = i) }
+                return true
+            }
+        }
+        return false
+    }
+
+    fun onStickerDragMove(x: Float, y: Float) {
+        val idx = _uiState.value.draggingStickerIndex
+        if (idx < 0) return
+        _uiState.update { state ->
+            val strokes = state.strokes.toMutableList()
+            if (idx < strokes.size) {
+                strokes[idx] = strokes[idx].copy(points = listOf(StrokePoint(x, y)))
+            }
+            state.copy(strokes = strokes)
+        }
+    }
+
+    fun onStickerDragEnd() = _uiState.update { it.copy(draggingStickerIndex = -1) }
+
     // ── Challenge ───────────────────────────────────────────────────
 
     fun setIsChallenge(isChallenge: Boolean) = _uiState.update { it.copy(isChallenge = isChallenge) }
@@ -369,6 +442,10 @@ class ColoringViewModel @Inject constructor(
     }
 
     fun dismissChallengeResult() = _uiState.update { it.copy(showChallengeResult = false) }
+
+    fun dismissBadgeCelebration() = _uiState.update {
+        it.copy(showBadgeCelebration = false, newlyEarnedBadges = emptyList())
+    }
 
     // ── Strokes ─────────────────────────────────────────────────────
 
@@ -444,6 +521,24 @@ class ColoringViewModel @Inject constructor(
                 prompt = state.sketch.prompt,
                 category = null
             )
+            if (saved != null) {
+                val colorsUsed = state.strokes
+                    .filter { it.tool.isBrush }
+                    .map { it.colorArgb }
+                    .distinct()
+                    .size
+                val stickersPlaced = state.strokes.count { it.tool == ColoringTool.StickerTool }
+                val newBadges = rewardsPreferences.recordArtworkSaved(
+                    colorsUsed = colorsUsed,
+                    stickersPlaced = stickersPlaced,
+                    currentStreak = 0
+                )
+                if (newBadges.isNotEmpty()) {
+                    _uiState.update {
+                        it.copy(newlyEarnedBadges = newBadges, showBadgeCelebration = true)
+                    }
+                }
+            }
             saved != null
         } finally {
             _uiState.update { it.copy(isSaving = false) }

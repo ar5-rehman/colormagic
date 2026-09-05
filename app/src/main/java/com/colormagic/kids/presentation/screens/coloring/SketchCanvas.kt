@@ -67,6 +67,9 @@ fun SketchCanvas(
     onTextDragStart: (Float, Float) -> Boolean = { _, _ -> false },
     onTextDragMove: (Float, Float) -> Unit = { _, _ -> },
     onTextDragEnd: () -> Unit = {},
+    onStickerDragStart: (Float, Float) -> Boolean = { _, _ -> false },
+    onStickerDragMove: (Float, Float) -> Unit = { _, _ -> },
+    onStickerDragEnd: () -> Unit = {},
     strokeWidthBase: Float = 18f,
     opacity: Float = 1f
 ) {
@@ -120,6 +123,25 @@ fun SketchCanvas(
                                 val pos = down.position.liftedBy(liftPx, edgePadPx)
                                 onEyedropperPick(pos.x, pos.y)
                                 down.consume()
+                                return@awaitEachGesture
+                            }
+
+                            // Sticker tool: drag to reposition placed stickers
+                            if (tool == ColoringTool.StickerTool) {
+                                val pos = down.position
+                                val isDrag = onStickerDragStart(pos.x, pos.y)
+                                if (isDrag) {
+                                    down.consume()
+                                    do {
+                                        val ev = awaitPointerEvent()
+                                        val ch = ev.changes.firstOrNull { it.id == down.id } ?: break
+                                        if (ch.pressed) {
+                                            onStickerDragMove(ch.position.x, ch.position.y)
+                                            ch.consume()
+                                        }
+                                    } while (ev.changes.any { it.pressed && it.id == down.id })
+                                    onStickerDragEnd()
+                                }
                                 return@awaitEachGesture
                             }
 
@@ -228,6 +250,22 @@ fun SketchCanvas(
                 }
             }
 
+            // Sticker layer (on top of text, not clipped by mask)
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                strokes.filter { it.tool == ColoringTool.StickerTool && it.stickerEmoji != null }.forEach { stroke ->
+                    val p = stroke.points.firstOrNull() ?: return@forEach
+                    drawIntoCanvas { canvas ->
+                        val stickerSize = stroke.strokeWidthBase * density.density * stroke.stickerScale
+                        val stickerPaint = android.graphics.Paint().apply {
+                            textSize = stickerSize
+                            textAlign = android.graphics.Paint.Align.CENTER
+                            isAntiAlias = true
+                        }
+                        canvas.nativeCanvas.drawText(stroke.stickerEmoji!!, p.x, p.y + stickerSize * 0.35f, stickerPaint)
+                    }
+                }
+            }
+
             // Cursor overlay
             cursor?.let { position ->
                 val brushIcon = tool.brushIconRes()
@@ -317,7 +355,8 @@ private fun ColoringTool.brushIconRes(): Int? = when (this) {
     ColoringTool.Magic -> R.drawable.ic_brush_magic
     ColoringTool.Glitter -> R.drawable.ic_brush_glitter
     ColoringTool.Fill, ColoringTool.Eraser,
-    ColoringTool.Eyedropper, ColoringTool.TextTool -> null
+    ColoringTool.Eyedropper, ColoringTool.TextTool,
+    ColoringTool.StickerTool -> null
 }
 
 private const val BRUSH_TIP_X = 0.38f
@@ -391,7 +430,7 @@ private fun DrawScope.drawActionCursor(
 }
 
 private fun DrawScope.drawStroke(stroke: Stroke, densityScale: Float) {
-    if (stroke.tool == ColoringTool.TextTool) return
+    if (stroke.tool == ColoringTool.TextTool || stroke.tool == ColoringTool.StickerTool) return
     val w = stroke.effectiveWidthPx(densityScale)
     val baseColor = Color(stroke.colorArgb)
     val alpha = stroke.opacity
@@ -441,7 +480,8 @@ private fun DrawScope.drawStroke(stroke: Stroke, densityScale: Float) {
             }
         }
 
-        ColoringTool.Eyedropper, ColoringTool.TextTool -> { /* no drawing */ }
+        ColoringTool.Eyedropper, ColoringTool.TextTool,
+        ColoringTool.StickerTool -> { /* no drawing */ }
     }
 }
 

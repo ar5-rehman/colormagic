@@ -46,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -59,6 +60,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.R
 import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.data.local.preferences.Badges
+import com.colormagic.kids.data.local.preferences.RewardsState
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.CreditPill
@@ -182,6 +185,8 @@ private fun HomeTabletContent(
                 }
                 DailyIdeaCard(idea = state.dailyIdea, onClick = { onDailyIdea(state.dailyIdea) })
                 DailyChallengeCard(onClick = onDailyChallenge)
+                Spacer(Modifier.height(12.dp))
+                RewardsCard(rewards = state.rewards)
                 ChildIllustrationCard()
             }
 
@@ -397,6 +402,8 @@ private fun HomeContent(
                 DailyIdeaCard(idea = state.dailyIdea, onClick = { onDailyIdea(state.dailyIdea) })
                 Spacer(Modifier.height(12.dp))
                 DailyChallengeCard(onClick = onDailyChallenge)
+                Spacer(Modifier.height(16.dp))
+                RewardsCard(rewards = state.rewards)
                 Spacer(Modifier.height(24.dp))
             }
 
@@ -781,6 +788,150 @@ private fun HomePreviewPhone() {
             onOpenGallery = {},
             onOpenParentArea = {}
         )
+    }
+}
+
+@Composable
+private fun RewardsCard(rewards: RewardsState) {
+    val shape = RoundedCornerShape(20.dp)
+    Surface(
+        shape = shape,
+        color = Color(0xFFFFF8E1),
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(4.dp, shape, ambientColor = Color(0x0A000000), spotColor = Color(0x0A000000))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("🏅", fontSize = 22.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "My Rewards",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF5D4037)
+                )
+                Spacer(Modifier.weight(1f))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFFFFE082)
+                ) {
+                    Text(
+                        "Level ${rewards.level}",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF5D4037),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            // Progress bar to next level
+            val progress = 1f - (rewards.artworksToNextLevel.toFloat() / 5f)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "${rewards.totalArtworks} artworks",
+                    fontSize = 12.sp,
+                    color = Color(0xFF8D6E63)
+                )
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(8.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(Color(0xFFFFE0B2))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(progress.coerceIn(0f, 1f))
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFFFB300))
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "${rewards.artworksToNextLevel} to go",
+                    fontSize = 12.sp,
+                    color = Color(0xFF8D6E63)
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Badge row
+            val earned = rewards.earnedBadges()
+            val unearned = rewards.unearnedBadges()
+            if (earned.isNotEmpty()) {
+                Text(
+                    "Earned Badges",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF5D4037)
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    earned.forEach { badge ->
+                        BadgeChip(emoji = badge.emoji, title = badge.title, earned = true)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (unearned.isNotEmpty()) {
+                Text(
+                    "Next Goals",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF8D6E63)
+                )
+                Spacer(Modifier.height(6.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    unearned.take(5).forEach { badge ->
+                        BadgeChip(emoji = badge.emoji, title = badge.title, earned = false)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BadgeChip(emoji: String, title: String, earned: Boolean) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (earned) Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                emoji,
+                fontSize = 20.sp,
+                modifier = if (!earned) Modifier.graphicsLayer { alpha = 0.4f } else Modifier
+            )
+            Text(
+                title,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Medium,
+                color = if (earned) Color(0xFF2E7D32) else Color(0xFFBDBDBD),
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

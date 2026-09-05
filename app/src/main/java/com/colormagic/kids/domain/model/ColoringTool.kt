@@ -25,7 +25,8 @@ enum class ColoringTool {
     Fill,
     Eraser,
     Eyedropper,
-    TextTool
+    TextTool,
+    StickerTool
 }
 
 val ColoringTool.isBrush: Boolean

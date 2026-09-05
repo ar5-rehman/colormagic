@@ -54,6 +54,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.material.icons.filled.EmojiEmotions
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -181,7 +182,11 @@ fun ColoringScreen(
         onTextDragMove = viewModel::onTextDragMove,
         onTextDragEnd = viewModel::onTextDragEnd,
         onSubmitChallenge = viewModel::submitChallenge,
-        onTextButtonClick = viewModel::onTextButtonClicked
+        onTextButtonClick = viewModel::onTextButtonClicked,
+        onStickerButtonClick = viewModel::onStickerButtonClicked,
+        onStickerDragStart = viewModel::onStickerDragStart,
+        onStickerDragMove = viewModel::onStickerDragMove,
+        onStickerDragEnd = viewModel::onStickerDragEnd
     )
 
     if (info.isCompactWidth) {
@@ -201,11 +206,25 @@ fun ColoringScreen(
         )
     }
 
+    if (state.showStickerPicker) {
+        StickerPickerSheet(
+            onDismiss = viewModel::onStickerPickerDismiss,
+            onStickerSelected = viewModel::onStickerSelected
+        )
+    }
+
     val challengeScore = state.challengeScore
     if (state.showChallengeResult && challengeScore != null) {
         ChallengeResultOverlay(
             score = challengeScore,
             onDismiss = viewModel::dismissChallengeResult
+        )
+    }
+
+    if (state.showBadgeCelebration && state.newlyEarnedBadges.isNotEmpty()) {
+        BadgeCelebrationOverlay(
+            badges = state.newlyEarnedBadges,
+            onDismiss = viewModel::dismissBadgeCelebration
         )
     }
 }
@@ -240,7 +259,11 @@ private data class ColoringCallbacks(
     val onTextDragMove: (Float, Float) -> Unit,
     val onTextDragEnd: () -> Unit,
     val onSubmitChallenge: () -> Unit,
-    val onTextButtonClick: () -> Unit
+    val onTextButtonClick: () -> Unit,
+    val onStickerButtonClick: () -> Unit,
+    val onStickerDragStart: (Float, Float) -> Boolean,
+    val onStickerDragMove: (Float, Float) -> Unit,
+    val onStickerDragEnd: () -> Unit
 )
 
 @Composable
@@ -372,6 +395,77 @@ private fun FancyTextInputSheet(
                     ) {
                         Text("Add Text!", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BadgeCelebrationOverlay(
+    badges: List<com.colormagic.kids.data.local.preferences.Badge>,
+    onDismiss: () -> Unit
+) {
+    Box(
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.6f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Surface(
+            onClick = {},
+            shape = RoundedCornerShape(32.dp),
+            color = Color.White,
+            modifier = Modifier.fillMaxWidth(0.85f)
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("🎉", fontSize = 48.sp)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (badges.size == 1) "Badge Unlocked!" else "Badges Unlocked!",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF5D4037)
+                )
+                Spacer(Modifier.height(16.dp))
+                badges.forEach { badge ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp)
+                    ) {
+                        Text(badge.emoji, fontSize = 32.sp)
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                badge.title,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF5D4037)
+                            )
+                            Text(
+                                badge.description,
+                                fontSize = 13.sp,
+                                color = Color(0xFF8D6E63)
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+                Surface(
+                    onClick = onDismiss,
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFFFFB300)
+                ) {
+                    Text(
+                        "Awesome!",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 32.dp, vertical = 12.dp)
+                    )
                 }
             }
         }
@@ -560,6 +654,9 @@ private fun ColoringTabletContent(
                         onTextDragStart = cb.onTextDragStart,
                         onTextDragMove = cb.onTextDragMove,
                         onTextDragEnd = cb.onTextDragEnd,
+                        onStickerDragStart = cb.onStickerDragStart,
+                        onStickerDragMove = cb.onStickerDragMove,
+                        onStickerDragEnd = cb.onStickerDragEnd,
                         strokeWidthBase = state.strokeWidthBase,
                         opacity = state.opacity,
                         modifier = Modifier
@@ -598,7 +695,7 @@ private fun ColoringTabletContent(
                 ) {
                     TabletBrushesGrid(tool = state.tool, onToolSelected = onToolSelected)
                     Spacer(Modifier.height(10.dp))
-                    TabletActionsRow(tool = state.tool, onToolSelected = onToolSelected, onTextButtonClick = cb.onTextButtonClick)
+                    TabletActionsRow(tool = state.tool, onToolSelected = onToolSelected, onTextButtonClick = cb.onTextButtonClick, onStickerButtonClick = cb.onStickerButtonClick)
                     Spacer(Modifier.height(18.dp))
 
                     Text("Colors", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary, modifier = Modifier.align(Alignment.CenterHorizontally))
@@ -733,7 +830,10 @@ private fun ColoringContent(
                         onTextToolTap = onTextToolTap,
                         onTextDragStart = cb.onTextDragStart,
                         onTextDragMove = cb.onTextDragMove,
-                        onTextDragEnd = cb.onTextDragEnd
+                        onTextDragEnd = cb.onTextDragEnd,
+                        onStickerDragStart = cb.onStickerDragStart,
+                        onStickerDragMove = cb.onStickerDragMove,
+                        onStickerDragEnd = cb.onStickerDragEnd
                     )
                 }
 
@@ -789,7 +889,7 @@ private fun ColoringContent(
                 Spacer(Modifier.height(12.dp))
                 BrushesRow(tool = state.tool, onToolSelected = onToolSelected)
                 Spacer(Modifier.height(8.dp))
-                ActionsRow(tool = state.tool, onToolSelected = onToolSelected, onTextButtonClick = cb.onTextButtonClick)
+                ActionsRow(tool = state.tool, onToolSelected = onToolSelected, onTextButtonClick = cb.onTextButtonClick, onStickerButtonClick = cb.onStickerButtonClick)
                 Spacer(Modifier.height(10.dp))
                 UndoRedoRow(canUndo = state.canUndo, canRedo = state.canRedo, onUndo = onUndo, onRedo = onRedo)
                 Spacer(Modifier.height(12.dp))
@@ -814,7 +914,10 @@ private fun SketchCanvasCard(
     onTextToolTap: (Float, Float) -> Unit = { _, _ -> },
     onTextDragStart: (Float, Float) -> Boolean = { _, _ -> false },
     onTextDragMove: (Float, Float) -> Unit = { _, _ -> },
-    onTextDragEnd: () -> Unit = {}
+    onTextDragEnd: () -> Unit = {},
+    onStickerDragStart: (Float, Float) -> Boolean = { _, _ -> false },
+    onStickerDragMove: (Float, Float) -> Unit = { _, _ -> },
+    onStickerDragEnd: () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier
@@ -843,6 +946,9 @@ private fun SketchCanvasCard(
             onTextDragStart = onTextDragStart,
             onTextDragMove = onTextDragMove,
             onTextDragEnd = onTextDragEnd,
+            onStickerDragStart = onStickerDragStart,
+            onStickerDragMove = onStickerDragMove,
+            onStickerDragEnd = onStickerDragEnd,
             strokeWidthBase = state.strokeWidthBase,
             opacity = state.opacity,
             modifier = Modifier
@@ -1075,7 +1181,8 @@ private fun BrushesRow(
 private fun ActionsRow(
     tool: ColoringTool,
     onToolSelected: (ColoringTool) -> Unit,
-    onTextButtonClick: () -> Unit = {}
+    onTextButtonClick: () -> Unit = {},
+    onStickerButtonClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -1109,6 +1216,13 @@ private fun ActionsRow(
             onClick = onTextButtonClick,
             modifier = Modifier.weight(1f)
         )
+        ToolButton(
+            label = "Sticker",
+            icon = Icons.Filled.EmojiEmotions,
+            selected = tool == ColoringTool.StickerTool,
+            onClick = onStickerButtonClick,
+            modifier = Modifier.weight(1f)
+        )
     }
 }
 
@@ -1139,7 +1253,8 @@ private fun TabletBrushesGrid(
 private fun TabletActionsRow(
     tool: ColoringTool,
     onToolSelected: (ColoringTool) -> Unit,
-    onTextButtonClick: () -> Unit = {}
+    onTextButtonClick: () -> Unit = {},
+    onStickerButtonClick: () -> Unit = {}
 ) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
         ToolButton(label = "Fill", icon = Icons.Filled.FormatColorFill, selected = tool == ColoringTool.Fill, onClick = { onToolSelected(ColoringTool.Fill) }, modifier = Modifier.weight(1f))
@@ -1149,6 +1264,11 @@ private fun TabletActionsRow(
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
         ToolButton(label = "Picker", icon = Icons.Filled.Colorize, selected = tool == ColoringTool.Eyedropper, onClick = { onToolSelected(ColoringTool.Eyedropper) }, modifier = Modifier.weight(1f))
         ToolButton(label = "Text", icon = Icons.Filled.TextFields, selected = tool == ColoringTool.TextTool, onClick = onTextButtonClick, modifier = Modifier.weight(1f))
+    }
+    Spacer(Modifier.height(6.dp))
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+        ToolButton(label = "Sticker", icon = Icons.Filled.EmojiEmotions, selected = tool == ColoringTool.StickerTool, onClick = onStickerButtonClick, modifier = Modifier.weight(1f))
+        Spacer(Modifier.weight(1f))
     }
 }
 
@@ -1331,6 +1451,7 @@ private val ColoringTool.label: String
         ColoringTool.Fill -> "Fill"
         ColoringTool.Eyedropper -> "Picker"
         ColoringTool.TextTool -> "Text"
+        ColoringTool.StickerTool -> "Sticker"
     }
 
 private val BrushSize.label: String
@@ -1340,6 +1461,50 @@ private val BrushSize.label: String
         BrushSize.Medium -> "Medium"
         BrushSize.Large -> "Large"
     }
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun StickerPickerSheet(
+    onDismiss: () -> Unit,
+    onStickerSelected: (String) -> Unit
+) {
+    val stickers = com.colormagic.kids.domain.model.StickerPack.all
+    androidx.compose.material3.ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Text(
+                "Pick a Sticker",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 12.dp)
+            )
+            androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(6),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.height(240.dp)
+            ) {
+                items(stickers.size) { idx ->
+                    val sticker = stickers[idx]
+                    Surface(
+                        onClick = { onStickerSelected(sticker.emoji) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier.aspectRatio(1f)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(sticker.emoji, fontSize = 28.sp)
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+    }
+}
 
 @Preview(name = "Coloring – phone", showBackground = true, widthDp = 360, heightDp = 880)
 @Composable
@@ -1359,7 +1524,11 @@ private fun ColoringPreviewPhone() {
                 onEyedropperPick = { _, _ -> }, onTextToolTap = { _, _ -> },
                 onTextDragStart = { _, _ -> false }, onTextDragMove = { _, _ -> },
                 onTextDragEnd = {}, onSubmitChallenge = {},
-                onTextButtonClick = {}
+                onTextButtonClick = {},
+                onStickerButtonClick = {},
+                onStickerDragStart = { _, _ -> false },
+                onStickerDragMove = { _, _ -> },
+                onStickerDragEnd = {}
             )
         )
     }

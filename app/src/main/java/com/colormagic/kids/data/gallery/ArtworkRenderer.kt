@@ -69,12 +69,23 @@ object ArtworkRenderer {
             canvas.drawText(stroke.text!!, p.x, p.y, textPaint)
         }
 
+        // Sticker strokes rendered on top
+        strokes.filter { it.tool == ColoringTool.StickerTool && it.stickerEmoji != null }.forEach { stroke ->
+            val p = stroke.points.firstOrNull() ?: return@forEach
+            val stickerPaint = Paint().apply {
+                textSize = stroke.strokeWidthBase * densityScale * stroke.stickerScale
+                textAlign = Paint.Align.CENTER
+                isAntiAlias = true
+            }
+            canvas.drawText(stroke.stickerEmoji!!, p.x, p.y + stickerPaint.textSize * 0.35f, stickerPaint)
+        }
+
         return result
     }
 
     private fun drawStroke(canvas: Canvas, stroke: Stroke, densityScale: Float) {
         if (stroke.points.isEmpty()) return
-        if (stroke.tool == ColoringTool.TextTool || stroke.tool == ColoringTool.Eyedropper) return
+        if (stroke.tool == ColoringTool.TextTool || stroke.tool == ColoringTool.Eyedropper || stroke.tool == ColoringTool.StickerTool) return
 
         val w = stroke.effectiveWidthPx(densityScale)
         val base = stroke.colorArgb.toInt()

@@ -2,6 +2,9 @@ package com.colormagic.kids.presentation.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.colormagic.kids.data.local.preferences.Badge
+import com.colormagic.kids.data.local.preferences.RewardsPreferences
+import com.colormagic.kids.data.local.preferences.RewardsState
 import com.colormagic.kids.domain.model.DailyTheme
 import com.colormagic.kids.domain.model.UserQuota
 import com.colormagic.kids.domain.repository.CreditRepository
@@ -29,7 +32,8 @@ data class HomeUiState(
     val showStreakCelebration: Boolean = false,
     /** "Today's magic word" — a fresh suggested idea each day. */
     val dailyIdea: String = DailyTheme.todaysIdea(),
-    val categories: List<HomeCategory> = HomeCategory.defaults()
+    val categories: List<HomeCategory> = HomeCategory.defaults(),
+    val rewards: RewardsState = RewardsState()
 )
 
 enum class CategoryTone { Blue, Lavender, Grey, GreenDeep, GreenLight }
@@ -54,7 +58,8 @@ data class HomeCategory(
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val sketchRepository: SketchRepository,
-    private val creditRepository: CreditRepository
+    private val creditRepository: CreditRepository,
+    private val rewardsPreferences: RewardsPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -94,6 +99,11 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             creditRepository.seedFromCacheIfUnknown()
             loadQuota()
+        }
+        viewModelScope.launch {
+            rewardsPreferences.state.collect { rewards ->
+                _uiState.update { it.copy(rewards = rewards) }
+            }
         }
     }
 

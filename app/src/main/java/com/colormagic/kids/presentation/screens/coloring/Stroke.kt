@@ -31,7 +31,9 @@ data class Stroke(
     val opacity: Float = 1f,
     val text: String? = null,
     val textSizeSp: Float = 28f,
-    val textFont: TextFont = TextFont.Normal
+    val textFont: TextFont = TextFont.Normal,
+    val stickerEmoji: String? = null,
+    val stickerScale: Float = 1f
 )
 
 fun Stroke.effectiveWidthPx(densityScale: Float): Float {
