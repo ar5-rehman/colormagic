@@ -19,6 +19,14 @@
 # would reach via reflection.
 -keep class com.colormagic.kids.domain.model.** { *; }
 
+# ── Firebase component registrars ──────────────────────────────────────
+# Firebase instantiates every *Registrar listed in the manifest by reflection
+# via its no-arg constructor. firebase-components ships this keep rule, but
+# AGP 9's R8 doesn't apply it, so the constructors were stripped and App Check
+# / Installations / Analytics failed to register (crash in Application.onCreate).
+-keep class * implements com.google.firebase.components.ComponentRegistrar { <init>(); }
+-keep,allowshrinking interface com.google.firebase.components.ComponentRegistrar
+
 # ── Kotlin coroutines ──────────────────────────────────────────────────
 -dontwarn kotlinx.coroutines.**
 

@@ -168,4 +168,77 @@ object CategoryIdeas {
 
     /** All known category keys, stable order. */
     val keys: List<String> = labels.keys.toList()
+
+    /** Keywords per category, checked in this order so the more specific
+     *  category wins a tie (a "robot dog" is Robots, a "space cat" is Space). */
+    private val keywords: List<Pair<String, Set<String>>> = listOf(
+        DINOSAURS to setOf(
+            "dinosaur", "dino", "rex", "trex", "triceratops", "stegosaurus",
+            "pteranodon", "raptor", "brontosaurus", "brachiosaurus", "velociraptor"
+        ),
+        ROBOTS to setOf("robot", "robo", "android", "cyborg", "machine"),
+        SPACE to setOf(
+            "space", "rocket", "astronaut", "alien", "planet", "moon", "star",
+            "comet", "galaxy", "rover", "spaceship", "ufo", "satellite", "saturn", "mars"
+        ),
+        VEHICLES to setOf(
+            "car", "truck", "bus", "train", "boat", "sailboat", "ship", "plane",
+            "airplane", "helicopter", "tractor", "digger", "bike", "bicycle",
+            "motorcycle", "submarine", "balloon", "taxi", "ambulance", "scooter"
+        ),
+        PRINCESS to setOf(
+            "princess", "prince", "queen", "king", "castle", "crown", "tiara",
+            "knight", "palace", "royal"
+        ),
+        MAGIC to setOf(
+            "unicorn", "dragon", "mermaid", "wizard", "witch", "genie", "fairy",
+            "magic", "magical", "wand", "spell", "pegasus", "phoenix", "elf", "gnome"
+        ),
+        ANIMALS to setOf(
+            "animal", "elephant", "puppy", "dog", "cat", "kitten", "penguin",
+            "koala", "giraffe", "bunny", "rabbit", "panda", "owl", "turtle",
+            "fox", "duck", "duckling", "lion", "tiger", "bear", "monkey", "horse",
+            "pony", "cow", "pig", "sheep", "goat", "chicken", "bird", "fish",
+            "whale", "dolphin", "shark", "octopus", "frog", "mouse", "hamster",
+            "zebra", "hippo", "crocodile", "snake", "deer", "squirrel", "hedgehog",
+            "sloth", "otter", "seal", "parrot", "flamingo", "bee", "snail"
+        ),
+        NATURE to setOf(
+            "flower", "sunflower", "daisy", "rose", "tree", "forest", "garden",
+            "meadow", "mushroom", "leaf", "rainbow", "cloud", "rain", "sun",
+            "pond", "river", "mountain", "beach", "ocean", "butterfly", "ladybug",
+            "nature", "park", "jungle", "volcano", "waterfall"
+        )
+    )
+
+    /** Ideas from the built-in pools map straight to their own category. */
+    private val ideaCategory: Map<String, String> =
+        allIdeaItems.associate { it.text.lowercase() to it.category }
+
+    /**
+     * Best-guess category key for a prompt (or a title derived from one), or
+     * null when nothing matches — such artworks then appear only under "All".
+     */
+    fun categorize(prompt: String?): String? {
+        val text = prompt?.trim()?.lowercase().orEmpty()
+        if (text.isEmpty()) return null
+        ideaCategory[text]?.let { return it }
+
+        val words = text.split(Regex("[^a-z]+"))
+            .filter { it.isNotEmpty() }
+            .map {
+                when {
+                    it.length > 4 && it.endsWith("ies") -> it.dropLast(3) + "y" // puppies → puppy
+                    it.length > 3 && it.endsWith("s") -> it.dropLast(1)          // trucks → truck
+                    else -> it
+                }
+            }
+            .toSet() + text.replace("-", "").split(Regex("[^a-z]+"))
+        // Highest keyword count wins; list order breaks ties.
+        return keywords
+            .map { (key, set) -> key to words.count { it in set } }
+            .filter { it.second > 0 }
+            .maxByOrNull { it.second }
+            ?.first
+    }
 }

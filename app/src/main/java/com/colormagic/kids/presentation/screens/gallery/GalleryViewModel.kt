@@ -44,7 +44,15 @@ class GalleryViewModel @Inject constructor(
         // a manual refresh.
         viewModelScope.launch {
             galleryRepository.artworks.collect { list ->
-                _uiState.update { it.copy(allArtworks = list) }
+                val present = list.mapNotNull { it.category }.toSet()
+                _uiState.update { state ->
+                    state.copy(
+                        allArtworks = list,
+                        availableCategories = CategoryIdeas.keys.filter { it in present },
+                        // Drop a filter whose last artwork was just deleted.
+                        selectedCategory = state.selectedCategory?.takeIf { it in present }
+                    )
+                }
             }
         }
     }

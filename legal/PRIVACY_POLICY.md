@@ -1,246 +1,239 @@
-# Privacy Policy — Color Magic Kids
+# Privacy Policy — ColorMagic Kids
 
-**Last updated: June 10, 2026**
+**Last updated: October 6, 2026**
 
-This Privacy Policy explains how **[Your Legal Company / Developer Name]** ("we", "us",
-or "our") collects, uses, and protects information when you and your child use the
-**Color Magic Kids** mobile application (the "App").
+This Privacy Policy explains how **ZyloMind** ("we", "us", or "our"), the
+developer of the **ColorMagic Kids** mobile application (the "App"), collects, uses,
+shares, and protects information when you and your child use the App.
 
-Color Magic Kids is an AI coloring-page app intended for children, used **under the
-supervision of a parent or legal guardian**. We have designed the App to collect as
-little personal information as reasonably possible.
+ColorMagic Kids is an AI coloring-page app designed for children aged 4–10, to be used
+**under the supervision of a parent or legal guardian**. We built the App to collect as
+little information as possible.
+
+**Contact:** abdurzylomind@gmail.com
 
 If you do not agree with this Policy, please do not use the App.
 
-**Contact:** [your-support-email@example.com]
-**Developer:** [Your Legal Company / Developer Name], [Address, optional]
-
 ---
 
-## 1. A note for parents (children's privacy)
+## 1. Children's privacy — a note for parents
 
-Color Magic Kids is designed for families and is directed, in part, to children. We
-take children's privacy seriously and aim to comply with applicable laws, including the
-U.S. Children's Online Privacy Protection Act (**COPPA**), the EU/UK General Data
-Protection Regulation including provisions for children (**GDPR / "GDPR-K"**), and
-Google Play's Families Policy.
+The App is directed to children. We aim to comply with the U.S. Children's Online
+Privacy Protection Act (**COPPA**), the EU/UK General Data Protection Regulation
+(**GDPR**, including its rules for children), and **Google Play's Families Policy**.
 
-Key points:
+- The App **never asks children** for their name, email address, phone number, home
+  address, photos, voice, or location.
+- The App works **without a named account**. On first launch it creates an anonymous
+  "guest" account — a random ID that is not linked to a real-world identity.
+- **Google Sign-In, purchases, support messages, and settings changes** sit behind a
+  parent-only area and are intended to be used by a parent or guardian, not the child.
+- We **do not sell** personal information, and we **do not show personalized
+  (interest-based) ads**.
 
-- The App does **not** ask children to provide personal details such as their real
-  name, email address, phone number, photograph, or location.
-- The App can be used **without creating a named account** — by default each device is
-  given an anonymous identifier (a "guest" account) that is not tied to a real-world
-  identity.
-- Optional **Google Sign-In** and **purchases** are intended to be performed by a
-  parent or guardian, not the child.
-- We do **not** knowingly sell children's personal information, and we do **not** use
-  children's personal information for behavioral/targeted advertising.
-
-If you believe your child has provided us personal information without your consent, or
-you would like to review or delete your child's information, contact us at
-**[your-support-email@example.com]** and we will act promptly (see Section 9).
+If you believe your child has given us personal information without your consent, or
+you want to review or delete your child's information, email
+**abdurzylomind@gmail.com** and we will act promptly (see Section 9).
 
 ---
 
 ## 2. Information we collect
 
-### a) Information you/your child provide
+### a) Information you or your child provide
 
-- **Drawing prompts** — the words or selected ideas used to generate a coloring page.
-  These are short text descriptions (e.g., "a friendly dinosaur"). Please do not enter
-  personal information into prompts.
-- **Feedback** — if you choose to send feedback or contact support, we receive the
-  message you send.
+| Information | Details |
+|---|---|
+| **Drawing prompts** | The short text description or selected idea used to create a coloring page (for example, "a friendly dinosaur"). Prompts are limited to 200 characters. Please do not type personal information into prompts. |
+| **Support messages** (parents only) | If you contact us from the Help & Support screen: the message, its type (suggestion, bug, or question), and — only if you choose to enter one — your email address so we can reply. |
 
-### b) Information collected automatically
+### b) Information created when you use the App
 
-- **Anonymous user identifier** — when the App first runs, we create an anonymous
-  account via Firebase Authentication so we can save your credits and settings. This
-  identifier is a random ID and is not, by itself, linked to a real-world identity.
-- **App usage & credit data** — your credit balance (daily credits, rewarded-ad credits,
-  purchased credits, subscription credits), whether you have a subscription, purchase
-  status, coloring streak progress, and similar app-state needed to operate the service.
-- **Parent control settings** — if a parent sets screen-time limits, daily sketch limits,
-  or content filters (e.g., free-text toggle), these settings are stored on our servers
-  (Firebase Cloud Firestore) so they sync across devices when signed in with Google.
-  These settings do not include personal information.
-- **Device & technical data** — limited technical information (such as device type,
-  operating-system version, app version, and approximate connection status) used to
-  operate, secure, and troubleshoot the App.
+| Information | Details |
+|---|---|
+| **Anonymous user ID** | A random ID created through Firebase Authentication so your credits and settings can be saved. |
+| **Generated coloring pages** | The black-and-white coloring page image created from a prompt, together with its prompt, creation time, and a link to the image, is stored on our servers (Firebase Cloud Firestore and Cloud Storage) so the App can show it to you. |
+| **Account and credit data** | Credit balances (daily, rewarded-ad, monthly, and purchased credits), plan and subscription status, coloring-streak progress, and number of rewarded ads watched today. |
+| **Parent control settings** | Daily sketch limit, screen-time limit, and whether free-text prompts are allowed. |
 
-### c) Information collected only if a parent chooses to use optional features
+### c) Information stored only on your device
 
-- **Google account information** — if a parent signs in with Google, we receive the
-  account's email address, display name, and profile photo URL (as provided by Google) to
-  link the account. This information is stored on our servers (Firebase Cloud Firestore)
-  to identify the account and enable cross-device syncing of credits, settings, and
-  streak progress.
-- **Purchase information** — if you buy a subscription or credits, Google Play
-  processes the payment. We receive a purchase token and entitlement status to unlock
-  the purchase. **We never receive or store your full payment-card details.**
+The following never leaves the device unless you choose to share it: **colored
+artwork** (including stickers and text added to it), the in-app gallery, **badges,
+levels, and progress rewards**, and drawing preferences. When you tap Save or Share, a
+copy of the artwork is placed in your phone's photo gallery or shared with the app you
+choose.
 
-We do **not** collect precise geolocation, contacts, microphone, camera, or photo
-library data.
+### d) Information collected only if a parent uses optional features
+
+- **Google Sign-In** — if a parent signs in with Google, we receive the account's
+  **email address, display name, and profile photo URL** from Google. We use these to
+  link the account and sync credits, settings, and streaks across devices.
+- **Purchases** — Google Play processes all payments. We receive the **product ID,
+  purchase token, and subscription status** so we can verify the purchase on our
+  server and unlock it. **We never receive your payment-card details.**
+
+### e) Information collected automatically
+
+| Information | Purpose | Collected by |
+|---|---|---|
+| **Crash logs and diagnostics** (crash stack trace, device model, Android version, app version, a random installation ID) | Find and fix crashes | Firebase Crashlytics |
+| **App usage events** (for example, screens opened and features used) and a random app-instance ID | Understand which features work and improve the App | Firebase Analytics |
+| **Device integrity signals** | Confirm requests come from the genuine App, to prevent fraud and abuse | Firebase App Check / Google Play Integrity |
+| **Ad delivery data** (for example, IP address and device information) | Deliver optional rewarded video ads, limit how often ads are shown, and prevent ad fraud | Google AdMob |
+
+We have **turned off** advertising-ID collection and ad personalization in Firebase
+Analytics.
+
+### f) Information we do NOT collect
+
+We do not collect precise or approximate location, contacts, camera or microphone
+input, SMS, call logs, or files from your device. The App only **saves** images to your
+photo gallery when you ask it to; it does not read your existing photos.
 
 ---
 
 ## 3. How we use information
 
-We use the information above to:
+We use information only to:
 
-- generate coloring pages from prompts;
-- create and maintain the anonymous (or, if chosen, Google-linked) account;
-- track and apply credits (daily, rewarded-ad, purchased, and subscription credits),
-  subscriptions, and purchases;
-- reset daily credits each calendar day and manage credit consumption priority;
-- provide rewarded-ad credits where applicable (see Section 6);
-- enforce parent-configured limits (daily sketch limits, screen-time limits, content
-  filters) and sync them across devices;
-- track coloring streaks to encourage daily creative activity;
-- respond to feedback and support requests;
-- keep the App secure, prevent abuse and fraud (e.g., App Check, purchase
-  verification); and
-- diagnose problems and improve the App.
+- create coloring pages from prompts and show them to you;
+- run the anonymous (or Google-linked) account and sync it across devices;
+- manage credits, daily resets, rewarded-ad credits, purchases, and subscriptions;
+- apply the parent controls you set;
+- track coloring streaks;
+- check prompts for safety and block inappropriate requests;
+- reply to support messages;
+- prevent fraud, abuse, and unauthorized access; and
+- fix crashes and improve the App.
 
-We do **not** use personal information to build advertising profiles of children or to
-serve targeted/behavioral ads to children.
+We **do not** use children's information for advertising profiles, targeted ads, or
+any purpose unrelated to running the App.
 
 ---
 
-## 4. Legal bases (EEA/UK users)
+## 4. Legal bases (EEA / UK)
 
-Where GDPR applies, we rely on the following legal bases:
-
-- **Performance of a contract** — to provide the App's core features (generating
-  pages, managing credits and purchases).
-- **Legitimate interests** — to secure the App, prevent abuse, and improve the
-  service, balanced against users' rights.
-- **Consent** — where required, including for any optional features; for children, the
-  consent of a holder of parental responsibility.
-- **Legal obligation** — where we must process data to comply with law.
+Where GDPR applies, we rely on: **performance of a contract** (providing the App's
+features and purchases); **legitimate interests** (security, fraud prevention, fixing
+crashes, improving the App); **consent** where required — for a child, the consent of a
+parent or guardian; and **legal obligation**.
 
 ---
 
-## 5. How information is shared (service providers / subprocessors)
+## 5. Who we share information with
 
-We do not sell personal information. We share limited information with trusted service
-providers who process it on our behalf to run the App:
+We do **not sell or rent** personal information. We share only what each service
+provider needs to run the App for us:
 
-| Provider | Purpose | What is shared |
+| Service provider | Purpose | Information shared |
 |---|---|---|
-| **Google Firebase** (Authentication, Cloud Firestore, Cloud Functions, App Check) | Account, data storage, backend logic, anti-abuse | Anonymous user ID, credit/subscription data, prompts (in transit), Google account info if used |
-| **Cloudflare, Inc.** (Workers AI) | Generating the coloring image from the text prompt | The drawing prompt text |
-| **Google Play Billing** | Processing purchases and subscriptions | Purchase token / entitlement status |
-| **Google AdMob** | Optional rewarded video ads | Ad-related identifiers/device data (see Section 6) |
+| **Google Firebase** (Authentication, Cloud Firestore, Cloud Storage, Cloud Functions, App Check, Crashlytics, Analytics) | Accounts, data storage, backend, security, crash reports, usage statistics | Anonymous ID, prompts, generated pages, credit and settings data, Google account info (if used), diagnostics |
+| **Cloudflare, Inc.** (Workers AI) | Turning a prompt into a coloring-page image | The prompt text (wrapped in our coloring-page instructions). No user ID or account information is sent. |
+| **Google Play** (Billing) | Processing purchases and subscriptions | Purchase and subscription status |
+| **Google AdMob** | Optional rewarded video ads | Ad delivery data (see Section 6) |
 
-These providers are bound by their own terms and privacy/security commitments. We
-encourage you to review:
-
-- Google Privacy Policy: https://policies.google.com/privacy
-- Firebase: https://firebase.google.com/support/privacy
-- Cloudflare Privacy Policy: https://www.cloudflare.com/privacypolicy/
-- AdMob / Google Ads: https://policies.google.com/technologies/ads
+Their privacy policies:
+Google — https://policies.google.com/privacy ·
+Firebase — https://firebase.google.com/support/privacy ·
+Cloudflare — https://www.cloudflare.com/privacypolicy/ ·
+Google ads — https://policies.google.com/technologies/ads
 
 We may also disclose information if required by law, to enforce our Terms, or to
-protect the rights, safety, and security of our users or the public.
+protect the safety of our users or the public. If the App is ever transferred to a new
+owner, this Policy will continue to apply to information collected under it.
 
 ---
 
 ## 6. Advertising
 
-The App may offer **optional rewarded ads** (for example, watching a short video to
-earn credits). We use Google AdMob to deliver these ads.
+Free users can **choose** to watch a short rewarded video ad to earn extra credits. Ads
+never play automatically, and ads appear only after the child or parent taps a "watch
+ad" button.
 
-Because the App is directed to children, we configure ad requests for **child-directed
-treatment** and request **non-personalized ads** only. This means ads are not based on
-a user's interests or behavior. Advertising identifiers are used only as permitted for
-families/child-directed apps (e.g., frequency capping, fraud prevention, and ad
-delivery).
-
-Users with an active subscription do not see rewarded ads.
+All ad requests are tagged for **child-directed treatment** under COPPA. This means
+AdMob shows only **non-personalized ads**, does not build interest profiles, and limits
+the data it uses to what is needed to deliver ads, cap frequency, and prevent fraud.
 
 ---
 
-## 7. Data retention
+## 7. How long we keep information
 
-- **Account & app-state data** (anonymous ID, credits, subscription status, streak
-  progress, parent control settings) is retained while the App is in use and for as long
-  as needed to provide the service.
-- **Profile data** (display name, email, profile photo URL for Google-linked accounts) is
-  retained as long as the account exists and is deleted upon account deletion.
-- **Prompts** are processed to generate an image and are not used to identify a child.
-- **Generated coloring pages** are stored **locally on the device** in your gallery; we
-  do not require a copy on our servers to provide the core feature.
-- **Feedback** is retained as long as needed to address it and improve the App.
-
-When data is no longer needed, or upon a valid deletion request, we delete or anonymize
-it (see Section 9).
+| Information | How long |
+|---|---|
+| Account, credit, streak, and parent-control data | While the account exists; deleted when the account is deleted |
+| Prompts and generated coloring pages on our servers | While the account exists, or until you ask us to delete them |
+| Google account details (email, name, photo URL) | While the account exists; deleted when the account is deleted |
+| Purchase records | As long as needed to provide the purchase and meet legal and accounting obligations |
+| Support messages | Up to 24 months after the conversation ends |
+| Crash reports | About 90 days (Firebase Crashlytics) |
+| Analytics events | Up to 14 months (Firebase Analytics retention setting) |
+| Artwork, gallery, badges, and rewards on your device | Until you delete them or uninstall the App |
 
 ---
 
-## 8. Data security
+## 8. Security
 
-We use industry-standard safeguards, including encryption in transit (HTTPS/TLS),
-access controls, server-side verification of purchases, and Firebase App Check to help
-prevent unauthorized access. No method of transmission or storage is 100% secure, but we
-work to protect your information.
-
----
-
-## 9. Your rights and choices (including parental rights)
-
-Depending on your location, you (or, for a child, the parent/guardian) may have the
-right to:
-
-- **access** the personal information we hold;
-- **correct** inaccurate information;
-- **delete** the account and associated personal information;
-- **withdraw consent** or **object to / restrict** certain processing;
-- **export** a copy of your data (portability).
-
-**How to exercise these rights / delete your data:**
-
-- In the App: open **Parent Area / Settings** to sign out or manage the account, or use
-  **Help & Support** to contact us.
-- By email: **[your-support-email@example.com]** — tell us you wish to access or delete
-  data; we may need to verify your request.
-- Account & data deletion request page: **[https://colormagic.app/delete-account]**
-
-We will respond within the timeframe required by applicable law. Deleting the account
-removes the associated account data; locally saved coloring pages remain on the device
-until you delete them or uninstall the App.
+We protect information with encryption in transit (HTTPS/TLS), Google's encryption at
+rest, server-side access rules so users can only read their own data, server-side
+purchase verification, and Firebase App Check. No system is 100% secure, but we work
+hard to protect your information.
 
 ---
 
-## 10. International data transfers
+## 9. Your rights and how to delete your data
 
-Our service providers may process and store information in countries other than yours,
-including the United States. Where required, we rely on appropriate safeguards (such as
-Standard Contractual Clauses) for these transfers.
+You — or, for a child, the parent or guardian — can ask us to **access, correct,
+delete, or export** personal information, or to **stop or restrict** processing.
+
+**To delete your account and data:**
+
+1. **In the App (easiest):** open **Parent Area → Help & Support** and send a message
+   saying **"Delete my ColorMagic data"**. Messages sent from the App automatically
+   identify your account.
+2. **By email:** write to **abdurzylomind@gmail.com** with the subject **"Delete my
+   ColorMagic data"** and include the Google account email you signed in with. (Guest
+   accounts that never used Google Sign-In can only be identified from inside the App,
+   so please use option 1 for those.)
+3. We may ask you to confirm the request. We delete the account, credit and streak
+   data, parent-control settings, prompts, generated pages, and Google account details
+   from our servers **within 30 days**.
+
+More details: **https://colormagic-555.web.app/delete-account**
+
+Records we must keep by law (for example, purchase records) may be retained for the
+legally required period. Artwork saved on the device or in your photo gallery stays
+there until you delete it or uninstall the App.
+
+Parents can also review or delete their child's information, and refuse further
+collection, at any time using the steps above. If you are in the EEA or UK, you may
+also complain to your local data-protection authority.
 
 ---
 
-## 11. Third-party links
+## 10. International transfers
 
-The App is not designed to lead children to third-party websites. Any external links
-(e.g., in the parent/support area) are governed by the privacy policies of those third
-parties, not this Policy.
+Our service providers may store and process information in the United States and other
+countries. Where required, we rely on appropriate safeguards such as Standard
+Contractual Clauses.
+
+---
+
+## 11. Links
+
+The children's area of the App does not link to outside websites. Links to this Policy,
+our Terms, and the Play Store appear only in the parent area.
 
 ---
 
 ## 12. Changes to this Policy
 
-We may update this Policy from time to time. We will revise the "Last updated" date
-above and, for material changes, provide a more prominent notice where appropriate.
-Continued use of the App after changes take effect means you accept the updated Policy.
+We may update this Policy. We will change the "Last updated" date and, for important
+changes, show a notice in the App. If a change affects how we use children's
+information, we will ask for parental consent where the law requires it.
 
 ---
 
-## 13. Contact us
+## 13. Contact
 
-If you have questions, requests, or concerns about this Policy or your child's privacy:
-
-**[Your Legal Company / Developer Name]**
-Email: **[your-support-email@example.com]**
-[Mailing address, optional]
+**ZyloMind** — publisher of ColorMagic Kids
+Email: **abdurzylomind@gmail.com**

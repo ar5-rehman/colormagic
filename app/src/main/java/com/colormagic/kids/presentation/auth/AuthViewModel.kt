@@ -1,5 +1,6 @@
 package com.colormagic.kids.presentation.auth
 
+import android.util.Log
 import android.app.Activity
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.NoCredentialException
@@ -131,11 +132,13 @@ class AuthViewModel @Inject constructor(
                                 // Google) account so the UI is instantly correct.
                                 creditRepository.refreshQuota()
                             }
-                            .onFailure {
+                            .onFailure { t ->
+                                Log.w(TAG, "Firebase Google sign-in failed", t)
                                 _message.value = "Couldn't sign in with Google. Please try again."
                             }
                     }
                     .onFailure { t ->
+                        Log.w(TAG, "Google credential request failed", t)
                         // Only show "cancelled" for an actual user cancel — other
                         // failures (no account, transient errors, misconfig) get a
                         // message that tells the parent what to do, instead of
@@ -172,3 +175,5 @@ class AuthViewModel @Inject constructor(
         _message.value = null
     }
 }
+
+private const val TAG = "AuthViewModel"

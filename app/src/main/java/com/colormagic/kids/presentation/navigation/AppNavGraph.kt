@@ -142,7 +142,7 @@ fun AppNavGraph(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onManageSubscription = { navController.navigate(Screen.Subscription.route) },
-                onDeleteAllArtwork = { /* TODO: wire to repository deleteAll */ }
+                onDeleteAllArtwork = {}
             )
         }
 

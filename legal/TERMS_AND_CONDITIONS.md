@@ -1,261 +1,203 @@
-# Terms & Conditions — Color Magic Kids
+# Terms & Conditions — ColorMagic Kids
 
-**Last updated: June 10, 2026**
+**Last updated: October 6, 2026**
 
-These Terms & Conditions ("Terms") are a legal agreement between you and
-**[Your Legal Company / Developer Name]** ("we", "us", or "our") governing your use of
-the **Color Magic Kids** mobile application (the "App"). Please read them carefully.
+These Terms & Conditions ("Terms") are an agreement between you and **ZyloMind** ("we", "us", or "our"), the developer of the **ColorMagic Kids** mobile
+application (the "App"). Please read them carefully.
 
-By downloading, accessing, or using the App, you agree to these Terms and to our
-[Privacy Policy](https://colormagic.app/privacy). If you do not agree, do not use the App.
+By downloading or using the App, you agree to these Terms and to our
+[Privacy Policy](https://colormagic-555.web.app/privacy). If you do not agree, please do
+not use the App.
 
-**Contact:** [your-support-email@example.com]
+**Contact:** abdurzylomind@gmail.com
 
 ---
 
-## 1. Who may use the App (eligibility & parental consent)
+## 1. Who may use the App
 
-Color Magic Kids is intended for children to use **under the supervision of a parent or
-legal guardian**.
+ColorMagic Kids is designed for children aged 4–10 to use **with the supervision of a
+parent or legal guardian**.
 
-- If you are a parent or guardian, you agree to these Terms on behalf of yourself and
-  any child who uses the App on your device, and you are responsible for their use.
-- If you are under the age of majority in your jurisdiction, you may only use the App
-  with the involvement and consent of a parent or guardian.
-- **Account sign-in (e.g., Google) and all purchases must be made by an adult** who is
-  authorized to use the relevant account and payment method.
+- A parent or guardian accepts these Terms for themselves and for any child who uses
+  the App on their device, and is responsible for that child's use.
+- **Google Sign-In, purchases, subscriptions, and contacting support must be done by an
+  adult** who is allowed to use the Google account and payment method involved.
 
 ---
 
 ## 2. The service
 
-The App lets users create digital "coloring page" line-art images from short text
-prompts or selected ideas using artificial intelligence, color them, and save them to
-the device. Features, including the number of available styles and credits, may change
-over time.
+The App lets you create black-and-white coloring pages from short text prompts or
+suggested ideas using artificial intelligence, color them with digital tools and
+stickers, and save, print, or share the finished artwork. An internet connection is
+needed to create new coloring pages; coloring and the saved gallery work offline.
 
-The App requires an internet connection to generate new images. Some features (such as
-viewing previously saved pages) may work offline.
+We may add, change, or remove features over time.
 
 ---
 
 ## 3. Accounts
 
-- By default the App uses an **anonymous "guest" account** so your credits and settings
-  are saved on the device.
-- A parent may optionally **sign in with Google** to link the account. You are
-  responsible for keeping account credentials secure and for activity under the account.
-- We may suspend or terminate accounts that violate these Terms or are used for abuse,
-  fraud, or unlawful activity.
+- The App creates an **anonymous guest account** automatically, so no sign-up is
+  needed.
+- A parent may **sign in with Google** to keep credits, settings, and streaks across
+  devices. Keep your Google account secure; you are responsible for activity under it.
+- You can ask us to delete your account and data at any time — see Section 9 of the
+  Privacy Policy.
+- We may suspend or close accounts used for fraud, abuse, or breaking these Terms.
 
 ---
 
 ## 4. Credits, subscriptions, and purchases
 
-The App uses a **credit system** to generate coloring pages. Each coloring page costs
-**1 credit** to create. Credits are available through the following sources:
+Creating one coloring page uses **1 credit**. The current amounts are shown in the App
+and may change (changes never remove credits you already earned or bought).
 
-### a) Daily free credits
-Every user receives a small number of **free credits each day** (currently 1 credit for
-free users; 30 for Pro subscribers). Daily credits reset at the start of each new
-calendar day (based on your device's time zone) and do not roll over — unused daily
-credits expire at the end of the day.
+- **Daily free credits** — free users currently get **1 credit per day**. Daily credits
+  reset each day and do not carry over.
+- **Rewarded-ad credits** — free users can choose to watch a short video ad for
+  **3 credits**, up to **5 ads per day**. These credits do not expire.
+- **Credit packs** — one-time purchases (for example, **20 credits**). Purchased
+  credits do not expire.
+- **Premium subscription** — a monthly subscription (currently **US$4.99/month**, or
+  the local price shown in Google Play) with a larger credit allowance as described in
+  the App at the time of purchase.
 
-### b) Rewarded-ad credits
-Users may optionally **watch a short video ad** to earn bonus credits (currently 3
-credits per video). There is a daily limit on the number of rewarded ads available
-(currently 5 per day). Rewarded-ad credits do not expire once earned.
+Credits are used in this order: daily, rewarded-ad, subscription, then purchased.
+Credits have **no cash value** and cannot be transferred, sold, or exchanged for money.
 
-### c) Purchased credit packs
-Parents may purchase **one-time credit packs** (e.g., 20 credits). Purchased credits
-are added to the account and **never expire**. Purchased credits are consumed only after
-daily and rewarded-ad credits are used.
+**Payments.** All payments are handled by **Google Play**, and the Google Play Terms of
+Service also apply. Prices are shown before you buy and may differ by country.
 
-### d) Subscriptions (Pro)
-A Pro subscription provides an elevated daily credit allowance (currently 30 per day)
-plus a monthly credit bonus (currently 50 per billing cycle). Monthly credits reset each
-billing period and do not roll over.
+**Auto-renewal and cancellation.** Subscriptions **renew automatically** each period at
+the current price until cancelled. You can cancel at any time in the **Google Play
+Store → Payments & subscriptions → Subscriptions**. After cancelling, you keep access
+until the end of the period you already paid for. Uninstalling the App does **not**
+cancel a subscription.
 
-**Credit consumption order.** When you create a coloring page, credits are consumed in
-this priority: daily → rewarded-ad → monthly (Pro only) → purchased.
-
-**Credit amounts may change.** We reserve the right to adjust the number of free daily
-credits, rewarded-ad credits, purchased credit pack sizes, and subscription credit
-allowances at any time. Changes will not retroactively reduce credits you have already
-earned or purchased.
-
-**Billing.** All purchases are processed by **Google Play Billing**. By purchasing, you
-also agree to the Google Play Terms of Service. Prices are shown in the App before
-purchase and may vary by region and over time.
-
-**Subscriptions & auto-renewal.** Subscriptions renew automatically for the stated
-period (e.g., monthly) at the then-current price until cancelled. **You can cancel at
-any time** through your Google Play account (Play Store → Subscriptions). Cancelling
-stops future renewals; access continues until the end of the paid period.
-
-**Refunds.** Purchases are generally handled and refunded according to **Google Play's
-refund policies**. Where required by law, you may have additional cancellation/refund
-rights. Except as required by law, credits and purchases are non-refundable once used.
-
-**Consumed credits.** Credits have no cash value, are non-transferable, and cannot be
-exchanged for money except where required by law.
+**Refunds.** Refunds are handled under **Google Play's refund policy**. You may have
+additional rights under the consumer law of your country; nothing in these Terms
+limits those rights.
 
 ---
 
-## 5. Acceptable use
+## 5. Safe and acceptable use
 
-You agree not to, and not to allow any child or third party to:
+You agree not to (and not to let anyone else):
 
-- enter prompts that are unlawful, hateful, harassing, sexual, violent, or otherwise
-  inappropriate, or that attempt to generate such content;
-- enter personal information of any person into prompts;
-- misuse, attack, reverse-engineer, scrape, or attempt to bypass the App's security,
-  credit system, or usage limits;
-- use the App to infringe others' intellectual-property or privacy rights; or
-- use the App in violation of any applicable law.
+- enter prompts that are sexual, violent, hateful, harassing, frightening, illegal, or
+  otherwise unsuitable for children, or try to get around our safety filters;
+- enter personal information (such as names, addresses, or phone numbers) into
+  prompts;
+- try to hack, reverse-engineer, overload, or bypass the App's security, credits, or
+  limits;
+- use the App to infringe anyone's copyright, trademarks, or privacy; or
+- use the App in any way that breaks the law.
 
-We use automated and other safety measures to limit inappropriate content, but no
-filter is perfect. We may refuse, block, or remove prompts or content at our discretion.
-
----
-
-## 6. Parent controls & streaks
-
-### a) Parent controls
-The App provides optional controls for parents, including:
-
-- **Daily sketch limit** — restrict the number of coloring pages a child can create per
-  day (1–99, or unlimited).
-- **Screen-time limit** — set a session timer (5–240 minutes) after which the child
-  receives a reminder. Only a parent can extend the session.
-- **Free-text toggle** — enable or disable the child's ability to type custom prompts
-  (when disabled, the child can only use preset categories/ideas).
-
-Parent control settings are stored locally on the device and, if signed in with Google,
-synced to our servers so they apply across devices. Parent controls are advisory
-tools — they do not replace active parental supervision.
-
-### b) Coloring streaks
-The App tracks a daily **coloring streak** — consecutive days on which the child creates
-at least one coloring page. Streaks are designed to encourage regular creative activity.
-Streak data (current streak and best streak) is stored on our servers and syncs across
-devices when signed in with Google. Streaks have no monetary value and do not entitle the
-user to credits or rewards.
+We use automated safety checks to block unsuitable prompts. No filter is perfect, and
+we may refuse or remove any prompt or image.
 
 ---
 
-## 7. AI-generated content
+## 6. AI-generated content and reporting
 
-- Images are generated automatically by AI based on prompts and may be unexpected,
-  inaccurate, or imperfect. They are provided "as is" for personal, non-commercial,
-  family use.
-- Similar prompts may produce similar images for different users; we do not guarantee
-  that any generated image is unique.
-- To the extent permitted by law and subject to these Terms, you may use the coloring
-  pages you generate for **personal, non-commercial** purposes (e.g., printing and
-  coloring at home). Commercial use is not permitted without our prior written consent.
-- You are responsible for the prompts you submit and for how you use the resulting
-  images.
-
----
-
-## 8. Your content (prompts & feedback)
-
-You retain whatever rights you have in the prompts and feedback you submit. By
-submitting them, you grant us a worldwide, royalty-free license to use, process, and
-store them as needed to operate, secure, and improve the App (including transmitting
-prompts to our AI provider to generate images). Please do not submit confidential or
-personal information.
+- Coloring pages are created automatically by a third-party AI model. Results may be
+  unexpected or imperfect, and similar prompts may give similar pages to different
+  users.
+- **If you see an image that is inappropriate or offensive, please report it** from
+  **Parent Area → Help & Support** or by emailing **abdurzylomind@gmail.com**. We
+  review every report and use it to improve our safety filters.
+- You may use the coloring pages and artwork you make for **personal, non-commercial
+  use** — for example, coloring, printing at home, and sharing with family and friends.
+  Selling them or using them commercially requires our written permission.
 
 ---
 
-## 9. Intellectual property
+## 7. Your content
 
-The App, including its software, design, branding, text, and graphics (excluding
-user-generated coloring pages), is owned by us or our licensors and is protected by
-intellectual-property laws. We grant you a limited, personal, non-exclusive,
-non-transferable, revocable license to use the App for its intended purpose. You may not
-copy, modify, distribute, sell, or lease any part of the App except as allowed by law.
+You keep any rights you have in your prompts, artwork, and messages. You allow us to
+store and process them only as needed to run the App — for example, sending a prompt to
+our AI provider to create a page, storing generated pages so you can see them, and
+reading support messages to help you.
 
 ---
 
-## 10. Advertising
+## 8. Parent controls, streaks, and rewards
 
-The App may show **optional rewarded ads** to earn credits. Ads are delivered by Google
-AdMob and are configured for child-directed treatment (non-personalized). See the
-[Privacy Policy](https://colormagic.app/privacy) for details. Subscribers do not see
-rewarded ads.
+- **Parent controls** (daily sketch limit, screen-time reminder, and turning off typed
+  prompts) help parents manage use but do **not replace adult supervision**.
+- **Coloring streaks, badges, levels, and other rewards** are just for fun. They have
+  no monetary value and cannot be exchanged for credits or money.
+
+---
+
+## 9. Advertising
+
+Free users can choose to watch rewarded video ads from Google AdMob. Ads are
+child-directed and **non-personalized**. Ads never play without a tap.
+
+---
+
+## 10. Our intellectual property
+
+The App — including its software, design, characters, stickers, branding, and text —
+belongs to us or our licensors. We give you a personal, non-exclusive,
+non-transferable, revocable licence to use the App for its intended purpose. You may
+not copy, modify, sell, or redistribute the App.
 
 ---
 
 ## 11. Third-party services
 
-The App relies on third-party services (including Google Firebase, Google Play, Google
-AdMob, and Cloudflare). Your use of those services may be subject to their own terms.
-We are not responsible for third-party services we do not control.
+The App relies on services from Google (Firebase, Google Play, AdMob) and Cloudflare.
+Their own terms may apply, and we are not responsible for services we do not control.
 
 ---
 
 ## 12. Disclaimers
 
-THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER
-EXPRESS OR IMPLIED, INCLUDING IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE APP WILL BE
-UNINTERRUPTED, ERROR-FREE, OR SECURE, OR THAT GENERATED CONTENT WILL MEET YOUR
-EXPECTATIONS. SOME JURISDICTIONS DO NOT ALLOW CERTAIN DISCLAIMERS, SO SOME MAY NOT APPLY
-TO YOU.
+THE APP IS PROVIDED "AS IS" AND "AS AVAILABLE". TO THE EXTENT ALLOWED BY LAW, WE MAKE
+NO WARRANTIES OF ANY KIND, AND WE DO NOT PROMISE THAT THE APP WILL ALWAYS BE AVAILABLE,
+ERROR-FREE, OR THAT GENERATED IMAGES WILL MEET YOUR EXPECTATIONS.
 
 ---
 
 ## 13. Limitation of liability
 
-TO THE MAXIMUM EXTENT PERMITTED BY LAW, WE WILL NOT BE LIABLE FOR ANY INDIRECT,
-INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF DATA,
-PROFITS, OR GOODWILL, ARISING FROM OR RELATED TO YOUR USE OF THE APP. OUR TOTAL
-LIABILITY FOR ANY CLAIM RELATING TO THE APP WILL NOT EXCEED THE GREATER OF (A) THE
-AMOUNT YOU PAID US IN THE 12 MONTHS BEFORE THE CLAIM, OR (B) USD $50. NOTHING IN THESE
-TERMS LIMITS LIABILITY THAT CANNOT BE LIMITED UNDER APPLICABLE LAW (INCLUDING CERTAIN
-CONSUMER RIGHTS).
+TO THE EXTENT ALLOWED BY LAW, WE ARE NOT LIABLE FOR INDIRECT, INCIDENTAL, SPECIAL, OR
+CONSEQUENTIAL DAMAGES, OR FOR LOSS OF DATA OR PROFITS. OUR TOTAL LIABILITY FOR ANY
+CLAIM IS LIMITED TO THE GREATER OF THE AMOUNT YOU PAID US IN THE 12 MONTHS BEFORE THE
+CLAIM OR US$50. NOTHING IN THESE TERMS LIMITS LIABILITY THAT CANNOT BE LIMITED BY LAW,
+INCLUDING YOUR STATUTORY CONSUMER RIGHTS.
 
 ---
 
-## 14. Indemnification
+## 14. Ending use
 
-You agree to indemnify and hold us harmless from claims, damages, and expenses
-(including reasonable legal fees) arising from your misuse of the App or violation of
-these Terms, to the extent permitted by law.
-
----
-
-## 15. Termination
-
-You may stop using the App at any time and uninstall it. We may suspend or terminate
-access if you violate these Terms or if necessary to protect the App or its users.
-Sections that by their nature should survive termination (e.g., intellectual property,
-disclaimers, limitation of liability) will survive.
+You can stop using the App and uninstall it at any time. We may suspend or end access
+if these Terms are broken or to protect users or the App. Sections that by their nature
+should continue (such as intellectual property, disclaimers, and limitation of
+liability) continue after termination.
 
 ---
 
-## 16. Changes to the App or Terms
+## 15. Changes
 
-We may modify or discontinue features, and we may update these Terms from time to time.
-For material changes we will update the "Last updated" date and, where appropriate,
-provide additional notice. Continued use of the App after changes take effect means you
+We may update these Terms. We will change the "Last updated" date and show a notice in
+the App for important changes. Continuing to use the App after a change means you
 accept the updated Terms.
 
 ---
 
-## 17. Governing law
+## 16. Governing law
 
-These Terms are governed by the laws of **[Your Country / State]**, without regard to
-its conflict-of-laws rules. Disputes will be subject to the courts of
-**[Your Jurisdiction]**, except where applicable consumer-protection law gives you the
-right to bring proceedings in your place of residence.
+These Terms are governed by the laws of **Pakistan**. This does not take away any
+protection you have under the mandatory consumer laws of the country where you live,
+including the right to bring a claim in your local courts.
 
 ---
 
-## 18. Contact us
+## 17. Contact
 
-**[Your Legal Company / Developer Name]**
-Email: **[your-support-email@example.com]**
-[Mailing address, optional]
+**ZyloMind** — publisher of ColorMagic Kids
+Email: **abdurzylomind@gmail.com**

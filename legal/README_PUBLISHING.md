@@ -3,29 +3,24 @@
 These documents are templates tailored to Color Magic Kids. **They are not legal advice.**
 Because the App targets children, have them reviewed by a lawyer before publishing.
 
-## 1. Fill in the placeholders
+## 1. Sources
 
-Search both files for `[` and replace every bracketed placeholder:
+- `PRIVACY_POLICY.md`, `TERMS_AND_CONDITIONS.md`, `DELETE_ACCOUNT.md` — edit these.
+- Publisher: ZyloMind · Contact: abdurzylomind@gmail.com · Governing law: Pakistan.
+  "ZyloMind" must match the developer name shown on the Play Console account.
 
-- `[Your Legal Company / Developer Name]`
-- `[your-support-email@example.com]`
-- `[Mailing address, optional]`
-- `[Your Country / State]` and `[Your Jurisdiction]` (Terms, governing law)
-- `[https://colormagic.app/delete-account]` (account-deletion page URL)
+## 2. Build & host (Firebase Hosting, free)
 
-## 2. Host them at the URLs the app already uses
+```
+python3 legal/build_html.py      # writes hosting/public/*.html
+firebase deploy --only hosting
+```
 
-The app links to (see `app/.../presentation/util/AppLinks.kt`):
+Public URLs (already used by the app in `AppLinks.kt`):
 
-- Terms:   `https://colormagic.app/terms`
-- Privacy: `https://colormagic.app/privacy`
-
-The URLs must be **public, stable, and not behind a login**. Options:
-- Convert these `.md` files to simple HTML pages on your own site, or
-- GitHub Pages / Cloudflare Pages / Firebase Hosting, then point the paths above to them.
-
-If your final URLs differ, update `AppLinks.TERMS_URL` / `AppLinks.PRIVACY_URL` to match.
-The **Privacy Policy URL in the app must match the one in the Play Console.**
+- Privacy:        https://colormagic-555.web.app/privacy
+- Terms:          https://colormagic-555.web.app/terms
+- Delete account: https://colormagic-555.web.app/delete-account
 
 ## 3. Google Play Console — what actually gets checked
 
@@ -60,8 +55,9 @@ App content → **Target audience and content**:
 
 ### e) Account deletion (required when accounts exist)
 Because the app creates an account (anonymous + optional Google), Play requires an
-**in-app** path and a **web URL** to request account + data deletion. The Privacy
-Policy references `[https://colormagic.app/delete-account]` — create that page.
+**in-app** path and a **web URL** to request account + data deletion.
+Web URL: https://colormagic-555.web.app/delete-account. In-app path: Parent Area →
+Help & Support (feedback form identifies the account by uid).
 
 ## 4. Open items in the app to confirm before release
 

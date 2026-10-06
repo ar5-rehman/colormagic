@@ -2,8 +2,6 @@ package com.colormagic.kids
 
 import android.app.Application
 import com.google.firebase.appcheck.appCheck
-import com.google.firebase.appcheck.debug.DebugAppCheckProviderFactory
-import com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
 import com.google.firebase.Firebase
 import com.google.firebase.initialize
 import dagger.hilt.android.HiltAndroidApp
@@ -21,19 +19,12 @@ class ColorMagicKidsApp : Application() {
      * genuine app build — not a script replaying the API. Every Cloud
      * Function / Firestore / Storage call carries an App Check token.
      *
-     *  • Release  → Play Integrity (hardware-backed attestation).
-     *  • Debug    → Debug provider. On first run Logcat prints a debug token;
-     *               register it under Firebase Console → App Check → Apps so
-     *               local builds aren't rejected.
+     * The provider is picked per build type (see AppCheckProviders in the
+     * debug / release source sets): Debug provider for debug, Play Integrity
+     * for release.
      */
     private fun initFirebaseAppCheck() {
         Firebase.initialize(this)
-        Firebase.appCheck.installAppCheckProviderFactory(
-            if (BuildConfig.DEBUG) {
-                DebugAppCheckProviderFactory.getInstance()
-            } else {
-                PlayIntegrityAppCheckProviderFactory.getInstance()
-            }
-        )
+        Firebase.appCheck.installAppCheckProviderFactory(AppCheckProviders.factory())
     }
 }

@@ -12,9 +12,9 @@ import android.widget.Toast
  * one you set in the Google Play Console listing.
  */
 object AppLinks {
-    const val SUPPORT_EMAIL = "support@colormagic.app"
-    const val TERMS_URL = "https://colormagic.app/terms"
-    const val PRIVACY_URL = "https://colormagic.app/privacy"
+    const val SUPPORT_EMAIL = "abdurzylomind@gmail.com"
+    const val TERMS_URL = "https://colormagic-555.web.app/terms"
+    const val PRIVACY_URL = "https://colormagic-555.web.app/privacy"
 }
 
 /** Opens a web URL in the browser. Shows a toast if nothing can handle it. */

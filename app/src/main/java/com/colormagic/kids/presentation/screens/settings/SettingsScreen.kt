@@ -33,6 +33,16 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewModelScope
+import com.colormagic.kids.domain.repository.GalleryRepository
+import com.colormagic.kids.presentation.components.DeleteAllArtworkDialog
+import com.colormagic.kids.presentation.util.openSupportEmail
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,24 +63,34 @@ import javax.inject.Inject
 private const val APP_VERSION = "App Version 2.4.1"
 
 @HiltViewModel
-class SettingsViewModel @Inject constructor() : ViewModel()
+class SettingsViewModel @Inject constructor(
+    private val galleryRepository: GalleryRepository
+) : ViewModel() {
+    fun deleteAllArtwork() {
+        viewModelScope.launch { galleryRepository.deleteAll() }
+    }
+}
 
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onManageSubscription: () -> Unit,
-    onDeleteAllArtwork: () -> Unit,
-    @Suppress("UNUSED_PARAMETER") viewModel: SettingsViewModel = hiltViewModel()
+    onDeleteAllArtwork: () -> Unit = {},
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val info = currentWindowAdaptiveInfo()
+    val context = LocalContext.current
     SettingsContent(
         compact = info.isCompactWidth,
         onBack = onBack,
         onManageSubscription = onManageSubscription,
         onRestorePurchases = {},
         onPrivacyPolicy = {},
-        onContactSupport = {},
-        onDeleteAllArtwork = onDeleteAllArtwork
+        onContactSupport = { context.openSupportEmail("ColorMagic Support") },
+        onDeleteAllArtwork = {
+            viewModel.deleteAllArtwork()
+            onDeleteAllArtwork()
+        }
     )
 }
 
@@ -234,6 +254,16 @@ private fun ContactSupportRow(onClick: () -> Unit) {
 
 @Composable
 private fun DangerZoneCard(onDelete: () -> Unit) {
+    var showConfirm by remember { mutableStateOf(false) }
+    if (showConfirm) {
+        DeleteAllArtworkDialog(
+            onConfirm = {
+                showConfirm = false
+                onDelete()
+            },
+            onDismiss = { showConfirm = false }
+        )
+    }
     Surface(
         shape = RoundedCornerShape(22.dp),
         color = Color(0xFFFDEAEA),
@@ -265,7 +295,7 @@ private fun DangerZoneCard(onDelete: () -> Unit) {
             )
             Spacer(Modifier.height(14.dp))
             Surface(
-                onClick = onDelete,
+                onClick = { showConfirm = true },
                 shape = RoundedCornerShape(50),
                 color = Color(0xFFB0192C)
             ) {

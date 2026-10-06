@@ -5,6 +5,7 @@ import android.graphics.Bitmap
 import com.colormagic.kids.data.gallery.ArtworkMediaSaver
 import com.colormagic.kids.data.gallery.GalleryStore
 import com.colormagic.kids.data.telemetry.AppTelemetry
+import com.colormagic.kids.domain.model.CategoryIdeas
 import com.colormagic.kids.domain.model.GalleryArtwork
 import com.colormagic.kids.domain.repository.GalleryRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -30,8 +31,12 @@ class GalleryRepositoryImpl @Inject constructor(
     override val artworks: Flow<List<GalleryArtwork>> =
         store.artworks.map { list ->
             list.map { a ->
-                if (a.createdAtMillis > 0L) a.copy(dateLabel = formatTimestamp(a.createdAtMillis))
+                val dated = if (a.createdAtMillis > 0L) a.copy(dateLabel = formatTimestamp(a.createdAtMillis))
                 else a
+                // Artworks saved before auto-categorization have no category;
+                // infer one from the title (the prompt's first words).
+                if (dated.category == null) dated.copy(category = CategoryIdeas.categorize(dated.title))
+                else dated
             }
         }
 
@@ -52,7 +57,7 @@ class GalleryRepositoryImpl @Inject constructor(
             title = titleFromPrompt(prompt),
             dateLabel = formatTimestamp(now),
             placeholderTint = 0xFFEDE7F6,
-            category = category,
+            category = category ?: CategoryIdeas.categorize(prompt),
             localUri = uri.toString(),
             createdAtMillis = now
         )

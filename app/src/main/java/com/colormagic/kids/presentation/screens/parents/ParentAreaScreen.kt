@@ -1040,6 +1040,16 @@ private fun ClearArtworkCard(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var showConfirm by remember { mutableStateOf(false) }
+    if (showConfirm) {
+        com.colormagic.kids.presentation.components.DeleteAllArtworkDialog(
+            onConfirm = {
+                showConfirm = false
+                onDelete()
+            },
+            onDismiss = { showConfirm = false }
+        )
+    }
     Surface(
         shape = RoundedCornerShape(22.dp),
         color = Color(0xFFFADADA),
@@ -1061,7 +1071,7 @@ private fun ClearArtworkCard(
             )
             Spacer(Modifier.height(14.dp))
             Surface(
-                onClick = onDelete,
+                onClick = { showConfirm = true },
                 shape = RoundedCornerShape(50),
                 color = Color(0xFFB0192C)
             ) {
