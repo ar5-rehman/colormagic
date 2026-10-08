@@ -19,7 +19,6 @@ import com.colormagic.kids.presentation.navigation.AppNavGraph
 import com.colormagic.kids.presentation.navigation.BrandBottomBar
 import com.colormagic.kids.presentation.navigation.BrandTopNavBar
 import com.colormagic.kids.presentation.navigation.RootDestination
-import com.colormagic.kids.presentation.navigation.Screen
 import com.colormagic.kids.presentation.navigation.TopLevelDestination
 import com.colormagic.kids.presentation.navigation.navigateToTopLevel
 import com.colormagic.kids.presentation.screens.onboarding.OnboardingScreen
@@ -126,8 +125,7 @@ private fun MainScaffold() {
                 BrandTopNavBar(
                     selected = currentTopLevel,
                     onSelect = { navController.navigateToTopLevel(it) },
-                    onProfile = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) },
-                    onSettings = { navController.navigate(Screen.Settings.route) }
+                    onProfile = { navController.navigateToTopLevel(TopLevelDestination.PARENTS) }
                 )
             }
             AppNavGraph(

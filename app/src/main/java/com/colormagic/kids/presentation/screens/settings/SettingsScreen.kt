@@ -52,7 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.SettingsRowCard
@@ -80,18 +81,22 @@ fun SettingsScreen(
 ) {
     val info = currentWindowAdaptiveInfo()
     val context = LocalContext.current
-    SettingsContent(
-        compact = info.isCompactWidth,
-        onBack = onBack,
-        onManageSubscription = onManageSubscription,
-        onRestorePurchases = {},
-        onPrivacyPolicy = {},
-        onContactSupport = { context.openSupportEmail("ColorMagic Support") },
-        onDeleteAllArtwork = {
-            viewModel.deleteAllArtwork()
-            onDeleteAllArtwork()
-        }
-    )
+    val twoPane = info.useTwoPaneLayout
+    val content: @Composable () -> Unit = {
+        SettingsContent(
+            compact = !twoPane,
+            onBack = onBack,
+            onManageSubscription = onManageSubscription,
+            onRestorePurchases = {},
+            onPrivacyPolicy = {},
+            onContactSupport = { context.openSupportEmail("ColorMagic Support") },
+            onDeleteAllArtwork = {
+                viewModel.deleteAllArtwork()
+                onDeleteAllArtwork()
+            }
+        )
+    }
+    if (twoPane) content() else ReadableWidth(content = content)
 }
 
 @Composable

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -30,16 +29,15 @@ import androidx.compose.ui.unit.sp
 import com.colormagic.kids.presentation.components.BrandTokens
 
 // Tablet-only top navigation: brand wordmark on the left, top-level
-// destinations as text tabs in the middle, profile + settings circle
-// affordances on the right. Replaces both the bottom bar and nav rail
+// destinations as text tabs in the middle, a profile circle on the right.
+// No settings gear here: every setting lives in the parent-gated Parents tab. Replaces both the bottom bar and nav rail
 // when the window is wider than compact.
 @Composable
 fun BrandTopNavBar(
     selected: TopLevelDestination?,
     onSelect: (TopLevelDestination) -> Unit,
     modifier: Modifier = Modifier,
-    onProfile: () -> Unit = {},
-    onSettings: () -> Unit = {}
+    onProfile: () -> Unit = {}
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -80,14 +78,6 @@ fun BrandTopNavBar(
                 onClick = onProfile,
                 tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 background = MaterialTheme.colorScheme.primaryContainer
-            )
-            Spacer(Modifier.width(10.dp))
-            CircleAction(
-                icon = Icons.Filled.Settings,
-                contentDescription = "Settings",
-                onClick = onSettings,
-                tint = BrandTokens.HeadingInk,
-                background = BrandTokens.SubtleSurface
             )
         }
     }

@@ -1,5 +1,6 @@
 package com.colormagic.kids
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -19,6 +20,12 @@ class MainActivity : FragmentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // The manifest locks phones to portrait. Tablets (smallest width
+        // 600dp+) may rotate freely — they have dedicated landscape layouts,
+        // and Android 16 ignores orientation locks on large screens anyway.
+        if (resources.configuration.smallestScreenWidthDp >= 600) {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_FULL_USER
+        }
         enableEdgeToEdge()
         hideSystemBars()
         setContent {

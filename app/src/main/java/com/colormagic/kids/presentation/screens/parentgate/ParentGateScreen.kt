@@ -53,7 +53,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.parent.BiometricAuthenticator
 import kotlinx.coroutines.delay
@@ -93,8 +94,10 @@ fun ParentGateScreen(
     }
 
     val info = currentWindowAdaptiveInfo()
-    if (info.isCompactWidth) {
-        ParentGateContent(onHoldComplete = onHoldComplete, onCancel = onCancel)
+    if (!info.useTwoPaneLayout) {
+        ReadableWidth {
+            ParentGateContent(onHoldComplete = onHoldComplete, onCancel = onCancel)
+        }
     } else {
         ParentGateTabletContent(onHoldComplete = onHoldComplete, onCancel = onCancel)
     }

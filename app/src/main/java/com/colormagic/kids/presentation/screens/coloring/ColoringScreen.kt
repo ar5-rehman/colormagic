@@ -87,7 +87,8 @@ import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColorPalettes
 import com.colormagic.kids.domain.model.ColoringTool
 import com.colormagic.kids.domain.model.PaintColor
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.BrandTopBar
 import com.colormagic.kids.presentation.components.BrushSizeDot
@@ -189,8 +190,10 @@ fun ColoringScreen(
         onStickerDragEnd = viewModel::onStickerDragEnd
     )
 
-    if (info.isCompactWidth) {
-        ColoringContent(state = state, cb = commonCallbacks)
+    if (!info.useTwoPaneLayout) {
+        ReadableWidth {
+            ColoringContent(state = state, cb = commonCallbacks)
+        }
     } else {
         ColoringTabletContent(state = state, cb = commonCallbacks)
     }

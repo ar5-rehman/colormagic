@@ -59,7 +59,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.R
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.data.local.preferences.Badges
 import com.colormagic.kids.data.local.preferences.RewardsState
 import com.colormagic.kids.presentation.components.BrandHeading
@@ -107,17 +108,19 @@ fun HomeScreen(
     }
 
     androidx.compose.foundation.layout.Box(modifier = Modifier.fillMaxSize()) {
-        if (info.isCompactWidth) {
-            HomeContent(
-                state = state,
-                onCreateNewSketch = onCreateNewSketch,
-                onCategoryClick = onCategoryClick,
-                onOpenGallery = onOpenGallery,
-                onOpenParentArea = onOpenParentArea,
-                onGetCredits = onGetCredits,
-                onDailyIdea = onDailyIdea,
-                onDailyChallenge = onDailyChallenge
-            )
+        if (!info.useTwoPaneLayout) {
+            ReadableWidth {
+                HomeContent(
+                    state = state,
+                    onCreateNewSketch = onCreateNewSketch,
+                    onCategoryClick = onCategoryClick,
+                    onOpenGallery = onOpenGallery,
+                    onOpenParentArea = onOpenParentArea,
+                    onGetCredits = onGetCredits,
+                    onDailyIdea = onDailyIdea,
+                    onDailyChallenge = onDailyChallenge
+                )
+            }
         } else {
             HomeTabletContent(
                 state = state,

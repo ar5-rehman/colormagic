@@ -59,7 +59,8 @@ import com.colormagic.kids.presentation.util.AppLinks
 import com.colormagic.kids.presentation.util.openUrl
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.presentation.auth.AuthViewModel
 import com.colormagic.kids.presentation.components.AccountCard
 import com.colormagic.kids.presentation.components.BrandHeading
@@ -125,20 +126,22 @@ fun ParentAreaScreen(
         )
     }
 
-    if (info.isCompactWidth) {
-        ParentAreaContent(
-            state = state,
-            onManageSubscription = onManageSubscription,
-            onBuyMore = onGetCredits,
-            onSketchLimitChanged = viewModel::onSketchLimitChanged,
-            onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
-            onSessionLimitChanged = viewModel::onSessionLimitChanged,
-            onClearArtwork = viewModel::onClearArtwork,
-            onOpenSupport = onOpenSupport,
-            onTerms = onTerms,
-            onPrivacy = onPrivacy,
-            accountCard = accountCard
-        )
+    if (!info.useTwoPaneLayout) {
+        ReadableWidth {
+            ParentAreaContent(
+                state = state,
+                onManageSubscription = onManageSubscription,
+                onBuyMore = onGetCredits,
+                onSketchLimitChanged = viewModel::onSketchLimitChanged,
+                onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
+                onSessionLimitChanged = viewModel::onSessionLimitChanged,
+                onClearArtwork = viewModel::onClearArtwork,
+                onOpenSupport = onOpenSupport,
+                onTerms = onTerms,
+                onPrivacy = onPrivacy,
+                accountCard = accountCard
+            )
+        }
     } else {
         ParentAreaTabletContent(
             state = state,

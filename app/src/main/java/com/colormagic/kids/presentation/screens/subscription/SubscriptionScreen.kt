@@ -69,7 +69,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandTokens
 import com.colormagic.kids.presentation.components.ParentBrandHeader
@@ -125,18 +126,20 @@ fun SubscriptionScreen(
     val dismissIcon = if (dismissAsClose) Icons.Filled.Close else Icons.AutoMirrored.Filled.ArrowBack
     val dismissLabel = if (dismissAsClose) "Close" else "Back"
 
-    if (info.isCompactWidth) {
-        SubscriptionContent(
-            state = state,
-            onBack = onBack,
-            onPlanSelected = viewModel::onPlanSelected,
-            onContinue = onContinue,
-            onRestore = viewModel::onRestorePurchases,
-            onManageSubscription = onManageSubscription,
-            onProfile = onProfile,
-            dismissIcon = dismissIcon,
-            dismissLabel = dismissLabel
-        )
+    if (!info.useTwoPaneLayout) {
+        ReadableWidth {
+            SubscriptionContent(
+                state = state,
+                onBack = onBack,
+                onPlanSelected = viewModel::onPlanSelected,
+                onContinue = onContinue,
+                onRestore = viewModel::onRestorePurchases,
+                onManageSubscription = onManageSubscription,
+                onProfile = onProfile,
+                dismissIcon = dismissIcon,
+                dismissLabel = dismissLabel
+            )
+        }
     } else {
         SubscriptionTabletContent(
             state = state,

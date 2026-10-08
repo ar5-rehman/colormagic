@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -42,6 +44,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
@@ -101,6 +104,10 @@ fun OnboardingScreen(onStartCreating: () -> Unit) {
                 .padding(top = 24.dp, bottom = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+          Column(
+            modifier = Modifier.widthIn(max = 520.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+          ) {
             PageDots(count = PAGE_COUNT, current = pagerState.currentPage)
             Spacer(Modifier.height(24.dp))
 
@@ -138,6 +145,7 @@ fun OnboardingScreen(onStartCreating: () -> Unit) {
                     )
                 }
             }
+          }
         }
     }
 }
@@ -164,6 +172,9 @@ private fun WelcomePage() {
         // Hero image
         Surface(
             modifier = Modifier
+                // Cap applied BEFORE the fraction (fillMaxWidth fixes the width).
+                // Short landscape screens shrink it so the title clears the buttons.
+                .widthIn(max = (minOf(340, LocalConfiguration.current.screenHeightDp * 3 / 10) / 0.72f).dp)
                 .fillMaxWidth(0.72f)
                 .aspectRatio(1f)
                 .shadow(16.dp, RoundedCornerShape(32.dp)),
@@ -506,7 +517,11 @@ private fun PageShell(
         )
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .align(Alignment.TopCenter)
+                .fillMaxHeight()
+                // Tablets: keep pages at phone-like reading width, centred.
+                .widthIn(max = 560.dp)
+                .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 28.dp)
                 .padding(top = safeTop + 28.dp, bottom = 210.dp),

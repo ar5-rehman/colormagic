@@ -48,7 +48,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.horizontalScroll
 import com.colormagic.kids.domain.model.CategoryIdeas
 import com.colormagic.kids.domain.model.ColoringIdea
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandPromptInput
@@ -141,18 +142,20 @@ fun CreateSketchScreen(
         }
     }
 
-    if (info.isCompactWidth) {
-        CreateSketchContent(
-            state = state,
-            onBack = onBack,
-            onPromptChanged = viewModel::onPromptChanged,
-            onCategorySelected = viewModel::onCategorySelected,
-            onMakeSketch = onMakeSketch,
-            onIdeaSelected = viewModel::onIdeaSelected,
-            onUpgrade = onUpgrade,
-            onGetCredits = onGetCredits,
-            onVoice = onVoice
-        )
+    if (!info.useTwoPaneLayout) {
+        ReadableWidth {
+            CreateSketchContent(
+                state = state,
+                onBack = onBack,
+                onPromptChanged = viewModel::onPromptChanged,
+                onCategorySelected = viewModel::onCategorySelected,
+                onMakeSketch = onMakeSketch,
+                onIdeaSelected = viewModel::onIdeaSelected,
+                onUpgrade = onUpgrade,
+                onGetCredits = onGetCredits,
+                onVoice = onVoice
+            )
+        }
     } else {
         CreateSketchTabletContent(
             state = state,

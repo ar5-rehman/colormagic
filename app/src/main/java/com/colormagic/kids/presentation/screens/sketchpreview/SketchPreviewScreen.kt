@@ -50,7 +50,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.SubcomposeAsyncImage
 import com.colormagic.kids.presentation.components.ShimmerBox
 import com.colormagic.kids.domain.model.Sketch
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandTertiaryButton
 import com.colormagic.kids.presentation.components.BrandTokens
@@ -77,13 +78,15 @@ fun SketchPreviewScreen(
     val sketch by viewModel.sketch.collectAsStateWithLifecycle()
     val displaySketch = sketch ?: FALLBACK_SKETCH
     val info = currentWindowAdaptiveInfo()
-    if (info.isCompactWidth) {
-        SketchPreviewContent(
-            sketch = displaySketch,
-            onBack = onBack,
-            onColorThis = { onColorThis(displaySketch) },
-            onTryAnother = onTryAnother
-        )
+    if (!info.useTwoPaneLayout) {
+        ReadableWidth {
+            SketchPreviewContent(
+                sketch = displaySketch,
+                onBack = onBack,
+                onColorThis = { onColorThis(displaySketch) },
+                onTryAnother = onTryAnother
+            )
+        }
     } else {
         SketchPreviewTabletContent(
             sketch = displaySketch,

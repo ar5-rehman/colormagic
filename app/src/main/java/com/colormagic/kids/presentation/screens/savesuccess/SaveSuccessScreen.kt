@@ -43,7 +43,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.colormagic.kids.domain.model.SavedPicture
-import com.colormagic.kids.presentation.adaptive.isCompactWidth
+import com.colormagic.kids.presentation.adaptive.ReadableWidth
+import com.colormagic.kids.presentation.adaptive.useTwoPaneLayout
 import com.colormagic.kids.presentation.components.BrandHeading
 import com.colormagic.kids.presentation.components.BrandPrimaryButton
 import com.colormagic.kids.presentation.components.BrandTertiaryButton
@@ -64,12 +65,14 @@ fun SaveSuccessScreen(
         com.colormagic.kids.presentation.util.CelebrationFx.playSuccess()
     }
     Box(modifier = Modifier.fillMaxSize()) {
-        if (info.isCompactWidth) {
-            SaveSuccessContent(
-                picture = state.picture,
-                onGoToGallery = onGoToGallery,
-                onCreateAnother = onCreateAnother
-            )
+        if (!info.useTwoPaneLayout) {
+            ReadableWidth {
+                SaveSuccessContent(
+                    picture = state.picture,
+                    onGoToGallery = onGoToGallery,
+                    onCreateAnother = onCreateAnother
+                )
+            }
         } else {
             SaveSuccessTabletContent(
                 picture = state.picture,
@@ -131,10 +134,13 @@ private fun SaveSuccessTabletContent(
                                 .weight(0.5f)
                                 .aspectRatio(1f)
                                 .clip(RoundedCornerShape(22.dp))
-                                .background(Color(picture.placeholderTint)),
+                                .background(
+                                    if (picture.imageUrl != null) Color.White
+                                    else Color(picture.placeholderTint)
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(text = "🎨", fontSize = 96.sp)
+                            SavedPictureImage(picture, emojiSize = 96)
                         }
 
                         // Right column — heading, subtitle, buttons.
@@ -294,7 +300,7 @@ private fun SavedPicturePreview(picture: SavedPicture) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(180.dp)
+            .height(if (picture.imageUrl != null) 320.dp else 180.dp)
             .shadow(
                 elevation = 12.dp,
                 shape = RoundedCornerShape(26.dp),
@@ -308,13 +314,31 @@ private fun SavedPicturePreview(picture: SavedPicture) {
             modifier = Modifier
                 .padding(12.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(picture.placeholderTint))
+                .background(
+                    if (picture.imageUrl != null) Color.White
+                    else Color(picture.placeholderTint)
+                )
                 .fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            // Swap to AsyncImage(picture.imageUrl) when backend lands.
-            Text(text = "🎨", fontSize = 64.sp)
+            SavedPictureImage(picture, emojiSize = 64)
         }
+    }
+}
+
+/** The just-saved artwork, or a palette emoji if it can't be found. */
+@Composable
+private fun SavedPictureImage(picture: SavedPicture, emojiSize: Int) {
+    val url = picture.imageUrl
+    if (url != null) {
+        coil.compose.AsyncImage(
+            model = url,
+            contentDescription = "Your saved picture",
+            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+        )
+    } else {
+        Text(text = "🎨", fontSize = emojiSize.sp)
     }
 }
 
