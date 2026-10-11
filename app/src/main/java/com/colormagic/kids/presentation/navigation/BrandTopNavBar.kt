@@ -52,7 +52,7 @@ fun BrandTopNavBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "ColorMagic Kids",
+                text = "Color Magic",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,

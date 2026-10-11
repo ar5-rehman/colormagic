@@ -53,9 +53,15 @@ class RewardedAdManager @Inject constructor(
     private var rewardedAd: RewardedAd? = null
 
     init {
-        // Child-directed treatment required for this app under COPPA.
+        // Young children use this app (ages 4+, mixed audience), so EVERY ad
+        // request is treated as a child's:
+        //  • child-directed (COPPA) → non-personalized ads only
+        //  • under the age of consent (GDPR) → no personalized ads in the EEA/UK
+        //  • max content rating G → only family-safe ad creatives
         val config = RequestConfiguration.Builder()
             .setTagForChildDirectedTreatment(RequestConfiguration.TAG_FOR_CHILD_DIRECTED_TREATMENT_TRUE)
+            .setTagForUnderAgeOfConsent(RequestConfiguration.TAG_FOR_UNDER_AGE_OF_CONSENT_TRUE)
+            .setMaxAdContentRating(RequestConfiguration.MAX_AD_CONTENT_RATING_G)
             .build()
         MobileAds.setRequestConfiguration(config)
         MobileAds.initialize(context)
@@ -120,14 +126,14 @@ class RewardedAdManager @Inject constructor(
         // Server-Side Verification: bind this impression to the signed-in user
         // so AdMob's SSV callback grants credits to the right account. The
         // backend trusts this signed callback — never the client.
-        if (CreditConfig.USE_ADMOB_SSV) {
-            firebaseAuth.currentUser?.uid?.let { uid ->
-                ad.setServerSideVerificationOptions(
-                    ServerSideVerificationOptions.Builder()
-                        .setCustomData(uid)
-                        .build()
-                )
-            }
+        // Always attached (harmless when SSV is off) so the callback can never
+        // arrive without a user to credit.
+        firebaseAuth.currentUser?.uid?.let { uid ->
+            ad.setServerSideVerificationOptions(
+                ServerSideVerificationOptions.Builder()
+                    .setCustomData(uid)
+                    .build()
+            )
         }
 
         _adLoadState.value = AdLoadState.Showing

@@ -9,6 +9,12 @@
          banner, disable "Make My Sketch", and auto-recover when back online. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Advertising ID for the optional rewarded ads (AdMob). Declared here on
+         purpose: the app targets ages 4+ (mixed audience), so it must stay.
+         Ad requests are still tagged child-directed (RewardedAdManager), which
+         keeps ads non-personalized; Firebase Analytics ad-ID collection is off. -->
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+
     <!-- Saving completed artwork to the phone gallery. Scoped MediaStore on
          29+ doesn't need a runtime permission; only legacy 24-28 does. -->
     <uses-permission
@@ -22,7 +28,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
-        android:roundIcon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.ColorMagicKids">
 
@@ -33,7 +39,7 @@
              Google Play Families policy. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-3327131790118517~9954835424" />
 
         <!-- Disable Ad ID collection — required for child-directed apps. -->
         <meta-data

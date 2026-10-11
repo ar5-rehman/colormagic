@@ -81,8 +81,8 @@ private fun SplashContent() {
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Image(
-                            painter = painterResource(R.drawable.color_magic_kids_logo),
-                            contentDescription = "ColorMagic Kids logo",
+                            painter = painterResource(R.drawable.app_logo),
+                            contentDescription = "Color Magic logo",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .size(108.dp)
@@ -94,7 +94,7 @@ private fun SplashContent() {
                 Spacer(Modifier.height(28.dp))
 
                 Text(
-                    text = "ColorMagic Kids",
+                    text = "Color Magic",
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onBackground

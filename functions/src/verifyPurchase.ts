@@ -26,6 +26,7 @@ import {
   PRODUCT_MONTHLY_PRO,
   PRO_MONTHLY_LIMIT,
   REGION,
+  DEFAULT_MAX_INSTANCES
 } from "./config";
 import {computeQuota, ensureUserDoc} from "./credits";
 import {Collections, db} from "./firebase";
@@ -33,7 +34,7 @@ import {androidPublisher} from "./playApi";
 import {VerifyPurchaseRequest, VerifyPurchaseResponse} from "./types";
 
 export const verifyPurchase = onCall(
-  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
+  {region: REGION, maxInstances: DEFAULT_MAX_INSTANCES, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<VerifyPurchaseResponse> => {
     const uid = request.auth?.uid;
     if (!uid) {

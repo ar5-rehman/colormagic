@@ -19,4 +19,15 @@ interface FeedbackRepository {
         message: String,
         email: String?
     ): Result<Unit>
+
+    /**
+     * Flags an AI-generated picture as inappropriate (Google Play's AI-content
+     * policy requires in-app reporting). Sent as a "report" feedback entry with
+     * the sketch's id, prompt and image link so it can be reviewed.
+     */
+    suspend fun reportImage(
+        sketchId: String,
+        prompt: String,
+        imageUrl: String?
+    ): Result<Unit>
 }

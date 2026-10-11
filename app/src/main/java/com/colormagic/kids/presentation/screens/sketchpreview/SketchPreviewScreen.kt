@@ -1,5 +1,7 @@
 package com.colormagic.kids.presentation.screens.sketchpreview
 
+import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.Flag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -78,13 +80,30 @@ fun SketchPreviewScreen(
     val sketch by viewModel.sketch.collectAsStateWithLifecycle()
     val displaySketch = sketch ?: FALLBACK_SKETCH
     val info = currentWindowAdaptiveInfo()
+    val reported by viewModel.reported.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        viewModel.messages.collect {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+    // Only real generated pictures can be reported.
+    val reportButton: @Composable () -> Unit = {
+        if (sketch != null) {
+            ReportPictureButton(
+                reported = reported,
+                onReport = { viewModel.report(displaySketch) }
+            )
+        }
+    }
     if (!info.useTwoPaneLayout) {
         ReadableWidth {
             SketchPreviewContent(
                 sketch = displaySketch,
                 onBack = onBack,
                 onColorThis = { onColorThis(displaySketch) },
-                onTryAnother = onTryAnother
+                onTryAnother = onTryAnother,
+                reportButton = reportButton
             )
         }
     } else {
@@ -92,7 +111,8 @@ fun SketchPreviewScreen(
             sketch = displaySketch,
             onBack = onBack,
             onColorThis = { onColorThis(displaySketch) },
-            onTryAnother = onTryAnother
+            onTryAnother = onTryAnother,
+            reportButton = reportButton
         )
     }
 }
@@ -130,7 +150,8 @@ private fun SketchPreviewTabletContent(
     sketch: Sketch,
     onBack: () -> Unit,
     onColorThis: () -> Unit,
-    onTryAnother: () -> Unit
+    onTryAnother: () -> Unit,
+    reportButton: @Composable () -> Unit = {}
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -170,7 +191,7 @@ private fun SketchPreviewTabletContent(
                 }
                 Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "ColorMagic Kids",
+                        text = "Color Magic",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -258,6 +279,8 @@ private fun SketchPreviewTabletContent(
                             icon = Icons.Filled.Info,
                             style = CreditPillStyle.Subtle
                         )
+                        Spacer(Modifier.height(8.dp))
+                        reportButton()
                     }
                 }
             }
@@ -270,7 +293,8 @@ private fun SketchPreviewContent(
     sketch: Sketch,
     onBack: () -> Unit,
     onColorThis: () -> Unit,
-    onTryAnother: () -> Unit
+    onTryAnother: () -> Unit,
+    reportButton: @Composable () -> Unit = {}
 ) {
     val safeTop = WindowInsets.safeDrawing.asPaddingValues().calculateTopPadding()
     val safeBottom = WindowInsets.safeDrawing.asPaddingValues().calculateBottomPadding()
@@ -288,7 +312,7 @@ private fun SketchPreviewContent(
                 onBack = onBack,
                 title = {
                     Text(
-                        text = "ColorMagic",
+                        text = "Color Magic",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -350,6 +374,7 @@ private fun SketchPreviewContent(
                     icon = Icons.Filled.Info,
                     style = CreditPillStyle.Subtle
                 )
+                reportButton()
             }
 
             Spacer(Modifier.height(32.dp))
@@ -401,6 +426,87 @@ private fun SketchPreviewPhone() {
             onBack = {},
             onColorThis = {},
             onTryAnother = {}
+        )
+    }
+}
+
+/**
+ * "Report this picture" — Google Play's AI-generated content policy requires a
+ * way to flag offensive output in-app. Asks for confirmation, then sends the
+ * sketch to the review queue (feedback type "report").
+ */
+@Composable
+private fun ReportPictureButton(
+    reported: Boolean,
+    onReport: () -> Unit
+) {
+    var confirming by androidx.compose.runtime.remember {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    if (confirming) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirming = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Flag,
+                    contentDescription = null,
+                    tint = Color(0xFFB0192C)
+                )
+            },
+            title = {
+                Text(
+                    text = "Report this picture?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandTokens.HeadingInk
+                )
+            },
+            text = {
+                Text(
+                    text = "If this picture looks scary, wrong, or not right for kids, " +
+                        "let us know and we'll review it.",
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = BrandTokens.MutedInk
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        confirming = false
+                        onReport()
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFB0192C),
+                        contentColor = Color.White
+                    )
+                ) { Text("Report", fontWeight = FontWeight.SemiBold) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { confirming = false }) {
+                    Text("Cancel", fontWeight = FontWeight.SemiBold, color = BrandTokens.MutedInk)
+                }
+            }
+        )
+    }
+    androidx.compose.material3.TextButton(
+        onClick = { confirming = true },
+        enabled = !reported
+    ) {
+        Icon(
+            imageVector = Icons.Filled.Flag,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+            tint = if (reported) BrandTokens.MutedInk else Color(0xFFB0192C)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            text = if (reported) "Reported — thank you" else "Report this picture",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = if (reported) BrandTokens.MutedInk else Color(0xFFB0192C)
         )
     }
 }

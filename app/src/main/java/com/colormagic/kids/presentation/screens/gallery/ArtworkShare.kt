@@ -16,7 +16,7 @@ import com.colormagic.kids.domain.model.GalleryArtwork
 // MediaStore URIs are publicly read-permitted via the system, so no
 // FileProvider configuration is needed.
 fun shareArtwork(context: Context, artwork: GalleryArtwork) {
-    val text = "Check out \"${artwork.title}\" — made with ColorMagic Kids!"
+    val text = "Check out \"${artwork.title}\" — made with Color Magic!"
     val send = Intent(Intent.ACTION_SEND).apply {
         putExtra(Intent.EXTRA_SUBJECT, artwork.title)
         putExtra(Intent.EXTRA_TEXT, text)

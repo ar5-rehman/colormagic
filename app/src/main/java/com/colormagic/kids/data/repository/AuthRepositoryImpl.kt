@@ -6,6 +6,7 @@ import com.colormagic.kids.data.telemetry.AppTelemetry
 import com.colormagic.kids.domain.model.AuthUser
 import com.colormagic.kids.domain.repository.AuthRepository
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.functions.FirebaseFunctions
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -32,6 +33,7 @@ private const val SIGN_IN_TIMEOUT_MS = 15_000L
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
+    private val functions: FirebaseFunctions,
     private val telemetry: AppTelemetry,
     @ApplicationScope private val appScope: CoroutineScope
 ) : AuthRepository {
@@ -110,6 +112,16 @@ class AuthRepositoryImpl @Inject constructor(
         user ?: error("Google sign-in timed out. Please try again.")
     }.onFailure { e ->
         Log.e("AuthRepository", "Google sign-in failed", e)
+        telemetry.recordNonFatal(e)
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> = runCatching {
+        functions.getHttpsCallable("deleteAccount").call().await()
+        // The server deleted the Auth user; drop the stale session and mint a
+        // fresh guest identity (same path as sign-out).
+        signOut()
+    }.onFailure { e ->
+        Log.e("AuthRepository", "Account deletion failed", e)
         telemetry.recordNonFatal(e)
     }
 

@@ -19,10 +19,10 @@ import java.io.OutputStream
 //   • Q (29) + → scoped storage. MediaStore.Images is the only legal path,
 //                 RELATIVE_PATH determines folder, IS_PENDING gates visibility
 //                 until the write commits.
-//   • < Q       → legacy filesystem path under Pictures/ColorMagicKids/.
+//   • < Q       → legacy filesystem path under Pictures/Color Magic/.
 object ArtworkMediaSaver {
 
-    private const val ALBUM = "ColorMagicKids"
+    private const val ALBUM = "Color Magic"
 
     suspend fun saveToPictures(
         context: Context,

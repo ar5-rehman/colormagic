@@ -48,4 +48,11 @@ interface AuthRepository {
      * calls it (treat it as "reset", not "switch account").
      */
     suspend fun signOut()
+
+    /**
+     * Permanently deletes the signed-in account and its server data (backend
+     * `deleteAccount`), then starts a fresh anonymous identity so the app stays
+     * usable. Play subscriptions are not cancelled — that happens in Play.
+     */
+    suspend fun deleteAccount(): Result<Unit>
 }

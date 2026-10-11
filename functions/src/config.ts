@@ -16,16 +16,31 @@ export const OPENAI_API_KEY = defineSecret("OPENAI_API_KEY");
 export const REGION = "us-central1";
 
 /**
- * App Check enforcement on the callable functions.
+ * App Check enforcement on the callable functions — ON for release, so only
+ * the genuine Play-installed app can call the backend (and spend AI credits).
  *
  * IMPORTANT: this is enforced by the function itself — the App Check console's
- * "Unenforced" toggle does NOT override it. During development the debug token
- * regenerates on every reinstall, which then blocks EVERY callable with
- * "App attestation failed" (and stops the Firestore user doc from ever being
- * created). Keep this false while developing; set it to true before publishing
- * (and register your release Play Integrity / debug tokens in App Check).
+ * "Unenforced" toggle does NOT override it. Before deploying with this on:
+ *  • Firebase Console → App Check → Apps → Android app → Play Integrity, with
+ *    the Play App Signing SHA-256 (Play Console → App integrity).
+ *  • Only builds installed FROM Google Play pass Play Integrity. Sideloaded /
+ *    Android Studio builds fail with "App attestation failed": register their
+ *    debug token (printed in Logcat) under App Check → Manage debug tokens, or
+ *    temporarily set this to false for local development.
  */
-export const ENFORCE_APP_CHECK = false;
+export const ENFORCE_APP_CHECK = true;
+
+/**
+ * Cost guard: the most generateSketch instances that can run at once. Each one
+ * handles a single request (512MiB → concurrency 1) and calls the paid image
+ * API, so this caps both parallel AI spend and runaway scaling from abuse or a
+ * bug. Requests beyond it queue briefly, then fail with "resource-exhausted".
+ * Raise it as real traffic grows (Cloud Console → Cloud Run shows usage).
+ */
+export const GENERATE_MAX_INSTANCES = 20;
+
+/** Cap for every other (cheap) callable/HTTP function. */
+export const DEFAULT_MAX_INSTANCES = 10;
 
 /** Must match the Android app's applicationId (release variant, no suffix). */
 export const ANDROID_PACKAGE_NAME = "com.colormagic.kids";
@@ -86,9 +101,10 @@ export const PRODUCT_EXTRA_20 = "extra_20_sketches";    // one-time in-app
 // When SSV is configured in the AdMob console (Rewarded ad unit → SSV →
 // callback URL = the admobSsvCallback function URL), AdMob calls our backend
 // DIRECTLY on a verified reward. That is the authoritative grant and cannot be
-// forged by the client. Until you configure it, leave this false so the
-// client-callable grant path keeps working.
-export const USE_ADMOB_SSV = false;
+// forged by the client. Keep in sync with USE_ADMOB_SSV in the Android
+// CreditConfig. Google's TEST ad units never send SSV callbacks — set both to
+// false only while testing with test ad IDs.
+export const USE_ADMOB_SSV = true;
 /** Google's public keys used to verify rewarded SSV callback signatures. */
 export const ADMOB_VERIFIER_KEYS_URL =
   "https://www.gstatic.com/admob/reward/verifier-keys.json";

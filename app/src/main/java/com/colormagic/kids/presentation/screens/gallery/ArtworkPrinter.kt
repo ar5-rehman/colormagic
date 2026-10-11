@@ -19,6 +19,6 @@ fun printArtwork(context: Context, artwork: GalleryArtwork) {
             scaleMode = PrintHelper.SCALE_MODE_FIT       // whole page, no cropping
             colorMode = PrintHelper.COLOR_MODE_COLOR
             orientation = PrintHelper.ORIENTATION_PORTRAIT
-        }.printBitmap("${artwork.title} — ColorMagic Kids", uriString.toUri())
+        }.printBitmap("${artwork.title} — Color Magic", uriString.toUri())
     }
 }

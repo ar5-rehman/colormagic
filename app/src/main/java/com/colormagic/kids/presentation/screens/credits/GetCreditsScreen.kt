@@ -166,6 +166,7 @@ fun GetCreditsScreen(
             item {
                 Spacer(Modifier.height(16.dp))
                 PremiumUpsellCard(
+                    monthlyPrice = state.monthlyPrice,
                     isPremium = state.quota.isPremium,
                     onGoToPremium = onGoToPremium,
                     modifier = Modifier.padding(horizontal = 24.dp)
@@ -405,6 +406,7 @@ private fun WatchAdButton(
 @Composable
 private fun PremiumUpsellCard(
     isPremium: Boolean,
+    monthlyPrice: String,
     onGoToPremium: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -452,7 +454,7 @@ private fun PremiumUpsellCard(
                         color = Color.White
                     ) {
                         Text(
-                            text = "$${CreditConfig.PREMIUM_MONTHLY_PRICE_USD}/month — Upgrade Now",
+                            text = "$monthlyPrice/month — Upgrade Now",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF5E35B1),

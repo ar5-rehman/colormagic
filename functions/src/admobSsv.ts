@@ -20,7 +20,7 @@
  */
 import {createPublicKey, verify as cryptoVerify} from "crypto";
 import {onRequest} from "firebase-functions/v2/https";
-import {ADMOB_SSV_MAX_AGE_MS, ADMOB_VERIFIER_KEYS_URL, REGION} from "./config";
+import {ADMOB_SSV_MAX_AGE_MS, ADMOB_VERIFIER_KEYS_URL, REGION, DEFAULT_MAX_INSTANCES} from "./config";
 import {ensureUserDoc, grantRewardedAdCreditsForUser} from "./credits";
 
 interface VerifierKey {
@@ -45,7 +45,7 @@ async function getVerifierKey(keyId: string): Promise<string | null> {
 }
 
 export const admobSsvCallback = onRequest(
-  {region: REGION, cors: false},
+  {region: REGION, maxInstances: DEFAULT_MAX_INSTANCES, cors: false},
   async (req, res) => {
     try {
       // Work on the RAW query string — the signature is computed over the exact

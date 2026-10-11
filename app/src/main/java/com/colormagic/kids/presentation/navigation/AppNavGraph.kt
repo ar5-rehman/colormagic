@@ -5,6 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import com.colormagic.kids.presentation.parent.ParentGated
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -112,14 +113,17 @@ fun AppNavGraph(
         }
 
         composable(Screen.Subscription.route) {
-            SubscriptionScreen(
-                onBack = { navController.popBackStack() },
-                onPurchaseSuccessful = {
-                    navController.navigate(Screen.PurchaseSuccess.route) {
-                        popUpTo(Screen.Subscription.route) { inclusive = true }
+            // Purchases are parent-only (Families policy).
+            ParentGated(onCancel = { navController.popBackStack() }) {
+                SubscriptionScreen(
+                    onBack = { navController.popBackStack() },
+                    onPurchaseSuccessful = {
+                        navController.navigate(Screen.PurchaseSuccess.route) {
+                            popUpTo(Screen.Subscription.route) { inclusive = true }
+                        }
                     }
-                }
-            )
+                )
+            }
         }
 
         composable(Screen.PurchaseSuccess.route) {

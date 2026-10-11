@@ -21,6 +21,7 @@ import {
   REWARDED_AD_CREDITS,
   MAX_REWARDED_ADS_PER_DAY,
   USE_ADMOB_SSV,
+  DEFAULT_MAX_INSTANCES
 } from "./config";
 import {
   clampOffsetMinutes,
@@ -40,7 +41,7 @@ interface GrantRewardedAdResponse {
 }
 
 export const grantRewardedAdCredits = onCall(
-  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
+  {region: REGION, maxInstances: DEFAULT_MAX_INSTANCES, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<GrantRewardedAdResponse> => {
     const uid = request.auth?.uid;
     if (!uid) {

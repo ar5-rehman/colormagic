@@ -24,6 +24,10 @@ import com.google.firebase.functions.FirebaseFunctions
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
@@ -51,6 +55,8 @@ class BillingRepositoryImpl @Inject constructor(
                 .enableOneTimeProducts()
                 .build()
         )
+        // Billing 8: the client reconnects to Play on its own after a drop.
+        .enableAutoServiceReconnection()
         .build()
 
     // Product details, loaded once connected. Required to launch a purchase —
@@ -61,6 +67,14 @@ class BillingRepositoryImpl @Inject constructor(
     // asynchronously on onPurchasesUpdated; this bridges it to the caller.
     private val purchaseMutex = Mutex()
     @Volatile private var pendingPurchase: CompletableDeferred<PurchaseResult>? = null
+
+    private val _prices = MutableStateFlow<Map<String, String>>(emptyMap())
+    override val prices: StateFlow<Map<String, String>> = _prices.asStateFlow()
+
+    // Purchase tokens currently being verified/settled — stops the purchase
+    // flow and a concurrent reconcile from settling the same token twice.
+    private val tokensInFlight = mutableSetOf<String>()
+    @Volatile private var lastReconcileAt = 0L
 
     override suspend fun start() {
         if (connect()) loadProductDetails()
@@ -101,7 +115,16 @@ class BillingRepositoryImpl @Inject constructor(
         }
 
     override fun onPurchasesUpdated(result: BillingResult, purchases: List<Purchase>?) {
-        val deferred = pendingPurchase ?: return
+        val deferred = pendingPurchase
+        if (deferred == null) {
+            // No purchase dialog is open: a pending payment just cleared (or
+            // Play re-delivered a purchase). Settle it in the background so it
+            // isn't auto-refunded.
+            if (result.responseCode == BillingClient.BillingResponseCode.OK) {
+                purchases.orEmpty().forEach { appScope.launch { handlePurchase(it) } }
+            }
+            return
+        }
         when (result.responseCode) {
             BillingClient.BillingResponseCode.OK -> {
                 val purchase = purchases?.firstOrNull()
@@ -120,6 +143,18 @@ class BillingRepositoryImpl @Inject constructor(
     }
 
     private suspend fun handlePurchase(purchase: Purchase): PurchaseResult {
+        val token = purchase.purchaseToken
+        synchronized(tokensInFlight) {
+            if (!tokensInFlight.add(token)) return PurchaseResult.Pending
+        }
+        return try {
+            settlePurchase(purchase)
+        } finally {
+            synchronized(tokensInFlight) { tokensInFlight.remove(token) }
+        }
+    }
+
+    private suspend fun settlePurchase(purchase: Purchase): PurchaseResult {
         when (purchase.purchaseState) {
             Purchase.PurchaseState.PENDING -> return PurchaseResult.Pending
             Purchase.PurchaseState.PURCHASED -> Unit
@@ -189,7 +224,7 @@ class BillingRepositoryImpl @Inject constructor(
     }
 
     private suspend fun loadProductDetails() {
-        // Billing 7 requires every product in a single query to be the same
+        // Billing requires every product in a single query to be the same
         // type — subscription and one-time products are fetched separately.
         queryByType(BillingProducts.MONTHLY_PRO, BillingClient.ProductType.SUBS)
         queryByType(BillingProducts.EXTRA_20, BillingClient.ProductType.INAPP)
@@ -208,7 +243,10 @@ class BillingRepositoryImpl @Inject constructor(
             .build()
 
         val details = suspendCancellableCoroutine<List<ProductDetails>> { cont ->
-            billingClient.queryProductDetailsAsync(params) { result, list ->
+            // Billing 8: the callback returns a QueryProductDetailsResult —
+            // fetched products plus any Play couldn't return.
+            billingClient.queryProductDetailsAsync(params) { result, queryResult ->
+                val list = queryResult.productDetailsList
                 if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                     Log.e(
                         TAG,
@@ -231,7 +269,51 @@ class BillingRepositoryImpl @Inject constructor(
             }
         }
         details.forEach { productDetails[it.productId] = it }
+        val formatted = details.mapNotNull { d ->
+            val price = d.subscriptionOfferDetails
+                ?.firstOrNull()
+                // The LAST pricing phase is the recurring price (earlier
+                // phases would be a free trial / intro offer).
+                ?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice
+                ?: d.oneTimePurchaseOfferDetails?.formattedPrice
+            price?.let { d.productId to it }
+        }
+        if (formatted.isNotEmpty()) _prices.update { it + formatted }
     }
+
+    override suspend fun reconcilePurchases(): Boolean {
+        // Runs on every Home resume — at most once a minute is plenty.
+        val now = System.currentTimeMillis()
+        if (now - lastReconcileAt < RECONCILE_INTERVAL_MS) return false
+        lastReconcileAt = now
+        if (!connect()) return false
+
+        val owned = queryOwned(BillingClient.ProductType.INAPP) +
+            queryOwned(BillingClient.ProductType.SUBS)
+        var credited = false
+        owned.filter { p ->
+            p.purchaseState == Purchase.PurchaseState.PURCHASED &&
+                // An owned one-time pack is by definition unconsumed (= not
+                // settled); a subscription only needs work until acknowledged.
+                (p.products.contains(BillingProducts.EXTRA_20) || !p.isAcknowledged)
+        }.forEach { purchase ->
+            if (handlePurchase(purchase) is PurchaseResult.Success) credited = true
+        }
+        return credited
+    }
+
+    private suspend fun queryOwned(productType: String): List<Purchase> =
+        suspendCancellableCoroutine { cont ->
+            val params = QueryPurchasesParams.newBuilder().setProductType(productType).build()
+            billingClient.queryPurchasesAsync(params) { result, list ->
+                if (cont.isActive) {
+                    cont.resume(
+                        if (result.responseCode == BillingClient.BillingResponseCode.OK) list
+                        else emptyList()
+                    )
+                }
+            }
+        }
 
     private suspend fun consume(purchaseToken: String) {
         val params = ConsumeParams.newBuilder()
@@ -245,20 +327,7 @@ class BillingRepositoryImpl @Inject constructor(
     override suspend fun restorePurchases(): PurchaseResult {
         if (!connect()) return PurchaseResult.Failed(CONNECT_ERROR)
 
-        // Query active subscriptions
-        val purchases = suspendCancellableCoroutine<List<Purchase>> { cont ->
-            val params = QueryPurchasesParams.newBuilder()
-                .setProductType(BillingClient.ProductType.SUBS)
-                .build()
-            billingClient.queryPurchasesAsync(params) { result, list ->
-                if (cont.isActive) {
-                    cont.resume(
-                        if (result.responseCode == BillingClient.BillingResponseCode.OK) list
-                        else emptyList()
-                    )
-                }
-            }
-        }
+        val purchases = queryOwned(BillingClient.ProductType.SUBS)
 
         val activePurchase = purchases.firstOrNull {
             it.purchaseState == Purchase.PurchaseState.PURCHASED
@@ -287,5 +356,6 @@ class BillingRepositoryImpl @Inject constructor(
             "This product isn't available yet. Please try again later."
         const val PURCHASE_ERROR = "Something went wrong with the purchase. Please try again."
         const val VERIFY_ERROR = "We couldn't confirm your purchase. Please try again."
+        const val RECONCILE_INTERVAL_MS = 60_000L
     }
 }

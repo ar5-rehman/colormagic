@@ -20,6 +20,7 @@ import {
   MAX_PROMPT_LENGTH,
   MODEL_FREE,
   REGION,
+  GENERATE_MAX_INSTANCES
 } from "./config";
 import {
   type ImageProvider,
@@ -42,6 +43,7 @@ import {GenerateSketchRequest, GenerateSketchResponse} from "./types";
 export const generateSketch = onCall(
   {
     region: REGION,
+    maxInstances: GENERATE_MAX_INSTANCES,
     enforceAppCheck: ENFORCE_APP_CHECK,
     timeoutSeconds: 120,
     memory: "512MiB",

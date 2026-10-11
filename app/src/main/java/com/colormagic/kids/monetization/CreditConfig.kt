@@ -1,30 +1,41 @@
 package com.colormagic.kids.monetization
 
+import com.colormagic.kids.BuildConfig
+
 /**
  * Central credit economy configuration. Mirrors the backend config.ts values
  * so the UI can pre-check limits without a network round-trip. When changing
  * these values, update both this file and functions/src/config.ts.
  */
 object CreditConfig {
-    // Free tier gets NO daily freebie — credits come from rewarded ads or a
-    // premium subscription only.
-    const val FREE_DAILY_CREDITS = 0
+    // Free tier: 1 daily credit; more from rewarded ads or Premium.
+    const val FREE_DAILY_CREDITS = 1  // keep in sync with functions/src/config.ts
     const val REWARDED_AD_CREDITS = 3
     const val MAX_REWARDED_ADS_PER_DAY = 5
     const val PREMIUM_DAILY_CREDITS = 30
-    const val PREMIUM_MONTHLY_PRICE_USD = 4.99
+    const val PREMIUM_MONTHLY_PRICE_USD = 7.99
 
-    /** AdMob rewarded ad unit ID — replace with the real unit ID from the AdMob console. */
-    const val REWARDED_AD_UNIT_ID = "ca-app-pub-3940256099942544/5224354917" // test ID
+    /** Real AdMob rewarded ad unit (release builds). */
+    private const val REWARDED_AD_UNIT_ID_LIVE = "ca-app-pub-3327131790118517/1980142489"
+
+    /** Google's public test rewarded unit — debug builds use it so we never
+     *  tap our own live ads (AdMob suspends accounts for that). */
+    private const val REWARDED_AD_UNIT_ID_TEST = "ca-app-pub-3940256099942544/5224354917"
+
+    val REWARDED_AD_UNIT_ID: String =
+        if (BuildConfig.DEBUG) REWARDED_AD_UNIT_ID_TEST else REWARDED_AD_UNIT_ID_LIVE
 
     /**
      * When true, rewarded credits are granted by AdMob Server-Side Verification
      * (the backend admobSsvCallback function), NOT by the client callable. This
      * is the most tamper-proof path. Keep in sync with USE_ADMOB_SSV in the
-     * backend config.ts. Leave false until SSV is configured in the AdMob
-     * console (Rewarded ad unit → Server-side verification → callback URL).
+     * backend config.ts. Requires SSV configured on the REAL rewarded ad unit
+     * in the AdMob console (Server-side verification → callback URL = the
+     * admobSsvCallback function URL). Google's test ad units never send SSV
+     * callbacks, so with test IDs rewards won't arrive — set false (here AND
+     * in config.ts) only for local testing with test ads.
      */
-    const val USE_ADMOB_SSV = false
+    const val USE_ADMOB_SSV = true
 
     object Costs {
         // Only generation costs credits. Saving/exporting artwork to the phone

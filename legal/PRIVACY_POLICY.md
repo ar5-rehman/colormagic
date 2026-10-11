@@ -1,14 +1,14 @@
-# Privacy Policy — ColorMagic Kids
+# Privacy Policy — Color Magic
 
-**Last updated: October 6, 2026**
+**Last updated: October 11, 2026**
 
 This Privacy Policy explains how **ZyloMind** ("we", "us", or "our"), the
-developer of the **ColorMagic Kids** mobile application (the "App"), collects, uses,
+developer of the **Color Magic** mobile application (the "App"), collects, uses,
 shares, and protects information when you and your child use the App.
 
-ColorMagic Kids is an AI coloring-page app designed for children aged 4–10, to be used
-**under the supervision of a parent or legal guardian**. We built the App to collect as
-little information as possible.
+Color Magic is an AI coloring-page app for **everyone aged 4 and up**. Children should
+use it **under the supervision of a parent or legal guardian**. We built the App to
+collect as little information as possible.
 
 **Contact:** abdurzylomind@gmail.com
 
@@ -18,7 +18,8 @@ If you do not agree with this Policy, please do not use the App.
 
 ## 1. Children's privacy — a note for parents
 
-The App is directed to children. We aim to comply with the U.S. Children's Online
+The App is designed for a mixed audience that includes young children, so we treat
+every user as a child for privacy purposes. We aim to comply with the U.S. Children's Online
 Privacy Protection Act (**COPPA**), the EU/UK General Data Protection Regulation
 (**GDPR**, including its rules for children), and **Google Play's Families Policy**.
 
@@ -79,10 +80,12 @@ choose.
 | **Crash logs and diagnostics** (crash stack trace, device model, Android version, app version, a random installation ID) | Find and fix crashes | Firebase Crashlytics |
 | **App usage events** (for example, screens opened and features used) and a random app-instance ID | Understand which features work and improve the App | Firebase Analytics |
 | **Device integrity signals** | Confirm requests come from the genuine App, to prevent fraud and abuse | Firebase App Check / Google Play Integrity |
-| **Ad delivery data** (for example, IP address and device information) | Deliver optional rewarded video ads, limit how often ads are shown, and prevent ad fraud | Google AdMob |
+| **Advertising ID and ad delivery data** (the device's resettable Google advertising ID, IP address, and device information) | Deliver optional rewarded video ads, limit how often ads are shown, measure ad delivery, and prevent ad fraud — never for personalized ads | Google AdMob |
 
-We have **turned off** advertising-ID collection and ad personalization in Firebase
-Analytics.
+Only AdMob receives the advertising ID. We have **turned off** advertising-ID
+collection and ad personalization in Firebase Analytics. You can reset or delete the
+advertising ID at any time in your device's **Settings → Google → Ads** (or
+**Settings → Privacy → Ads**).
 
 ### f) Information we do NOT collect
 
@@ -130,7 +133,7 @@ provider needs to run the App for us:
 | **Google Firebase** (Authentication, Cloud Firestore, Cloud Storage, Cloud Functions, App Check, Crashlytics, Analytics) | Accounts, data storage, backend, security, crash reports, usage statistics | Anonymous ID, prompts, generated pages, credit and settings data, Google account info (if used), diagnostics |
 | **Cloudflare, Inc.** (Workers AI) | Turning a prompt into a coloring-page image | The prompt text (wrapped in our coloring-page instructions). No user ID or account information is sent. |
 | **Google Play** (Billing) | Processing purchases and subscriptions | Purchase and subscription status |
-| **Google AdMob** | Optional rewarded video ads | Ad delivery data (see Section 6) |
+| **Google AdMob** | Optional rewarded video ads | Advertising ID and ad delivery data (see Section 6) |
 
 Their privacy policies:
 Google — https://policies.google.com/privacy ·
@@ -150,9 +153,11 @@ Free users can **choose** to watch a short rewarded video ad to earn extra credi
 never play automatically, and ads appear only after the child or parent taps a "watch
 ad" button.
 
-All ad requests are tagged for **child-directed treatment** under COPPA. This means
-AdMob shows only **non-personalized ads**, does not build interest profiles, and limits
-the data it uses to what is needed to deliver ads, cap frequency, and prevent fraud.
+Because young children use the App, **every** ad request is tagged for
+**child-directed treatment** under COPPA, whatever the user's age. This means AdMob shows
+only **non-personalized**, family-appropriate ads and does not build interest profiles.
+AdMob uses the advertising ID and device information only to deliver ads, cap how often
+they appear, and prevent fraud. Premium subscribers see no ads.
 
 ---
 
@@ -187,14 +192,15 @@ delete, or export** personal information, or to **stop or restrict** processing.
 
 **To delete your account and data:**
 
-1. **In the App (easiest):** open **Parent Area → Help & Support** and send a message
-   saying **"Delete my ColorMagic data"**. Messages sent from the App automatically
-   identify your account.
+1. **In the App (instant):** open **Parents → Delete Account** and confirm. This
+   immediately deletes your account, credits, streak, parent settings, and the
+   prompts and coloring pages stored on our servers, and clears the App's gallery and
+   badges on that device.
 2. **By email:** write to **abdurzylomind@gmail.com** with the subject **"Delete my
-   ColorMagic data"** and include the Google account email you signed in with. (Guest
+   Color Magic data"** and include the Google account email you signed in with. (Guest
    accounts that never used Google Sign-In can only be identified from inside the App,
    so please use option 1 for those.)
-3. We may ask you to confirm the request. We delete the account, credit and streak
+3. For email requests, we may ask you to confirm the request. We delete the account, credit and streak
    data, parent-control settings, prompts, generated pages, and Google account details
    from our servers **within 30 days**.
 
@@ -235,5 +241,5 @@ information, we will ask for parental consent where the law requires it.
 
 ## 13. Contact
 
-**ZyloMind** — publisher of ColorMagic Kids
+**ZyloMind** — publisher of Color Magic
 Email: **abdurzylomind@gmail.com**

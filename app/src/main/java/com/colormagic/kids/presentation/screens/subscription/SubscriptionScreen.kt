@@ -592,7 +592,7 @@ private fun PlanCard(
                 Spacer(Modifier.height(14.dp))
 
                 Row(verticalAlignment = Alignment.Bottom) {
-                    // The actual amount the user pays (e.g. "$4.99", "$1.99", "Free").
+                    // The actual amount the user pays (e.g. "$7.99", "$2.99", "Free").
                     Text(
                         text = plan.price,
                         fontSize = 32.sp,

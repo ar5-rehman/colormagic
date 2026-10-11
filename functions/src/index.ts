@@ -19,5 +19,6 @@ export {submitFeedback} from "./submitFeedback";
 // Cleans up the Firestore user doc when an Auth user is deleted (e.g. the app
 // discards a throwaway anonymous guest on logout→login).
 export {onUserDeleted} from "./onUserDeleted";
+export {deleteAccount} from "./deleteAccount";
 // Syncs parent-control settings to Firestore (sketch limit, screen time, etc.).
 export {saveParentControls} from "./saveParentControls";

@@ -51,6 +51,24 @@ class SubscriptionViewModel @Inject constructor(
     init {
         // Connect to Play + preload product details so Continue is instant.
         viewModelScope.launch { billingRepository.start() }
+        // Swap the USD fallback prices for Play's localized ones (the price
+        // shown must match what Play actually charges in the user's country).
+        viewModelScope.launch {
+            billingRepository.prices.collect { prices ->
+                _uiState.update { st ->
+                    st.copy(
+                        plans = st.plans.map { plan ->
+                            val productId = when (plan.id) {
+                                PlanTier.Unlimited -> BillingProducts.MONTHLY_PRO
+                                PlanTier.Refill -> BillingProducts.EXTRA_20
+                                PlanTier.Starter -> null
+                            }
+                            prices[productId]?.let { plan.copy(price = it) } ?: plan
+                        }
+                    )
+                }
+            }
+        }
         telemetry.logCreditEvent("premium_screen_opened")
 
         // Reflect the user's ACTUAL plan on the cards (so a premium user sees
@@ -179,7 +197,7 @@ private val defaultPlans = listOf(
         id = PlanTier.Unlimited,
         name = "Premium",
         tagline = "Create more with fewer limits.",
-        price = "$4.99",
+        price = "$7.99",
         priceSuffix = "per month",
         features = listOf(
             "30 credits every day",
@@ -193,7 +211,7 @@ private val defaultPlans = listOf(
         id = PlanTier.Refill,
         name = "Credit Refill",
         tagline = "A quick boost of creativity.",
-        price = "$1.99",
+        price = "$2.99",
         priceSuffix = "one time",
         features = listOf("20 extra credits", "Never expires", "Use anytime")
     )

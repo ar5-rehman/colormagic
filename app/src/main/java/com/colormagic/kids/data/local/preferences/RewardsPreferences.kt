@@ -78,6 +78,11 @@ class RewardsPreferences @Inject constructor(
         )
     }
 
+    /** Wipes badges, levels and progress (used by account deletion). */
+    suspend fun clear() {
+        store.edit { it.clear() }
+    }
+
     suspend fun recordArtworkSaved(colorsUsed: Int, stickersPlaced: Int, currentStreak: Int): List<Badge> {
         val newBadges = mutableListOf<Badge>()
         store.edit { prefs ->

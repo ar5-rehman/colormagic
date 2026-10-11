@@ -7,6 +7,7 @@ import com.colormagic.kids.data.local.preferences.RewardsPreferences
 import com.colormagic.kids.data.local.preferences.RewardsState
 import com.colormagic.kids.domain.model.DailyTheme
 import com.colormagic.kids.domain.model.UserQuota
+import com.colormagic.kids.domain.repository.BillingRepository
 import com.colormagic.kids.domain.repository.CreditRepository
 import com.colormagic.kids.domain.repository.SketchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -59,7 +60,8 @@ data class HomeCategory(
 class HomeViewModel @Inject constructor(
     private val sketchRepository: SketchRepository,
     private val creditRepository: CreditRepository,
-    private val rewardsPreferences: RewardsPreferences
+    private val rewardsPreferences: RewardsPreferences,
+    private val billingRepository: BillingRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(HomeUiState())
@@ -124,6 +126,10 @@ class HomeViewModel @Inject constructor(
         sketchRepository.getQuota()
         creditsResolved = true
         publishCredits()
+        // The account is ready now, so settle any paid-but-unfinished Play
+        // purchase (otherwise Play refunds it after 3 days and the parent
+        // never gets what they paid for).
+        if (billingRepository.reconcilePurchases()) sketchRepository.getQuota()
     }
 
     private fun publishCredits() {

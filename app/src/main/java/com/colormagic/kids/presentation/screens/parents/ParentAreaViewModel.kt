@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.colormagic.kids.data.parents.ParentControlsStore
 import com.colormagic.kids.domain.model.SketchLimit
+import com.colormagic.kids.data.local.preferences.RewardsPreferences
+import com.colormagic.kids.domain.repository.AuthRepository
 import com.colormagic.kids.domain.repository.GalleryRepository
 import com.colormagic.kids.domain.repository.SketchRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,14 +30,20 @@ data class ParentAreaUiState(
     val sessionLimitMinutes: Int? = null,
     /** Child's coloring streak — current + best (server-tracked). */
     val streakCurrent: Int = 0,
-    val streakBest: Int = 0
+    val streakBest: Int = 0,
+    /** True while the account deletion request is running. */
+    val isDeletingAccount: Boolean = false,
+    /** One-shot result message for account deletion (shown as a toast). */
+    val accountMessage: String? = null
 )
 
 @HiltViewModel
 class ParentAreaViewModel @Inject constructor(
     private val sketchRepository: SketchRepository,
     private val galleryRepository: GalleryRepository,
-    private val parentControls: ParentControlsStore
+    private val parentControls: ParentControlsStore,
+    private val authRepository: AuthRepository,
+    private val rewardsPreferences: RewardsPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ParentAreaUiState())
@@ -94,6 +102,43 @@ class ParentAreaViewModel @Inject constructor(
      *  art into the device library it's theirs to keep. */
     fun onClearArtwork() {
         viewModelScope.launch { galleryRepository.deleteAll() }
+    }
+
+    /**
+     * Permanently deletes the account and its server data, then wipes this
+     * device's in-app data (gallery list, badges/progress). Pictures already
+     * saved to the phone's photo gallery are left alone. A fresh guest
+     * account starts automatically.
+     */
+    fun onDeleteAccount() {
+        if (_uiState.value.isDeletingAccount) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDeletingAccount = true) }
+            authRepository.deleteAccount()
+                .onSuccess {
+                    galleryRepository.deleteAll()
+                    rewardsPreferences.clear()
+                    sketchRepository.getQuota()
+                    _uiState.update {
+                        it.copy(
+                            isDeletingAccount = false,
+                            accountMessage = "Your account and data have been deleted."
+                        )
+                    }
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(
+                            isDeletingAccount = false,
+                            accountMessage = "Couldn't delete your account. Check your connection and try again."
+                        )
+                    }
+                }
+        }
+    }
+
+    fun accountMessageShown() {
+        _uiState.update { it.copy(accountMessage = null) }
     }
 
     private fun labelForPlan(plan: String, active: Boolean): String = when {

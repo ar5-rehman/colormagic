@@ -5,7 +5,7 @@ import com.colormagic.kids.domain.model.GalleryArtwork
 import kotlinx.coroutines.flow.Flow
 
 // Persistent in-app gallery. Backed by:
-//   • MediaStore (Pictures/ColorMagicKids/) — also makes the artwork show up
+//   • MediaStore (Pictures/Color Magic/) — also makes the artwork show up
 //                                              in the phone's stock gallery.
 //   • A local JSON metadata file — survives reinstall-survival isn't a goal
 //                                  yet; this is per-install for MVP.

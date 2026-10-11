@@ -161,8 +161,8 @@ private fun WelcomePage() {
 
         // Logo
         Image(
-            painter = painterResource(R.drawable.color_magic_kids_logo),
-            contentDescription = "Color Magic Kids logo",
+            painter = painterResource(R.drawable.app_logo),
+            contentDescription = "Color Magic logo",
             modifier = Modifier
                 .size(80.dp)
                 .clip(RoundedCornerShape(18.dp))
@@ -201,7 +201,7 @@ private fun WelcomePage() {
             fontWeight = FontWeight.Medium
         )
         Text(
-            text = "Color Magic Kids",
+            text = "Color Magic",
             fontSize = 32.sp,
             fontWeight = FontWeight.ExtraBold,
             color = MaterialTheme.colorScheme.primary,

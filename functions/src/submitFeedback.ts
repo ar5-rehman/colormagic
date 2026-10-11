@@ -11,10 +11,11 @@
  */
 import {Timestamp} from "firebase-admin/firestore";
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import {ENFORCE_APP_CHECK, REGION} from "./config";
+import {ENFORCE_APP_CHECK, REGION, DEFAULT_MAX_INSTANCES} from "./config";
 import {Collections, db} from "./firebase";
 
-const VALID_TYPES = ["suggestion", "bug", "question"] as const;
+// "report" = a user flagged an AI-generated picture (Play AI-content policy).
+const VALID_TYPES = ["suggestion", "bug", "question", "report"] as const;
 const MAX_MESSAGE = 4000;
 const MAX_SHORT = 300;
 
@@ -25,10 +26,14 @@ interface SubmitFeedbackRequest {
   appVersion?: string;
   device?: string;
   platform?: string;
+  // Only for type "report": the flagged picture.
+  sketchId?: string;
+  prompt?: string;
+  imageUrl?: string;
 }
 
 export const submitFeedback = onCall(
-  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
+  {region: REGION, maxInstances: DEFAULT_MAX_INSTANCES, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<{success: true; id: string}> => {
     const uid = request.auth?.uid;
     if (!uid) {
@@ -58,6 +63,11 @@ export const submitFeedback = onCall(
       appVersion: (data.appVersion ?? "").slice(0, MAX_SHORT),
       device: (data.device ?? "").slice(0, MAX_SHORT),
       platform: (data.platform ?? "android").slice(0, MAX_SHORT),
+      ...(type === "report" ? {
+        sketchId: (data.sketchId ?? "").slice(0, MAX_SHORT),
+        prompt: (data.prompt ?? "").slice(0, MAX_SHORT),
+        imageUrl: (data.imageUrl ?? "").slice(0, 1000),
+      } : {}),
       status: "new",
       createdAt: Timestamp.now(),
     };

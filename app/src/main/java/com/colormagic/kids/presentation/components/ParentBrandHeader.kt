@@ -69,7 +69,7 @@ fun ParentBrandHeader(
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                text = "ColorMagic",
+                text = "Color Magic",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary,

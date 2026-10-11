@@ -1,8 +1,8 @@
-# Terms & Conditions — ColorMagic Kids
+# Terms & Conditions — Color Magic
 
-**Last updated: October 6, 2026**
+**Last updated: October 11, 2026**
 
-These Terms & Conditions ("Terms") are an agreement between you and **ZyloMind** ("we", "us", or "our"), the developer of the **ColorMagic Kids** mobile
+These Terms & Conditions ("Terms") are an agreement between you and **ZyloMind** ("we", "us", or "our"), the developer of the **Color Magic** mobile
 application (the "App"). Please read them carefully.
 
 By downloading or using the App, you agree to these Terms and to our
@@ -15,8 +15,8 @@ not use the App.
 
 ## 1. Who may use the App
 
-ColorMagic Kids is designed for children aged 4–10 to use **with the supervision of a
-parent or legal guardian**.
+Color Magic is for **everyone aged 4 and up**. Children must use it **with the
+supervision of a parent or legal guardian**.
 
 - A parent or guardian accepts these Terms for themselves and for any child who uses
   the App on their device, and is responsible for that child's use.
@@ -57,9 +57,9 @@ and may change (changes never remove credits you already earned or bought).
   reset each day and do not carry over.
 - **Rewarded-ad credits** — free users can choose to watch a short video ad for
   **3 credits**, up to **5 ads per day**. These credits do not expire.
-- **Credit packs** — one-time purchases (for example, **20 credits**). Purchased
-  credits do not expire.
-- **Premium subscription** — a monthly subscription (currently **US$4.99/month**, or
+- **Credit packs** — one-time purchases (currently **20 credits for US$2.99**, or the
+  local price shown in Google Play). Purchased credits do not expire.
+- **Premium subscription** — a monthly subscription (currently **US$7.99/month**, or
   the local price shown in Google Play) with a larger credit allowance as described in
   the App at the time of purchase.
 
@@ -104,8 +104,9 @@ we may refuse or remove any prompt or image.
 - Coloring pages are created automatically by a third-party AI model. Results may be
   unexpected or imperfect, and similar prompts may give similar pages to different
   users.
-- **If you see an image that is inappropriate or offensive, please report it** from
-  **Parent Area → Help & Support** or by emailing **abdurzylomind@gmail.com**. We
+- **If you see an image that is inappropriate or offensive, please report it** with
+  the **"Report this picture"** button under the picture, from **Parents → Help &
+  Support**, or by emailing **abdurzylomind@gmail.com**. We
   review every report and use it to improve our safety filters.
 - You may use the coloring pages and artwork you make for **personal, non-commercial
   use** — for example, coloring, printing at home, and sharing with family and friends.
@@ -133,8 +134,9 @@ reading support messages to help you.
 
 ## 9. Advertising
 
-Free users can choose to watch rewarded video ads from Google AdMob. Ads are
-child-directed and **non-personalized**. Ads never play without a tap.
+Free users can choose to watch rewarded video ads from Google AdMob. Because the App
+is used by young children, all ads are child-directed and **non-personalized** for every
+user. Ads never play without a tap, and Premium subscribers see no ads.
 
 ---
 
@@ -199,5 +201,5 @@ including the right to bring a claim in your local courts.
 
 ## 17. Contact
 
-**ZyloMind** — publisher of ColorMagic Kids
+**ZyloMind** — publisher of Color Magic
 Email: **abdurzylomind@gmail.com**

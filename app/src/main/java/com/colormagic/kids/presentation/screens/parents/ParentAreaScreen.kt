@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AllInclusive
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ChildCare
@@ -88,6 +89,14 @@ fun ParentAreaScreen(
     val onTerms = { context.openUrl(AppLinks.TERMS_URL) }
     val onPrivacy = { context.openUrl(AppLinks.PRIVACY_URL) }
 
+    // Account-deletion result.
+    androidx.compose.runtime.LaunchedEffect(state.accountMessage) {
+        state.accountMessage?.let {
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
+            viewModel.accountMessageShown()
+        }
+    }
+
     // Show sign-in feedback (success / cancelled) as a quick toast.
     androidx.compose.runtime.LaunchedEffect(authMessage) {
         authMessage?.let {
@@ -136,6 +145,7 @@ fun ParentAreaScreen(
                 onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
                 onSessionLimitChanged = viewModel::onSessionLimitChanged,
                 onClearArtwork = viewModel::onClearArtwork,
+                onDeleteAccount = viewModel::onDeleteAccount,
                 onOpenSupport = onOpenSupport,
                 onTerms = onTerms,
                 onPrivacy = onPrivacy,
@@ -151,6 +161,7 @@ fun ParentAreaScreen(
             onAllowFreeTextPromptsChanged = viewModel::onAllowFreeTextPromptsChanged,
             onSessionLimitChanged = viewModel::onSessionLimitChanged,
             onClearArtwork = viewModel::onClearArtwork,
+            onDeleteAccount = viewModel::onDeleteAccount,
             onOpenSupport = onOpenSupport,
             onTerms = onTerms,
             onPrivacy = onPrivacy,
@@ -168,6 +179,7 @@ private fun ParentAreaTabletContent(
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
     onSessionLimitChanged: (Int?) -> Unit,
     onClearArtwork: () -> Unit,
+    onDeleteAccount: () -> Unit = {},
     onOpenSupport: () -> Unit,
     onTerms: () -> Unit,
     onPrivacy: () -> Unit,
@@ -228,6 +240,10 @@ private fun ParentAreaTabletContent(
                     )
                     HelpSupportCard(onOpenSupport = onOpenSupport)
                     ClearArtworkCard(onDelete = onClearArtwork)
+                    DeleteAccountCard(
+                        isDeleting = state.isDeletingAccount,
+                        onDelete = onDeleteAccount
+                    )
                     LegalFooter(onTerms = onTerms, onPrivacy = onPrivacy)
                 }
             }
@@ -244,6 +260,7 @@ private fun ParentAreaContent(
     onAllowFreeTextPromptsChanged: (Boolean) -> Unit,
     onSessionLimitChanged: (Int?) -> Unit,
     onClearArtwork: () -> Unit,
+    onDeleteAccount: () -> Unit = {},
     onOpenSupport: () -> Unit,
     onTerms: () -> Unit,
     onPrivacy: () -> Unit,
@@ -318,6 +335,14 @@ private fun ParentAreaContent(
             item {
                 ClearArtworkCard(
                     onDelete = onClearArtwork,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+
+            item {
+                DeleteAccountCard(
+                    isDeleting = state.isDeletingAccount,
+                    onDelete = onDeleteAccount,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
             }
@@ -1091,6 +1116,129 @@ private fun ClearArtworkCard(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "Delete All Artwork",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── Card: Delete Account ──────────────────────────────────────────
+
+/**
+ * In-app account deletion (Google Play requirement). Confirms first, then the
+ * backend deletes the account + server data and a fresh guest account starts.
+ */
+@Composable
+private fun DeleteAccountCard(
+    isDeleting: Boolean,
+    onDelete: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showConfirm by remember { mutableStateOf(false) }
+    if (showConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            containerColor = Color.White,
+            shape = RoundedCornerShape(24.dp),
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.DeleteForever,
+                    contentDescription = null,
+                    tint = Color(0xFFB0192C)
+                )
+            },
+            title = {
+                Text(
+                    text = "Delete your account?",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandTokens.HeadingInk
+                )
+            },
+            text = {
+                Text(
+                    text = "This permanently deletes your account, credits, streak, " +
+                        "parent settings, and the coloring pages stored on our servers, " +
+                        "and clears this app's gallery and badges. Pictures saved to your " +
+                        "phone's photos stay. This can't be undone.\n\n" +
+                        "A Premium subscription is not cancelled — cancel it in the " +
+                        "Google Play Store.",
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    color = BrandTokens.MutedInk
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.Button(
+                    onClick = {
+                        showConfirm = false
+                        onDelete()
+                    },
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFB0192C),
+                        contentColor = Color.White
+                    )
+                ) { Text("Delete account", fontWeight = FontWeight.SemiBold) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showConfirm = false }) {
+                    Text("Cancel", fontWeight = FontWeight.SemiBold, color = BrandTokens.MutedInk)
+                }
+            }
+        )
+    }
+
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFFFADADA),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Delete Account",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFB0192C)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Permanently delete this account and all its data from our servers.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = Color(0xFFB0192C)
+            )
+            Spacer(Modifier.height(14.dp))
+            Surface(
+                onClick = { if (!isDeleting) showConfirm = true },
+                enabled = !isDeleting,
+                shape = RoundedCornerShape(50),
+                color = Color(0xFFB0192C)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
+                ) {
+                    if (isDeleting) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.DeleteForever,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (isDeleting) "Deleting…" else "Delete Account",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White

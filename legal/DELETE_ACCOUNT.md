@@ -1,22 +1,20 @@
-# Delete your ColorMagic Kids account and data
+# Delete your Color Magic account and data
 
-**ColorMagic Kids** — by **ZyloMind**
+**Color Magic** — by **ZyloMind**
 
-You can ask us to delete your ColorMagic Kids account and the data linked to it at any
+You can ask us to delete your Color Magic account and the data linked to it at any
 time.
 
 ## How to request deletion
 
-1. **In the App (easiest):** open **Parent Area → Help & Support** and send a message
-   saying **"Delete my ColorMagic data"**. Messages sent from the App automatically
-   identify your account — this is the only way to identify a guest account that never
-   used Google Sign-In.
+1. **In the App (instant):** open **Parents → Delete Account** and confirm. Your
+   account and server data are deleted immediately and a fresh guest account starts.
 2. **By email:** write to **abdurzylomind@gmail.com** with the subject
-   **"Delete my ColorMagic data"** and include the Google account email you signed in
+   **"Delete my Color Magic data"** and include the Google account email you signed in
    with.
-3. We may reply to confirm the request comes from the account owner.
+3. For email requests, we may reply to confirm the request comes from the account owner.
 
-We complete deletion **within 30 days** and let you know when it is done (if you gave us an email address).
+Email requests are completed **within 30 days** and let you know when it is done (if you gave us an email address).
 
 ## What we delete
 

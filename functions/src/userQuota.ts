@@ -8,7 +8,7 @@
  * worth of sketches without a separate "reset" call.
  */
 import {HttpsError, onCall} from "firebase-functions/v2/https";
-import {ENFORCE_APP_CHECK, REGION} from "./config";
+import {ENFORCE_APP_CHECK, REGION, DEFAULT_MAX_INSTANCES} from "./config";
 import {Timestamp} from "firebase-admin/firestore";
 import {
   clampOffsetMinutes,
@@ -54,7 +54,7 @@ async function revalidateSubscriptionIfExpired(
 }
 
 export const userQuota = onCall(
-  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
+  {region: REGION, maxInstances: DEFAULT_MAX_INSTANCES, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<UserQuotaResponse> => {
     const uid = request.auth?.uid;
     if (!uid) {

@@ -10,7 +10,7 @@
  */
 import {HttpsError, onCall} from "firebase-functions/v2/https";
 import {Timestamp} from "firebase-admin/firestore";
-import {ENFORCE_APP_CHECK, REGION} from "./config";
+import {ENFORCE_APP_CHECK, REGION, DEFAULT_MAX_INSTANCES} from "./config";
 import {db, Collections} from "./firebase";
 
 interface SaveParentControlsRequest {
@@ -20,7 +20,7 @@ interface SaveParentControlsRequest {
 }
 
 export const saveParentControls = onCall(
-  {region: REGION, enforceAppCheck: ENFORCE_APP_CHECK},
+  {region: REGION, maxInstances: DEFAULT_MAX_INSTANCES, enforceAppCheck: ENFORCE_APP_CHECK},
   async (request): Promise<{success: true}> => {
     const uid = request.auth?.uid;
     if (!uid) {

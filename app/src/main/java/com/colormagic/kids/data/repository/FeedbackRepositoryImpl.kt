@@ -34,6 +34,25 @@ class FeedbackRepositoryImpl @Inject constructor(
         Unit
     }.onFailure { telemetry.recordNonFatal(it) }
 
+    override suspend fun reportImage(
+        sketchId: String,
+        prompt: String,
+        imageUrl: String?
+    ): Result<Unit> = runCatching {
+        val payload = mapOf(
+            "type" to "report",
+            "message" to "Reported AI picture. Prompt: \"${prompt.take(200)}\"",
+            "sketchId" to sketchId,
+            "prompt" to prompt.take(200),
+            "imageUrl" to (imageUrl ?: ""),
+            "appVersion" to "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+            "device" to "${Build.MANUFACTURER} ${Build.MODEL}",
+            "platform" to "Android ${Build.VERSION.RELEASE}"
+        )
+        functions.getHttpsCallable(FN_SUBMIT_FEEDBACK).call(payload).await()
+        Unit
+    }.onFailure { telemetry.recordNonFatal(it) }
+
     private companion object {
         const val FN_SUBMIT_FEEDBACK = "submitFeedback"
     }

@@ -1,5 +1,7 @@
 package com.colormagic.kids.presentation.screens.credits
 
+import com.colormagic.kids.domain.model.BillingProducts
+import com.colormagic.kids.domain.repository.BillingRepository
 import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,7 +26,9 @@ data class GetCreditsUiState(
     val adLoadState: AdLoadState = AdLoadState.Idle,
     val isGranting: Boolean = false,        // waiting for backend grant after ad
     val toastMessage: String? = null,       // one-shot feedback message
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    /** Play's localized Premium price; USD fallback until product details load. */
+    val monthlyPrice: String = "$" + CreditConfig.PREMIUM_MONTHLY_PRICE_USD
 ) {
     val canWatchAd: Boolean
         get() = adLoadState == AdLoadState.Ready &&
@@ -47,13 +51,22 @@ data class GetCreditsUiState(
 class GetCreditsViewModel @Inject constructor(
     private val creditRepository: CreditRepository,
     private val rewardedAdManager: RewardedAdManager,
-    private val telemetry: AppTelemetry
+    private val telemetry: AppTelemetry,
+    private val billingRepository: BillingRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GetCreditsUiState())
     val uiState: StateFlow<GetCreditsUiState> = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch { billingRepository.start() }
+        viewModelScope.launch {
+            billingRepository.prices.collect { prices ->
+                prices[BillingProducts.MONTHLY_PRO]?.let { p ->
+                    _uiState.update { it.copy(monthlyPrice = p) }
+                }
+            }
+        }
         // Mirror ad load state into UI state
         viewModelScope.launch {
             rewardedAdManager.adLoadState.collect { loadState ->

@@ -23,6 +23,7 @@ import com.colormagic.kids.presentation.navigation.TopLevelDestination
 import com.colormagic.kids.presentation.navigation.navigateToTopLevel
 import com.colormagic.kids.presentation.screens.onboarding.OnboardingScreen
 import com.colormagic.kids.presentation.screens.splash.SplashScreen
+import com.colormagic.kids.presentation.parent.ParentGated
 import com.colormagic.kids.presentation.screens.subscription.SubscriptionScreen
 
 // Two-tier navigation:
@@ -74,11 +75,15 @@ fun AppRoot(
                     popUpTo(RootDestination.PAYWALL) { inclusive = true }
                 }
             }
-            SubscriptionScreen(
-                onBack = enterMain,
-                onPurchaseSuccessful = enterMain,
-                dismissAsClose = true
-            )
+            // First-launch paywall: a grown-up unlocks it; cancelling skips
+            // straight into the app (purchases are parent-only).
+            ParentGated(onCancel = enterMain) {
+                SubscriptionScreen(
+                    onBack = enterMain,
+                    onPurchaseSuccessful = enterMain,
+                    dismissAsClose = true
+                )
+            }
         }
         composable(RootDestination.MAIN) {
             // Wrap the whole app shell so the parent's screen-time limit can

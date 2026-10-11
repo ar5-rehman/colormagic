@@ -89,7 +89,7 @@ fun SettingsScreen(
             onManageSubscription = onManageSubscription,
             onRestorePurchases = {},
             onPrivacyPolicy = {},
-            onContactSupport = { context.openSupportEmail("ColorMagic Support") },
+            onContactSupport = { context.openSupportEmail("Color Magic Support") },
             onDeleteAllArtwork = {
                 viewModel.deleteAllArtwork()
                 onDeleteAllArtwork()

@@ -19,7 +19,7 @@
  * Docs: https://developer.android.com/google/play/billing/rtdn-reference
  */
 import {onMessagePublished} from "firebase-functions/v2/pubsub";
-import {PLAY_RTDN_TOPIC, REGION} from "./config";
+import {PLAY_RTDN_TOPIC, REGION, DEFAULT_MAX_INSTANCES} from "./config";
 import {setSubscriptionState} from "./credits";
 import {Collections, db} from "./firebase";
 import {fetchSubscriptionState} from "./playApi";
@@ -34,7 +34,7 @@ interface DeveloperNotification {
 }
 
 export const playRtdnHandler = onMessagePublished(
-  {region: REGION, topic: PLAY_RTDN_TOPIC},
+  {region: REGION, maxInstances: DEFAULT_MAX_INSTANCES, topic: PLAY_RTDN_TOPIC},
   async (event) => {
     const dataB64 = event.data.message.data;
     if (!dataB64) return;
