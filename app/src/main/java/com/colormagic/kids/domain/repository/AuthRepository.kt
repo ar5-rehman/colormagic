@@ -40,19 +40,29 @@ interface AuthRepository {
     suspend fun signInWithGoogle(idToken: String): Result<AuthUser>
 
     /**
-     * Signs the current user out.
-     *
-     * NOTE: anonymous accounts cannot be recovered. After sign-out the next
-     * [ensureSignedIn] mints a brand-new uid — any credits/sketches tied to
-     * the old uid become unreachable. Surface this clearly in any UI that
-     * calls it (treat it as "reset", not "switch account").
+     * After [signInWithGoogle]: a parent-facing note about what moved to the
+     * Google account (e.g. "3 credits from this phone were moved…"), or null.
+     * Consumed once.
+     */
+    fun consumeSignInSummary(): String?
+
+    /**
+     * Signs out of the Google account. Everything stays with that Google
+     * account (signing in again restores it); the phone continues on a
+     * separate guest account with no free credits. No-op for guests.
      */
     suspend fun signOut()
 
     /**
-     * Permanently deletes the signed-in account and its server data (backend
-     * `deleteAccount`), then starts a fresh anonymous identity so the app stays
-     * usable. Play subscriptions are not cancelled — that happens in Play.
+     * Deletes the account: it becomes inactive and is permanently erased after
+     * 60 days unless restored. The phone moves to a new empty account (free
+     * credits stay limited per phone). Play subscriptions are not cancelled.
      */
     suspend fun deleteAccount(): Result<Unit>
+
+    /**
+     * Brings back the account deleted on this phone (within the 60-day window)
+     * and signs into it.
+     */
+    suspend fun restoreDeletedAccount(): Result<Unit>
 }

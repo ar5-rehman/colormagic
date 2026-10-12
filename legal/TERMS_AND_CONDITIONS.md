@@ -42,7 +42,8 @@ We may add, change, or remove features over time.
   needed.
 - A parent may **sign in with Google** to keep credits, settings, and streaks across
   devices. Keep your Google account secure; you are responsible for activity under it.
-- You can ask us to delete your account and data at any time — see Section 9 of the
+- You can delete your account at any time from **Parents → Delete Account**. It is kept
+  for 60 days so you can restore it, then permanently erased — see Section 9 of the
   Privacy Policy.
 - We may suspend or close accounts used for fraud, abuse, or breaking these Terms.
 
@@ -53,8 +54,16 @@ We may add, change, or remove features over time.
 Creating one coloring page uses **1 credit**. The current amounts are shown in the App
 and may change (changes never remove credits you already earned or bought).
 
-- **Daily free credits** — free users currently get **1 credit per day**. Daily credits
-  reset each day and do not carry over.
+- **Welcome credits** — a new user gets **1 free credit on each of their first 3 days**.
+  Unused welcome credits don't expire. Welcome credits are given only to the **first
+  account created on a phone**; accounts created later on the same phone (for example
+  after signing out or deleting an account) don't receive free credits. After the first
+  3 days, credits come from rewarded ads or purchases.
+- **Your credits belong to your account.** You can buy credits or Premium without
+  signing in; they are kept on the phone's guest account. When you sign in with Google,
+  everything on the guest account — credits and Premium — moves to that Google account.
+  Signing out leaves everything with the Google account (sign in again to get it back),
+  and the phone switches to an empty guest account.
 - **Rewarded-ad credits** — free users can choose to watch a short video ad for
   **3 credits**, up to **5 ads per day**. These credits do not expire.
 - **Credit packs** — one-time purchases (currently **20 credits for US$2.99**, or the
@@ -63,7 +72,7 @@ and may change (changes never remove credits you already earned or bought).
   the local price shown in Google Play) with a larger credit allowance as described in
   the App at the time of purchase.
 
-Credits are used in this order: daily, rewarded-ad, subscription, then purchased.
+Credits are used in this order: Premium daily, free (welcome and rewarded-ad), Premium monthly, then purchased.
 Credits have **no cash value** and cannot be transferred, sold, or exchanged for money.
 
 **Payments.** All payments are handled by **Google Play**, and the Google Play Terms of

@@ -54,6 +54,17 @@ export interface UserDoc {
   parentSessionLimitMinutes?: number | null; // null = off
   createdAt: Timestamp;
   updatedAt: Timestamp;
+  // False for accounts that aren't the first account on their phone — they
+  // get no free daily credits (missing = eligible, for older accounts).
+  freeCreditsEligible?: boolean;
+  // Welcome credits: how many of the WELCOME_DAYS have been granted, and on
+  // which local day the last one was (see normalizeUser).
+  welcomeDaysGranted?: number;
+  welcomeLastDay?: string | null;
+  // Soft delete (see deleteAccount.ts): set while the account is pending
+  // permanent deletion; cleared if the account is restored.
+  deletionRequestedAt?: Timestamp | null;
+  purgeAfter?: Timestamp | null;
 }
 
 /** Credit transaction types for audit / analytics */
@@ -96,7 +107,7 @@ export interface UserQuotaResponse {
   remainingFreeSketches: number;      // today's daily credits remaining
   remainingMonthlySketches: number;
   extraCredits: number;               // purchased (paid) credits
-  adCredits: number;                  // rewarded-ad (free) credits
+  adCredits: number;                  // free, non-expiring: rewarded-ad + welcome credits
   totalAvailableCredits: number;
   rewardedAdsToday: number;
   rewardedAdsRemaining: number;
@@ -109,6 +120,8 @@ export interface UserQuotaResponse {
   parentDailySketchLimit: number | null;    // null = unlimited
   parentAllowFreeText: boolean;
   parentSessionLimitMinutes: number | null; // null = off
+  /** Millis until which a deleted account on THIS phone can be restored. */
+  restorableAccountUntil?: number | null;
 }
 
 // ── Callable: verifyPurchase ───────────────────────────────────────────

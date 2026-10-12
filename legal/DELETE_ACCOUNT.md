@@ -7,16 +7,19 @@ time.
 
 ## How to request deletion
 
-1. **In the App (instant):** open **Parents → Delete Account** and confirm. Your
-   account and server data are deleted immediately and a fresh guest account starts.
+1. **In the App:** open **Parents → Delete Account** and confirm. The account is
+   deactivated right away and a new empty account starts on the phone.
 2. **By email:** write to **abdurzylomind@gmail.com** with the subject
    **"Delete my Color Magic data"** and include the Google account email you signed in
    with.
 3. For email requests, we may reply to confirm the request comes from the account owner.
 
-Email requests are completed **within 30 days** and let you know when it is done (if you gave us an email address).
+**60-day restore window:** deleted accounts are kept inactive for 60 days, then
+**permanently erased**. Within those 60 days you can bring the account back from
+**Parents → Restore Account** on the same phone, or by signing in again with the same
+Google account. Email requests are completed **within 30 days** and let you know when it is done (if you gave us an email address).
 
-## What we delete
+## What is erased (after the 60 days)
 
 - Your account (anonymous or Google-linked)
 - Google account details we stored: email address, display name, profile photo URL

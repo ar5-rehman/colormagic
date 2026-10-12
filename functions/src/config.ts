@@ -39,6 +39,13 @@ export const ENFORCE_APP_CHECK = true;
  */
 export const GENERATE_MAX_INSTANCES = 20;
 
+/**
+ * "Delete account" is a soft delete: the account is kept (inactive) for this
+ * many days so the parent can restore it, then permanently erased by the daily
+ * purgeDeletedAccounts job. Must match the Privacy Policy.
+ */
+export const ACCOUNT_RESTORE_DAYS = 60;
+
 /** Cap for every other (cheap) callable/HTTP function. */
 export const DEFAULT_MAX_INSTANCES = 10;
 
@@ -52,7 +59,14 @@ export const EXTRA_PACK_CREDITS = 20;     // credits granted by one extra pack
 export const MONTHLY_PERIOD_DAYS = 30;    // approximate billing-cycle length
 
 // ── Daily credit economy (hybrid free / rewarded-ad / premium model) ───
-export const FREE_DAILY_CREDITS = 1;          // one free sketch per day for free-tier users
+export const FREE_DAILY_CREDITS = 0;          // no ongoing free daily credit (see welcome credits)
+// Welcome credits: a NEW user (only the first account ever made on a phone)
+// gets WELCOME_CREDITS_PER_DAY on each of their first WELCOME_DAYS days. They
+// go into the non-expiring free bucket (adCredits), so unused ones carry over —
+// and move with the account when the parent signs in with Google. After that,
+// credits come from rewarded ads or purchases only.
+export const WELCOME_DAYS = 3;
+export const WELCOME_CREDITS_PER_DAY = 1;
 export const PREMIUM_DAILY_CREDITS = 30;      // premium-tier daily grant
 export const REWARDED_AD_CREDITS = 3;         // credits per completed rewarded ad
 export const MAX_REWARDED_ADS_PER_DAY = 5;    // cap per calendar day

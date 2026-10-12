@@ -26,6 +26,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -217,12 +221,58 @@ fun AccountCard(
                         onClick = onSignInWithGoogle
                     )
                 } else {
-                    // Signed in with Google → a real, non-destructive sign-out
-                    // (drops back to a guest account).
+                    // Signed in with Google → sign-out keeps everything with the
+                    // Google account; the phone moves to an empty guest account.
+                    var confirmSignOut by remember { mutableStateOf(false) }
+                    if (confirmSignOut) {
+                        androidx.compose.material3.AlertDialog(
+                            onDismissRequest = { confirmSignOut = false },
+                            containerColor = Color.White,
+                            shape = RoundedCornerShape(24.dp),
+                            title = {
+                                Text(
+                                    text = "Sign out?",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = BrandTokens.HeadingInk
+                                )
+                            },
+                            text = {
+                                Text(
+                                    text = "Your credits, streak, Premium and settings stay " +
+                                        "safely with your Google account — sign in again " +
+                                        "anytime to get them back.\n\nThis phone will " +
+                                        "switch to an empty guest account with no credits.",
+                                    fontSize = 14.sp,
+                                    lineHeight = 20.sp,
+                                    color = BrandTokens.MutedInk
+                                )
+                            },
+                            confirmButton = {
+                                androidx.compose.material3.TextButton(onClick = {
+                                    confirmSignOut = false
+                                    onSignOut()
+                                }) {
+                                    Text("Sign out", fontWeight = FontWeight.SemiBold)
+                                }
+                            },
+                            dismissButton = {
+                                androidx.compose.material3.TextButton(
+                                    onClick = { confirmSignOut = false }
+                                ) {
+                                    Text(
+                                        "Cancel",
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = BrandTokens.MutedInk
+                                    )
+                                }
+                            }
+                        )
+                    }
                     SubtlePillButton(
                         label = "Sign out",
                         icon = Icons.AutoMirrored.Filled.Logout,
-                        onClick = onSignOut
+                        onClick = { confirmSignOut = true }
                     )
                 }
             }

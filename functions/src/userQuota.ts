@@ -18,6 +18,7 @@ import {
   setSubscriptionState,
 } from "./credits";
 import {db, Collections} from "./firebase";
+import {deviceDocForUid} from "./deviceLimits";
 import {fetchSubscriptionState} from "./playApi";
 import {UserDoc, UserQuotaResponse} from "./types";
 
@@ -97,6 +98,14 @@ export const userQuota = onCall(
     // Streak is READ here (not advanced). It only advances when the child
     // actually creates a sketch — see commitSketchAndDeduct in credits.ts.
     // This prevents "just opening the app" from counting as a streak day.
-    return {...computeQuota(user), streakAdvancedToday: false};
+    // A deleted account on this phone that can still be restored → the
+    // Parents tab offers "Restore deleted account".
+    const phone = await deviceDocForUid(uid).catch(() => null);
+    const restorePurge = phone?.get("purgeAfter") as Timestamp | undefined;
+    const restorableAccountUntil =
+      phone?.get("deletedUid") && phone.get("deletedUid") !== uid &&
+      restorePurge && restorePurge.toMillis() > Date.now() ? restorePurge.toMillis() : null;
+
+    return {...computeQuota(user), streakAdvancedToday: false, restorableAccountUntil};
   }
 );

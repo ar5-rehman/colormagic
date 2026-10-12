@@ -1,5 +1,6 @@
 package com.colormagic.kids.presentation.screens.onboarding
 
+import com.colormagic.kids.monetization.CreditConfig
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -337,11 +338,11 @@ private fun CreditsPage() {
         )
         Spacer(Modifier.height(24.dp))
 
-        // Credit source 1 — Daily free
+        // Credit source 1 — Welcome credits
         CreditSourceCard(
-            emoji = "🌅",
-            title = "Free Daily Credit",
-            body = "You get 1 free credit every day — just for opening the app! Resets at midnight.",
+            emoji = "🎁",
+            title = "Welcome Gift",
+            body = "New here? Get 1 free credit each day for your first ${CreditConfig.WELCOME_DAYS} days. Unused ones never expire!",
             accent = Color(0xFFFF8F00),
             bg = Color(0xFFFFF8E1),
             border = Color(0xFFFFCC80)

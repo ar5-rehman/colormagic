@@ -712,16 +712,14 @@ private fun CreditPillButton(
             style = style,
             modifier = Modifier.clickable(onClick = onClick)
         )
-        // Show daily credit count beneath the pill
-        if (sketchesLeft > 0) {
+        // Today's Premium daily credits (free users have no daily credits —
+        // their welcome/ad/bought credits are all in the pill total).
+        if (dailyCreditsLeft > 0) {
             Spacer(Modifier.height(4.dp))
             Text(
-                text = if (dailyCreditsLeft > 0)
-                    "🎨 $dailyCreditsLeft daily credit${if (dailyCreditsLeft == 1) "" else "s"} left today"
-                else
-                    "Daily credits used — watch ads for more!",
+                text = "🎨 $dailyCreditsLeft daily credit${if (dailyCreditsLeft == 1) "" else "s"} left today",
                 fontSize = 12.sp,
-                color = if (dailyCreditsLeft > 0) Color(0xFF6F6E76) else Color(0xFFE65100),
+                color = Color(0xFF6F6E76),
                 fontWeight = FontWeight.Medium
             )
         }

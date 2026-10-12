@@ -8,8 +8,13 @@ import com.colormagic.kids.BuildConfig
  * these values, update both this file and functions/src/config.ts.
  */
 object CreditConfig {
-    // Free tier: 1 daily credit; more from rewarded ads or Premium.
-    const val FREE_DAILY_CREDITS = 1  // keep in sync with functions/src/config.ts
+    // Free tier: no ongoing daily credit. A NEW user (first account on a phone)
+    // gets WELCOME_CREDITS_PER_DAY on each of the first WELCOME_DAYS days; after
+    // that, credits come from rewarded ads or purchases. Keep in sync with
+    // functions/src/config.ts.
+    const val FREE_DAILY_CREDITS = 0
+    const val WELCOME_DAYS = 3
+    const val WELCOME_CREDITS_PER_DAY = 1
     const val REWARDED_AD_CREDITS = 3
     const val MAX_REWARDED_ADS_PER_DAY = 5
     const val PREMIUM_DAILY_CREDITS = 30

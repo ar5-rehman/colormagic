@@ -485,6 +485,7 @@ private fun HowCreditsWorkSection(
         CreditRuleRow("Save to your gallery", "Free")
         // Ad rows only make sense for non-premium users.
         if (!isPremium) {
+            CreditRuleRow("New user welcome gift", "1 credit/day for ${CreditConfig.WELCOME_DAYS} days")
             CreditRuleRow("Watch a rewarded ad", "+${CreditConfig.REWARDED_AD_CREDITS} credits")
             CreditRuleRow("Rewarded ads per day", "up to ${CreditConfig.MAX_REWARDED_ADS_PER_DAY}")
         }

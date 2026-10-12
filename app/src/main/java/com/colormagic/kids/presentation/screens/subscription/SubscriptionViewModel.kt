@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.colormagic.kids.data.telemetry.AppTelemetry
 import com.colormagic.kids.domain.model.BillingProducts
 import com.colormagic.kids.domain.model.PurchaseResult
+import com.colormagic.kids.domain.repository.AuthRepository
 import com.colormagic.kids.domain.repository.BillingRepository
 import com.colormagic.kids.domain.repository.CreditRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,14 +36,17 @@ data class SubscriptionUiState(
     val isProcessing: Boolean = false,
     val isRestoring: Boolean = false,
     val errorMessage: String? = null,
-    val restoreMessage: String? = null
+    val restoreMessage: String? = null,
+    /** Not signed in with Google → explain where purchases go. */
+    val isGuest: Boolean = false
 )
 
 @HiltViewModel
 class SubscriptionViewModel @Inject constructor(
     private val billingRepository: BillingRepository,
     private val creditRepository: CreditRepository,
-    private val telemetry: AppTelemetry
+    private val telemetry: AppTelemetry,
+    authRepository: AuthRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SubscriptionUiState())
@@ -51,6 +55,11 @@ class SubscriptionViewModel @Inject constructor(
     init {
         // Connect to Play + preload product details so Continue is instant.
         viewModelScope.launch { billingRepository.start() }
+        viewModelScope.launch {
+            authRepository.authState.collect { user ->
+                _uiState.update { it.copy(isGuest = user?.isAnonymous != false) }
+            }
+        }
         // Swap the USD fallback prices for Play's localized ones (the price
         // shown must match what Play actually charges in the user's country).
         viewModelScope.launch {

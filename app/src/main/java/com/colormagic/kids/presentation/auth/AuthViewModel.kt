@@ -126,7 +126,8 @@ class AuthViewModel @Inject constructor(
                     .onSuccess { idToken ->
                         authRepository.signInWithGoogle(idToken)
                             .onSuccess {
-                                _message.value = "Signed in with Google."
+                                _message.value = authRepository.consumeSignInSummary()
+                                    ?: "Signed in with Google."
                                 // Same uid after linking → same Firestore doc; this
                                 // just refreshes the cached balance for the (now
                                 // Google) account so the UI is instantly correct.
@@ -161,9 +162,9 @@ class AuthViewModel @Inject constructor(
     }
 
     /**
-     * Signs out. For a guest this starts a fresh guest account; for a
-     * Google-linked account it returns to a new guest. Either way the app
-     * stays usable (a fresh anonymous identity is created immediately).
+     * Signs out of Google: everything stays with the Google account and the
+     * phone continues on an empty guest account (no free credits). Guests
+     * have no sign-out.
      */
     fun signOut() {
         viewModelScope.launch {

@@ -23,7 +23,10 @@ data class UserQuota(
     // Parent controls — synced to Firestore, returned with every quota fetch.
     val parentDailySketchLimit: Int? = null,   // null = unlimited
     val parentAllowFreeText: Boolean = true,
-    val parentSessionLimitMinutes: Int? = null  // null = off
+    val parentSessionLimitMinutes: Int? = null,  // null = off
+    /** When a deleted account on THIS phone can still be restored: its
+     *  permanent-deletion time (epoch millis). Null = nothing to restore. */
+    val restorableAccountUntil: Long? = null
 ) {
     val isPremium: Boolean get() = plan == "pro" && subscriptionActive
 

@@ -97,7 +97,8 @@ class SketchRepositoryImpl @Inject constructor(
             streakAdvancedToday = data["streakAdvancedToday"] as? Boolean ?: false,
             parentDailySketchLimit = (data["parentDailySketchLimit"] as? Number)?.toInt(),
             parentAllowFreeText = data["parentAllowFreeText"] as? Boolean ?: true,
-            parentSessionLimitMinutes = (data["parentSessionLimitMinutes"] as? Number)?.toInt()
+            parentSessionLimitMinutes = (data["parentSessionLimitMinutes"] as? Number)?.toInt(),
+            restorableAccountUntil = (data["restorableAccountUntil"] as? Number)?.toLong()
         )
         // Keep CreditRepository's live flow in sync with this fetch.
         creditRepository.updateLocalQuota(quota)

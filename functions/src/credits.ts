@@ -14,12 +14,15 @@
  */
 import {Timestamp} from "firebase-admin/firestore";
 import {db, Collections} from "./firebase";
+import {deviceUsageToday, noteAdsWatched} from "./deviceLimits";
 import {
   FREE_SKETCHES_TOTAL,
   MONTHLY_PERIOD_DAYS,
   MODEL_FREE,
   MODEL_PREMIUM,
   FREE_DAILY_CREDITS,
+  WELCOME_CREDITS_PER_DAY,
+  WELCOME_DAYS,
   PREMIUM_DAILY_CREDITS,
   REWARDED_AD_CREDITS,
   MAX_REWARDED_ADS_PER_DAY,
@@ -88,6 +91,9 @@ export async function ensureUserDoc(uid: string, offsetMinutes = 0): Promise<Use
 
   const now = Timestamp.now();
   const today = localDayKey(now.toMillis(), clampOffsetMinutes(offsetMinutes));
+  // Free daily credits only for the first account ever made on this phone;
+  // a later account (after sign-out / delete) starts with nothing free.
+  const phoneUsage = await deviceUsageToday(uid, today);
   const fresh: UserDoc = {
     plan: "free",
     subscriptionActive: false,
@@ -96,16 +102,20 @@ export async function ensureUserDoc(uid: string, offsetMinutes = 0): Promise<Use
     monthlySketchLimit: 0,
     usedSketchesThisMonth: 0,
     extraCredits: 0,
-    adCredits: 0,
+    adCredits: phoneUsage.freeCreditsEligible ? WELCOME_CREDITS_PER_DAY : 0,
     monthlyResetAt: null,
     subscriptionExpiresAt: null,
     subscriptionPurchaseToken: null,
     // New daily credit fields — grant the first day's credits immediately
     dailyCreditsDate: today,
-    dailyCreditsAvailable: FREE_DAILY_CREDITS,
+    dailyCreditsAvailable: phoneUsage.freeCreditsEligible ? FREE_DAILY_CREDITS : 0,
+    freeCreditsEligible: phoneUsage.freeCreditsEligible,
+    // Day 1 of the welcome credits (first account on this phone only).
+    welcomeDaysGranted: phoneUsage.freeCreditsEligible ? 1 : 0,
+    welcomeLastDay: phoneUsage.freeCreditsEligible ? today : null,
     lastDailyGrantAt: now,
     rewardedAdsDate: today,
-    rewardedAdsToday: 0,
+    rewardedAdsToday: phoneUsage.adsWatched,
     // Streak starts at 0 — it only advances when the child creates their
     // first sketch (commitSketchAndDeduct calls updateStreakForUser).
     streakCurrent: 0,
@@ -147,11 +157,26 @@ export function normalizeUser(user: UserDoc, offsetMinutes = 0): UserDoc {
     : result.dailyCreditsDate ?? null;
   if (lastGrantKey !== todayKey) {
     const isPro = result.plan === "pro" && result.subscriptionActive;
+    // Accounts that aren't a phone's first account get no FREE daily credits.
+    const freeDaily = result.freeCreditsEligible === false ? 0 : FREE_DAILY_CREDITS;
     result = {
       ...result,
       dailyCreditsDate: todayKey,
-      dailyCreditsAvailable: isPro ? PREMIUM_DAILY_CREDITS : FREE_DAILY_CREDITS,
+      dailyCreditsAvailable: isPro ? PREMIUM_DAILY_CREDITS : freeDaily,
       lastDailyGrantAt: Timestamp.fromMillis(nowMs),
+    };
+  }
+
+  // ── Welcome credits (first WELCOME_DAYS days, first account per phone) ──
+  // Added to the non-expiring free bucket, so unused ones carry over.
+  const welcomeGiven = result.welcomeDaysGranted ?? 0;
+  if (result.freeCreditsEligible !== false && welcomeGiven < WELCOME_DAYS &&
+      result.welcomeLastDay !== todayKey) {
+    result = {
+      ...result,
+      adCredits: (result.adCredits ?? 0) + WELCOME_CREDITS_PER_DAY,
+      welcomeDaysGranted: welcomeGiven + 1,
+      welcomeLastDay: todayKey,
     };
   }
 
@@ -312,9 +337,13 @@ export async function grantDailyCreditsIfNeeded(
     normalized.dailyCreditsAvailable !== raw.dailyCreditsAvailable ||
     normGrantMs !== rawGrantMs ||
     normalized.rewardedAdsDate !== raw.rewardedAdsDate ||
+    normalized.welcomeDaysGranted !== raw.welcomeDaysGranted ||
     monthlyChanged
   ) {
     await ref.update({
+      adCredits: normalized.adCredits ?? 0,
+      welcomeDaysGranted: normalized.welcomeDaysGranted ?? 0,
+      welcomeLastDay: normalized.welcomeLastDay ?? null,
       dailyCreditsDate: normalized.dailyCreditsDate,
       dailyCreditsAvailable: normalized.dailyCreditsAvailable,
       lastDailyGrantAt: normalized.lastDailyGrantAt ?? null,
@@ -348,6 +377,7 @@ export async function grantRewardedAdCreditsForUser(
   let newBalance = 0;
   let newAdsToday = 0;
   let error: string | null = null;
+  let grantedDay: string | null = null;
 
   await db.runTransaction(async (tx) => {
     const ref = userRef(uid);
@@ -385,6 +415,8 @@ export async function grantRewardedAdCreditsForUser(
       rewardedAdsDate: user.rewardedAdsDate,
       // Persist any lazy daily reset that happened inside normalizeUser
       dailyCreditsDate: user.dailyCreditsDate,
+      welcomeDaysGranted: user.welcomeDaysGranted ?? 0,
+      welcomeLastDay: user.welcomeLastDay ?? null,
       dailyCreditsAvailable: user.dailyCreditsAvailable,
       lastDailyGrantAt: user.lastDailyGrantAt ?? null,
       updatedAt: Timestamp.now(),
@@ -400,7 +432,11 @@ export async function grantRewardedAdCreditsForUser(
       Math.max(0, user.monthlySketchLimit - user.usedSketchesThisMonth) +
       (user.extraCredits ?? 0);
     newAdsToday = updated.rewardedAdsToday;
+    grantedDay = user.rewardedAdsDate ?? null;
   });
+
+  // Keep the PHONE's ad count in step, so a new account on it continues it.
+  if (grantedDay) await noteAdsWatched(uid, grantedDay, newAdsToday);
 
   return {error, newBalance, rewardedAdsToday: newAdsToday};
 }
@@ -469,6 +505,8 @@ export async function commitSketchAndDeduct(
     tx.update(ref, {
       dailyCreditsAvailable,
       dailyCreditsDate: user.dailyCreditsDate,
+      welcomeDaysGranted: user.welcomeDaysGranted ?? 0,
+      welcomeLastDay: user.welcomeLastDay ?? null,
       lastDailyGrantAt: user.lastDailyGrantAt ?? null,
       rewardedAdsDate: user.rewardedAdsDate,
       rewardedAdsToday: user.rewardedAdsToday,

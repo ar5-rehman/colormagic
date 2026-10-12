@@ -22,4 +22,7 @@ export const Collections = {
   processedAdRewards: "processedAdRewards",
   /** Parent-submitted feedback (suggestions / bug reports / questions). */
   feedback: "feedback",
+  /** devices/{deviceKey} → {uid}: the account last used on a phone, so a
+   *  reinstall signs back into it (deviceKey = hashed Android ID). */
+  devices: "devices",
 } as const;

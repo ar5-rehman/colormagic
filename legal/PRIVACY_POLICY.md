@@ -1,6 +1,6 @@
 # Privacy Policy — Color Magic
 
-**Last updated: October 11, 2026**
+**Last updated: October 12, 2026**
 
 This Privacy Policy explains how **ZyloMind** ("we", "us", or "our"), the
 developer of the **Color Magic** mobile application (the "App"), collects, uses,
@@ -52,6 +52,7 @@ you want to review or delete your child's information, email
 | Information | Details |
 |---|---|
 | **Anonymous user ID** | A random ID created through Firebase Authentication so your credits and settings can be saved. |
+| **Scrambled device key** | A one-way scrambled (hashed) version of the phone's Android ID. The raw ID never leaves the phone. It lets the App reconnect to the same account if it is uninstalled and installed again, lets a deleted account be restored on that phone within 60 days, and prevents free credits being claimed repeatedly. It changes if the phone is factory reset. |
 | **Generated coloring pages** | The black-and-white coloring page image created from a prompt, together with its prompt, creation time, and a link to the image, is stored on our servers (Firebase Cloud Firestore and Cloud Storage) so the App can show it to you. |
 | **Account and credit data** | Credit balances (daily, rewarded-ad, monthly, and purchased credits), plan and subscription status, coloring-streak progress, and number of rewarded ads watched today. |
 | **Parent control settings** | Daily sketch limit, screen-time limit, and whether free-text prompts are allowed. |
@@ -165,9 +166,10 @@ they appear, and prevent fraud. Premium subscribers see no ads.
 
 | Information | How long |
 |---|---|
-| Account, credit, streak, and parent-control data | While the account exists; deleted when the account is deleted |
-| Prompts and generated coloring pages on our servers | While the account exists, or until you ask us to delete them |
-| Google account details (email, name, photo URL) | While the account exists; deleted when the account is deleted |
+| Account, credit, streak, and parent-control data | While the account exists; after you delete the account, kept inactive for 60 days (so you can restore it), then permanently erased |
+| Scrambled device key with that phone's daily free-credit and ad counts | Kept to stop free credits being claimed again by deleting and re-creating accounts. Contains no name, email, or content |
+| Prompts and generated coloring pages on our servers | While the account exists; erased 60 days after the account is deleted |
+| Google account details (email, name, photo URL) | While the account exists; erased 60 days after the account is deleted |
 | Purchase records | As long as needed to provide the purchase and meet legal and accounting obligations |
 | Support messages | Up to 24 months after the conversation ends |
 | Crash reports | About 90 days (Firebase Crashlytics) |
@@ -192,10 +194,13 @@ delete, or export** personal information, or to **stop or restrict** processing.
 
 **To delete your account and data:**
 
-1. **In the App (instant):** open **Parents → Delete Account** and confirm. This
-   immediately deletes your account, credits, streak, parent settings, and the
-   prompts and coloring pages stored on our servers, and clears the App's gallery and
-   badges on that device.
+1. **In the App:** open **Parents → Delete Account** and confirm. The account is
+   deactivated immediately and the App's gallery and badges on that phone are
+   cleared. Your account, credits, streak, parent settings, and the prompts and
+   coloring pages stored on our servers are kept for **60 days** in case you change
+   your mind — you can restore them from **Parents → Restore Account** on the same
+   phone, or by signing in again with the same Google account. After 60 days they
+   are **permanently erased**.
 2. **By email:** write to **abdurzylomind@gmail.com** with the subject **"Delete my
    Color Magic data"** and include the Google account email you signed in with. (Guest
    accounts that never used Google Sign-In can only be identified from inside the App,

@@ -222,6 +222,10 @@ private fun SubscriptionTabletContent(
                     onClick = onContinue
                 )
             }
+            if (state.isGuest) {
+                Spacer(Modifier.height(10.dp))
+                GuestPurchaseNote(modifier = Modifier.fillMaxWidth(fraction = 0.6f))
+            }
             Spacer(Modifier.height(10.dp))
             Text(
                 text = "Payment will be charged to your Google Play account at confirmation of purchase.",
@@ -349,6 +353,15 @@ private fun SubscriptionContent(
                     onClick = onContinue,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 )
+            }
+            if (state.isGuest) {
+                item {
+                    GuestPurchaseNote(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 32.dp)
+                    )
+                }
             }
             item {
                 Text(
@@ -967,4 +980,20 @@ private fun SubscriptionPreviewPhone() {
             dismissLabel = "Back"
         )
     }
+}
+
+/** Guests can buy; tell the parent where the purchase is kept. */
+@Composable
+private fun GuestPurchaseNote(modifier: Modifier = Modifier) {
+    Text(
+        text = "You're using a guest account. Purchases are saved on this phone and move " +
+            "to your Google account when you sign in (Parents → Sign in with Google), " +
+            "so you never lose them.",
+        fontSize = 12.sp,
+        lineHeight = 18.sp,
+        color = Color(0xFF5E35B1),
+        fontWeight = FontWeight.SemiBold,
+        textAlign = TextAlign.Center,
+        modifier = modifier
+    )
 }

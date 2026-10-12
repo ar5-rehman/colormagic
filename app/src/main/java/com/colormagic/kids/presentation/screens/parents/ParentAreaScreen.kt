@@ -27,6 +27,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AllInclusive
 import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.ChildCare
@@ -100,7 +101,7 @@ fun ParentAreaScreen(
     // Show sign-in feedback (success / cancelled) as a quick toast.
     androidx.compose.runtime.LaunchedEffect(authMessage) {
         authMessage?.let {
-            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_SHORT).show()
+            android.widget.Toast.makeText(context, it, android.widget.Toast.LENGTH_LONG).show()
             authViewModel.messageShown()
         }
     }
@@ -146,6 +147,7 @@ fun ParentAreaScreen(
                 onSessionLimitChanged = viewModel::onSessionLimitChanged,
                 onClearArtwork = viewModel::onClearArtwork,
                 onDeleteAccount = viewModel::onDeleteAccount,
+                onRestoreAccount = viewModel::onRestoreAccount,
                 onOpenSupport = onOpenSupport,
                 onTerms = onTerms,
                 onPrivacy = onPrivacy,
@@ -162,6 +164,7 @@ fun ParentAreaScreen(
             onSessionLimitChanged = viewModel::onSessionLimitChanged,
             onClearArtwork = viewModel::onClearArtwork,
             onDeleteAccount = viewModel::onDeleteAccount,
+            onRestoreAccount = viewModel::onRestoreAccount,
             onOpenSupport = onOpenSupport,
             onTerms = onTerms,
             onPrivacy = onPrivacy,
@@ -180,6 +183,7 @@ private fun ParentAreaTabletContent(
     onSessionLimitChanged: (Int?) -> Unit,
     onClearArtwork: () -> Unit,
     onDeleteAccount: () -> Unit = {},
+    onRestoreAccount: () -> Unit = {},
     onOpenSupport: () -> Unit,
     onTerms: () -> Unit,
     onPrivacy: () -> Unit,
@@ -239,6 +243,13 @@ private fun ParentAreaTabletContent(
                         onSessionLimitChanged = onSessionLimitChanged
                     )
                     HelpSupportCard(onOpenSupport = onOpenSupport)
+                    state.restorableAccountUntil?.let { until ->
+                        RestoreAccountCard(
+                            until = until,
+                            isRestoring = state.isRestoringAccount,
+                            onRestore = onRestoreAccount
+                        )
+                    }
                     ClearArtworkCard(onDelete = onClearArtwork)
                     DeleteAccountCard(
                         isDeleting = state.isDeletingAccount,
@@ -261,6 +272,7 @@ private fun ParentAreaContent(
     onSessionLimitChanged: (Int?) -> Unit,
     onClearArtwork: () -> Unit,
     onDeleteAccount: () -> Unit = {},
+    onRestoreAccount: () -> Unit = {},
     onOpenSupport: () -> Unit,
     onTerms: () -> Unit,
     onPrivacy: () -> Unit,
@@ -330,6 +342,17 @@ private fun ParentAreaContent(
                     onOpenSupport = onOpenSupport,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
+            }
+
+            state.restorableAccountUntil?.let { until ->
+                item {
+                    RestoreAccountCard(
+                        until = until,
+                        isRestoring = state.isRestoringAccount,
+                        onRestore = onRestoreAccount,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                }
             }
 
             item {
@@ -445,13 +468,10 @@ private fun SparkleCreditsCard(
                 )
             }
             // Daily credit breakdown
-            if (credits != null) {
+            if (credits != null && dailyCreditsLeft > 0) {
                 Spacer(Modifier.height(6.dp))
                 Text(
-                    text = if (dailyCreditsLeft > 0)
-                        "🎨 $dailyCreditsLeft daily credit${if (dailyCreditsLeft == 1) "" else "s"} remaining today"
-                    else
-                        "Daily credits used — earn more by watching ads",
+                    text = "🎨 $dailyCreditsLeft daily credit${if (dailyCreditsLeft == 1) "" else "s"} remaining today",
                     fontSize = 13.sp,
                     color = Color(0xFF4A2E85)
                 )
@@ -1161,10 +1181,11 @@ private fun DeleteAccountCard(
             },
             text = {
                 Text(
-                    text = "This permanently deletes your account, credits, streak, " +
-                        "parent settings, and the coloring pages stored on our servers, " +
-                        "and clears this app's gallery and badges. Pictures saved to your " +
-                        "phone's photos stay. This can't be undone.\n\n" +
+                    text = "Your account, credits, streak, parent settings and the " +
+                        "coloring pages stored on our servers will be permanently erased " +
+                        "after 60 days. Until then you can restore it from the Parents " +
+                        "tab on this phone. This app's gallery and badges are cleared now; " +
+                        "pictures saved to your phone's photos stay.\n\n" +
                         "A Premium subscription is not cancelled — cancel it in the " +
                         "Google Play Store.",
                     fontSize = 14.sp,
@@ -1206,7 +1227,7 @@ private fun DeleteAccountCard(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = "Permanently delete this account and all its data from our servers.",
+                text = "Delete this account and its data. It's kept for 60 days in case you change your mind, then erased.",
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 color = Color(0xFFB0192C)
@@ -1239,6 +1260,77 @@ private fun DeleteAccountCard(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = if (isDeleting) "Deleting…" else "Delete Account",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ─── Card: Restore deleted account ─────────────────────────────────
+
+@Composable
+private fun RestoreAccountCard(
+    until: Long,
+    isRestoring: Boolean,
+    onRestore: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val date = remember(until) {
+        java.text.SimpleDateFormat("MMM d, yyyy", java.util.Locale.getDefault())
+            .format(java.util.Date(until))
+    }
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFFE3F2FD),
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Restore deleted account",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF0D47A1)
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "The account deleted on this phone can be brought back with its " +
+                    "credits, streak and settings until $date.",
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
+                color = Color(0xFF0D47A1)
+            )
+            Spacer(Modifier.height(14.dp))
+            Surface(
+                onClick = { if (!isRestoring) onRestore() },
+                enabled = !isRestoring,
+                shape = RoundedCornerShape(50),
+                color = Color(0xFF1565C0)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
+                ) {
+                    if (isRestoring) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.Restore,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = if (isRestoring) "Restoring…" else "Restore Account",
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White

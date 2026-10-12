@@ -34,7 +34,11 @@ data class ParentAreaUiState(
     /** True while the account deletion request is running. */
     val isDeletingAccount: Boolean = false,
     /** One-shot result message for account deletion (shown as a toast). */
-    val accountMessage: String? = null
+    val accountMessage: String? = null,
+    /** If a deleted account on this phone can still be restored: its
+     *  permanent-deletion time (epoch millis). */
+    val restorableAccountUntil: Long? = null,
+    val isRestoringAccount: Boolean = false
 )
 
 @HiltViewModel
@@ -78,7 +82,8 @@ class ParentAreaViewModel @Inject constructor(
                         dailyCreditsLeft = quota.remainingFreeSketches,
                         planName = labelForPlan(quota.plan, quota.subscriptionActive),
                         streakCurrent = quota.streakCurrent,
-                        streakBest = quota.streakBest
+                        streakBest = quota.streakBest,
+                        restorableAccountUntil = quota.restorableAccountUntil
                     )
                 }
             }
@@ -105,10 +110,10 @@ class ParentAreaViewModel @Inject constructor(
     }
 
     /**
-     * Permanently deletes the account and its server data, then wipes this
+     * Deletes the account (restorable for 60 days, then erased) and wipes this
      * device's in-app data (gallery list, badges/progress). Pictures already
-     * saved to the phone's photo gallery are left alone. A fresh guest
-     * account starts automatically.
+     * saved to the phone's photo gallery are left alone. The app continues on
+     * a new empty account.
      */
     fun onDeleteAccount() {
         if (_uiState.value.isDeletingAccount) return
@@ -118,19 +123,47 @@ class ParentAreaViewModel @Inject constructor(
                 .onSuccess {
                     galleryRepository.deleteAll()
                     rewardsPreferences.clear()
-                    sketchRepository.getQuota()
                     _uiState.update {
                         it.copy(
                             isDeletingAccount = false,
-                            accountMessage = "Your account and data have been deleted."
+                            accountMessage = "Account deleted. You can restore it from here " +
+                                "for the next 60 days."
                         )
                     }
+                    refreshQuota()
                 }
                 .onFailure {
                     _uiState.update {
                         it.copy(
                             isDeletingAccount = false,
                             accountMessage = "Couldn't delete your account. Check your connection and try again."
+                        )
+                    }
+                }
+        }
+    }
+
+    /** Brings back the account deleted on this phone (within 60 days). */
+    fun onRestoreAccount() {
+        if (_uiState.value.isRestoringAccount) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRestoringAccount = true) }
+            authRepository.restoreDeletedAccount()
+                .onSuccess {
+                    _uiState.update {
+                        it.copy(
+                            isRestoringAccount = false,
+                            restorableAccountUntil = null,
+                            accountMessage = "Welcome back! Your account has been restored."
+                        )
+                    }
+                    refreshQuota()
+                }
+                .onFailure {
+                    _uiState.update {
+                        it.copy(
+                            isRestoringAccount = false,
+                            accountMessage = "Couldn't restore the account. Please try again."
                         )
                     }
                 }
