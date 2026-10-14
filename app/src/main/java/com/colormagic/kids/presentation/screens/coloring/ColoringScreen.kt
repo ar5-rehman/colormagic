@@ -1,5 +1,6 @@
 package com.colormagic.kids.presentation.screens.coloring
 
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.mutableStateOf
@@ -668,6 +669,16 @@ private fun ColoringTabletContent(
                             .onSizeChanged(onCanvasSizeChanged)
                     )
                     Spacer(Modifier.height(12.dp))
+                    UndoRedoRow(
+                        canUndo = state.canUndo,
+                        canRedo = state.canRedo,
+                        onUndo = onUndo,
+                        onRedo = onRedo,
+                        modifier = Modifier
+                            .widthIn(max = 520.dp)
+                            .align(Alignment.CenterHorizontally)
+                    )
+                    Spacer(Modifier.height(10.dp))
                     Surface(
                         shape = RoundedCornerShape(50),
                         color = BrandTokens.SubtleSurface,
@@ -735,7 +746,6 @@ private fun ColoringTabletContent(
                     ModeToggleRow(symmetryEnabled = state.symmetryEnabled, colorByNumberEnabled = state.colorByNumberEnabled, onToggleSymmetry = onToggleSymmetry, onToggleColorByNumber = onToggleColorByNumber)
 
                     Spacer(Modifier.height(14.dp))
-                    UndoRedoRow(canUndo = state.canUndo, canRedo = state.canRedo, onUndo = onUndo, onRedo = onRedo)
                     Spacer(Modifier.height(14.dp))
                     TabletClearChip(onClick = onClear)
                     Spacer(Modifier.height(10.dp))
@@ -840,6 +850,17 @@ private fun ColoringContent(
                     )
                 }
 
+                // Undo / Redo right under the sketch — the most-used actions,
+                // so kids see them without scrolling.
+                Spacer(Modifier.height(10.dp))
+                UndoRedoRow(
+                    canUndo = state.canUndo,
+                    canRedo = state.canRedo,
+                    onUndo = onUndo,
+                    onRedo = onRedo,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+
                 Spacer(Modifier.height(6.dp))
                 ZoomButtonsRow(
                     zoomScale = state.zoomScale,
@@ -893,8 +914,6 @@ private fun ColoringContent(
                 BrushesRow(tool = state.tool, onToolSelected = onToolSelected)
                 Spacer(Modifier.height(8.dp))
                 ActionsRow(tool = state.tool, onToolSelected = onToolSelected, onTextButtonClick = cb.onTextButtonClick, onStickerButtonClick = cb.onStickerButtonClick)
-                Spacer(Modifier.height(10.dp))
-                UndoRedoRow(canUndo = state.canUndo, canRedo = state.canRedo, onUndo = onUndo, onRedo = onRedo)
                 Spacer(Modifier.height(12.dp))
                 FooterRow(onClear = onClear, onSave = onSave)
                 if (state.isChallenge) {
@@ -1280,14 +1299,57 @@ private fun UndoRedoRow(
     canUndo: Boolean,
     canRedo: Boolean,
     onUndo: () -> Unit,
-    onRedo: () -> Unit
+    onRedo: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally)
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        ToolButton(label = "Undo", icon = Icons.AutoMirrored.Filled.Undo, selected = false, enabled = canUndo, onClick = onUndo, modifier = Modifier.weight(1f))
-        ToolButton(label = "Redo", icon = Icons.AutoMirrored.Filled.Redo, selected = false, enabled = canRedo, onClick = onRedo, modifier = Modifier.weight(1f))
+        UndoRedoButton(
+            label = "Undo",
+            icon = Icons.AutoMirrored.Filled.Undo,
+            enabled = canUndo,
+            onClick = onUndo,
+            modifier = Modifier.weight(1f)
+        )
+        UndoRedoButton(
+            label = "Redo",
+            icon = Icons.AutoMirrored.Filled.Redo,
+            enabled = canRedo,
+            onClick = onRedo,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+/** Big, bright pill so kids spot Undo/Redo instantly; faded when unavailable. */
+@Composable
+private fun UndoRedoButton(
+    label: String,
+    icon: ImageVector,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val container = if (enabled) MaterialTheme.colorScheme.primary else BrandTokens.SubtleSurface
+    val content = if (enabled) Color.White else BrandTokens.MutedInk.copy(alpha = 0.6f)
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(50),
+        color = container,
+        shadowElevation = if (enabled) 3.dp else 0.dp,
+        modifier = modifier.height(52.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = content, modifier = Modifier.size(24.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text = label, fontSize = 17.sp, fontWeight = FontWeight.Bold, color = content)
+        }
     }
 }
 

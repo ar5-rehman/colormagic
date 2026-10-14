@@ -162,8 +162,10 @@ class RewardedAdManager @Inject constructor(
             }
         }
 
+        Log.d(TAG, "Showing rewarded ad")
         ad.show(activity) {
             // The SDK fires this only when the reward condition is met
+            Log.d(TAG, "Reward earned (${it.amount} ${it.type})")
             rewardEarned = true
             telemetry.logCreditEvent("rewarded_ad_completed")
             onAdEarned()

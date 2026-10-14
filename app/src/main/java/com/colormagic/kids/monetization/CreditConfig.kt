@@ -15,8 +15,8 @@ object CreditConfig {
     const val FREE_DAILY_CREDITS = 0
     const val WELCOME_DAYS = 3
     const val WELCOME_CREDITS_PER_DAY = 1
-    const val REWARDED_AD_CREDITS = 3
-    const val MAX_REWARDED_ADS_PER_DAY = 5
+    const val REWARDED_AD_CREDITS = 2
+    const val MAX_REWARDED_ADS_PER_DAY = 3
     const val PREMIUM_DAILY_CREDITS = 30
     const val PREMIUM_MONTHLY_PRICE_USD = 7.99
 
@@ -40,7 +40,7 @@ object CreditConfig {
      * callbacks, so with test IDs rewards won't arrive — set false (here AND
      * in config.ts) only for local testing with test ads.
      */
-    const val USE_ADMOB_SSV = true
+    const val USE_ADMOB_SSV = false  // see functions/src/config.ts
 
     object Costs {
         // Only generation costs credits. Saving/exporting artwork to the phone

@@ -20,7 +20,13 @@
  */
 import {createPublicKey, verify as cryptoVerify} from "crypto";
 import {onRequest} from "firebase-functions/v2/https";
-import {ADMOB_SSV_MAX_AGE_MS, ADMOB_VERIFIER_KEYS_URL, REGION, DEFAULT_MAX_INSTANCES} from "./config";
+import {
+  ADMOB_SSV_MAX_AGE_MS,
+  ADMOB_VERIFIER_KEYS_URL,
+  DEFAULT_MAX_INSTANCES,
+  REGION,
+  USE_ADMOB_SSV,
+} from "./config";
 import {ensureUserDoc, grantRewardedAdCreditsForUser} from "./credits";
 
 interface VerifierKey {
@@ -55,6 +61,7 @@ export const admobSsvCallback = onRequest(
       const sigMarker = "&signature=";
       const sigIdx = rawQuery.indexOf(sigMarker);
       if (sigIdx < 0) {
+        console.warn("admobSsvCallback: rejected — missing signature");
         res.status(400).send("missing signature");
         return;
       }
@@ -66,12 +73,14 @@ export const admobSsvCallback = onRequest(
       const signatureB64 = params.get("signature");
       const keyId = params.get("key_id");
       if (!signatureB64 || !keyId) {
+        console.warn("admobSsvCallback: rejected — missing signature/key_id");
         res.status(400).send("missing signature/key_id");
         return;
       }
 
       const pem = await getVerifierKey(keyId);
       if (!pem) {
+        console.warn(`admobSsvCallback: rejected — unknown key_id ${keyId}`);
         res.status(400).send("unknown key_id");
         return;
       }
@@ -89,17 +98,19 @@ export const admobSsvCallback = onRequest(
       );
       if (!verified) {
         // A bad signature means a forged/tampered request — reject hard.
+        console.warn("admobSsvCallback: rejected — invalid signature");
         res.status(403).send("invalid signature");
         return;
       }
 
       // Replay defense: reject stale callbacks (transaction_id dedup is the
       // primary guard; the timestamp check is belt-and-braces).
-      const tsMicros = Number(params.get("timestamp"));
-      if (
-        Number.isFinite(tsMicros) &&
-        Date.now() - tsMicros / 1000 > ADMOB_SSV_MAX_AGE_MS
-      ) {
+      // AdMob sends epoch MILLISECONDS (13 digits); accept microseconds too
+      // (16 digits) in case the format changes.
+      const tsRaw = Number(params.get("timestamp"));
+      const tsMs = tsRaw > 1e14 ? tsRaw / 1000 : tsRaw;
+      if (Number.isFinite(tsMs) && tsMs > 0 && Date.now() - tsMs > ADMOB_SSV_MAX_AGE_MS) {
+        console.warn(`admobSsvCallback: rejected — stale callback (timestamp=${tsRaw})`);
         res.status(400).send("stale callback");
         return;
       }
@@ -107,13 +118,25 @@ export const admobSsvCallback = onRequest(
       const uid = params.get("custom_data") || params.get("user_id");
       const transactionId = params.get("transaction_id");
       if (!uid || !transactionId) {
-        res.status(400).send("missing uid/transaction_id");
+        // Genuine (signed) callback but no user to credit — e.g. AdMob's
+        // "Verify URL" test, which has no custom_data. Acknowledge with 200 so
+        // AdMob doesn't retry forever / fail verification; nothing is granted.
+        console.log("admobSsvCallback: verified callback without uid/transaction_id — nothing to grant");
+        res.status(200).send("OK");
+        return;
+      }
+
+      if (!USE_ADMOB_SSV) {
+        // The app grants via the callable instead — don't credit twice.
+        console.log(`admobSsvCallback: SSV disabled — not granting (uid=${uid} tx=${transactionId})`);
+        res.status(200).send("OK");
         return;
       }
 
       await ensureUserDoc(uid);
       // Idempotent on transaction_id — AdMob may retry the callback.
-      await grantRewardedAdCreditsForUser(uid, 0, `ssv_${transactionId}`);
+      const grant = await grantRewardedAdCreditsForUser(uid, 0, `ssv_${transactionId}`);
+      console.log(`admobSsvCallback: uid=${uid} tx=${transactionId} → ${grant.error ?? "granted"}`);
 
       res.status(200).send("OK");
     } catch (err) {

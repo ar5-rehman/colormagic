@@ -353,7 +353,7 @@ private fun CreditsPage() {
         CreditSourceCard(
             emoji = "🎬",
             title = "Watch a Short Video",
-            body = "Watch a quick video to earn 3 bonus credits. You can watch up to 5 per day = 15 credits!",
+            body = "Watch a quick video to earn ${CreditConfig.REWARDED_AD_CREDITS} bonus credits. You can watch up to ${CreditConfig.MAX_REWARDED_ADS_PER_DAY} per day = ${CreditConfig.REWARDED_AD_CREDITS * CreditConfig.MAX_REWARDED_ADS_PER_DAY} credits!",
             accent = Color(0xFF1565C0),
             bg = Color(0xFFE3F2FD),
             border = Color(0xFF90CAF9)

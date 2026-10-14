@@ -65,7 +65,7 @@ and may change (changes never remove credits you already earned or bought).
   Signing out leaves everything with the Google account (sign in again to get it back),
   and the phone switches to an empty guest account.
 - **Rewarded-ad credits** — free users can choose to watch a short video ad for
-  **3 credits**, up to **5 ads per day**. These credits do not expire.
+  **2 credits**, up to **3 ads per day**. These credits do not expire.
 - **Credit packs** — one-time purchases (currently **20 credits for US$2.99**, or the
   local price shown in Google Play). Purchased credits do not expire.
 - **Premium subscription** — a monthly subscription (currently **US$7.99/month**, or

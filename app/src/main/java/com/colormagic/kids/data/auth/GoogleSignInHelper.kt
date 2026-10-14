@@ -1,6 +1,7 @@
 package com.colormagic.kids.data.auth
 
 import android.content.Context
+import com.colormagic.kids.R
 import androidx.credentials.CredentialManager
 import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
@@ -16,10 +17,7 @@ import javax.inject.Singleton
  * credential.
  *
  * Requires the OAuth **web client ID**, which the google-services plugin emits
- * as the string resource `default_web_client_id` — but ONLY after Google
- * sign-in is enabled in the Firebase console and google-services.json is
- * re-downloaded. We resolve it by name at runtime so the app still compiles
- * before that's configured (the call just fails with a clear message).
+ * as the string resource `default_web_client_id` from google-services.json.
  */
 @Singleton
 class GoogleSignInHelper @Inject constructor() {
@@ -29,14 +27,10 @@ class GoogleSignInHelper @Inject constructor() {
      * token. Must be called with an Activity [context] (it presents UI).
      */
     suspend fun getGoogleIdToken(context: Context): Result<String> = runCatching {
-        val resId = context.resources.getIdentifier(
-            "default_web_client_id", "string", context.packageName
-        )
-        require(resId != 0) {
-            "Google sign-in isn't configured yet. Enable Google in Firebase " +
-                "Authentication and re-download google-services.json."
-        }
-        val webClientId = context.getString(resId)
+        // Referenced DIRECTLY (not via getIdentifier): release builds shrink
+        // resources, and a name-only lookup let the shrinker delete this
+        // string — which made Google sign-in fail in release only.
+        val webClientId = context.getString(R.string.default_web_client_id)
 
         val googleIdOption = GetGoogleIdOption.Builder()
             // false → let the user pick ANY Google account, even the first time.

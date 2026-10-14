@@ -68,8 +68,8 @@ export const FREE_DAILY_CREDITS = 0;          // no ongoing free daily credit (s
 export const WELCOME_DAYS = 3;
 export const WELCOME_CREDITS_PER_DAY = 1;
 export const PREMIUM_DAILY_CREDITS = 30;      // premium-tier daily grant
-export const REWARDED_AD_CREDITS = 3;         // credits per completed rewarded ad
-export const MAX_REWARDED_ADS_PER_DAY = 5;    // cap per calendar day
+export const REWARDED_AD_CREDITS = 2;         // credits per completed rewarded ad
+export const MAX_REWARDED_ADS_PER_DAY = 3;    // cap per calendar day
 
 // ── Credit costs per action ────────────────────────────────────────────
 // Only generation costs credits. Saving/exporting artwork to the phone
@@ -118,7 +118,13 @@ export const PRODUCT_EXTRA_20 = "extra_20_sketches";    // one-time in-app
 // forged by the client. Keep in sync with USE_ADMOB_SSV in the Android
 // CreditConfig. Google's TEST ad units never send SSV callbacks — set both to
 // false only while testing with test ad IDs.
-export const USE_ADMOB_SSV = true;
+// OFF: AdMob wasn't delivering SSV callbacks for the live ad unit, so rewards
+// never arrived. The app now grants via the grantRewardedAdCredits callable
+// right after AdMob's onUserEarnedReward — protected by App Check (genuine
+// Play app only) and the server-side MAX_REWARDED_ADS_PER_DAY cap. While off,
+// admobSsvCallback grants nothing (no double credits). Turn both flags back on
+// once SSV callbacks are confirmed arriving in the logs.
+export const USE_ADMOB_SSV = false;
 /** Google's public keys used to verify rewarded SSV callback signatures. */
 export const ADMOB_VERIFIER_KEYS_URL =
   "https://www.gstatic.com/admob/reward/verifier-keys.json";

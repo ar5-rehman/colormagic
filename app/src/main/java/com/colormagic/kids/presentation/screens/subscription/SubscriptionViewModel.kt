@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.colormagic.kids.data.telemetry.AppTelemetry
 import com.colormagic.kids.domain.model.BillingProducts
+import com.colormagic.kids.monetization.CreditConfig
 import com.colormagic.kids.domain.model.PurchaseResult
 import com.colormagic.kids.domain.repository.AuthRepository
 import com.colormagic.kids.domain.repository.BillingRepository
@@ -195,8 +196,8 @@ private val defaultPlans = listOf(
         tagline = "Try out the magic.",
         price = "Free",
         features = listOf(
-            "Watch ads to earn +3 credits",
-            "Up to 5 rewarded ads/day",
+            "Watch ads to earn +${CreditConfig.REWARDED_AD_CREDITS} credits",
+            "Up to ${CreditConfig.MAX_REWARDED_ADS_PER_DAY} rewarded ads/day",
             "Save to Gallery — always free",
             "Basic coloring tools"
         ),

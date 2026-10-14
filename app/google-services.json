@@ -22,11 +22,27 @@
           }
         },
         {
+          "client_id": "1038007846379-j0avpp26lg739j78lod540dcbi64qinp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.colormagic.kids",
+            "certificate_hash": "a275d7a189a560ad539a1ffb34f5115c1a01fffb"
+          }
+        },
+        {
           "client_id": "1038007846379-kt63kjet1fb6tb63uis9khdod78tpamj.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.colormagic.kids",
             "certificate_hash": "b8655c387694334d06dcaf630472ce13ce6b8788"
+          }
+        },
+        {
+          "client_id": "1038007846379-melfj58vfbu5p4blnubpnv50sp7u0hak.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.colormagic.kids",
+            "certificate_hash": "e7259d1645c53ae2bc08e40bc4d013eb0b85a8e2"
           }
         },
         {
