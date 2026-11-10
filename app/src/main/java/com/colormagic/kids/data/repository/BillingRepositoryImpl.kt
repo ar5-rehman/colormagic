@@ -184,7 +184,14 @@ class BillingRepositoryImpl @Inject constructor(
     ): PurchaseResult.Success? = runCatching {
         val response = functions
             .getHttpsCallable(FN_VERIFY_PURCHASE)
-            .call(mapOf("productId" to productId, "purchaseToken" to purchaseToken))
+            .call(
+                mapOf(
+                    "productId" to productId,
+                    "purchaseToken" to purchaseToken,
+                    // Lets the server attribute renew/cancel events in Analytics.
+                    "appInstanceId" to telemetry.appInstanceId()
+                )
+            )
             .await()
 
         @Suppress("UNCHECKED_CAST")

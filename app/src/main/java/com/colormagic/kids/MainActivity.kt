@@ -1,5 +1,8 @@
 package com.colormagic.kids
 
+import javax.inject.Inject
+import com.colormagic.kids.data.telemetry.AnalyticsEvent
+import com.colormagic.kids.data.telemetry.AppTelemetry
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import androidx.activity.compose.setContent
@@ -18,8 +21,12 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class MainActivity : FragmentActivity() {
 
+    @Inject lateinit var telemetry: AppTelemetry
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Cold open only (not rotation / process-restore recreation).
+        if (savedInstanceState == null) telemetry.logEvent(AnalyticsEvent.APP_OPEN)
         // The manifest locks phones to portrait. Tablets (smallest width
         // 600dp+) may rotate freely — they have dedicated landscape layouts,
         // and Android 16 ignores orientation locks on large screens anyway.

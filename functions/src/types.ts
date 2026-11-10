@@ -128,6 +128,8 @@ export interface UserQuotaResponse {
 export interface VerifyPurchaseRequest {
   productId: string;
   purchaseToken: string;
+  /** Firebase Analytics app instance — for server-side subscription events. */
+  appInstanceId?: string | null;
 }
 export interface VerifyPurchaseResponse {
   success: true;

@@ -54,3 +54,43 @@ export async function fetchSubscriptionState(
 
   return {active, expiresAt};
 }
+
+/**
+ * Diagnostic: logs WHICH identity and OAuth scopes the Play API call used.
+ * Called only when Google Play rejects a call with 401/403, so the log shows
+ * exactly which service account needs Play Console access. Never logs the token.
+ */
+export async function logPlayIdentity(context: string): Promise<void> {
+  try {
+    const auth = new google.auth.GoogleAuth({
+      scopes: ["https://www.googleapis.com/auth/androidpublisher"],
+    });
+    const client = await auth.getClient();
+    const token = (await client.getAccessToken()).token;
+    const res = await fetch(
+      `https://oauth2.googleapis.com/tokeninfo?access_token=${token}`
+    );
+    const info = (await res.json()) as {email?: string; scope?: string; azp?: string};
+    const creds = await auth.getCredentials();
+    console.error(`Play API identity (${context})`, {
+      clientEmail: creds.client_email ?? null,
+      tokenEmail: info.email ?? null,
+      tokenAzp: info.azp ?? null,
+      tokenScopes: info.scope ?? null,
+      projectId: await auth.getProjectId().catch(() => null),
+    });
+  } catch (e) {
+    console.error("Play API identity lookup failed", e);
+  }
+}
+
+/** Runs a Play API call; on an auth/permission failure logs the identity used. */
+export async function withPlayDiagnostics<T>(context: string, call: () => Promise<T>): Promise<T> {
+  try {
+    return await call();
+  } catch (e) {
+    const code = (e as {code?: number}).code;
+    if (code === 401 || code === 403) await logPlayIdentity(context);
+    throw e;
+  }
+}

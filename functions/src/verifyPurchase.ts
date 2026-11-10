@@ -30,7 +30,7 @@ import {
 } from "./config";
 import {computeQuota, ensureUserDoc} from "./credits";
 import {Collections, db} from "./firebase";
-import {androidPublisher} from "./playApi";
+import {androidPublisher, withPlayDiagnostics} from "./playApi";
 import {VerifyPurchaseRequest, VerifyPurchaseResponse} from "./types";
 
 export const verifyPurchase = onCall(
@@ -41,8 +41,9 @@ export const verifyPurchase = onCall(
       throw new HttpsError("unauthenticated", "Sign-in required.");
     }
 
-    const {productId, purchaseToken} =
+    const {productId, purchaseToken, appInstanceId} =
       (request.data ?? {}) as VerifyPurchaseRequest;
+    const analyticsId = typeof appInstanceId === "string" ? appInstanceId.slice(0, 100) : null;
     if (!productId || !purchaseToken) {
       throw new HttpsError(
         "invalid-argument",
@@ -73,10 +74,12 @@ export const verifyPurchase = onCall(
 
     if (productId === PRODUCT_MONTHLY_PRO) {
       // ── Subscription ──────────────────────────────────────────────
-      const res = await publisher.purchases.subscriptionsv2.get({
-        packageName: ANDROID_PACKAGE_NAME,
-        token: purchaseToken,
-      });
+      const res = await withPlayDiagnostics("subscriptionsv2.get", () =>
+        publisher.purchases.subscriptionsv2.get({
+          packageName: ANDROID_PACKAGE_NAME,
+          token: purchaseToken,
+        })
+      );
       const state = res.data.subscriptionState;
       const active =
         state === "SUBSCRIPTION_STATE_ACTIVE" ||
@@ -115,16 +118,19 @@ export const verifyPurchase = onCall(
         tx.set(ledgerRef, {
           uid,
           productId,
+          appInstanceId: analyticsId,
           createdAt: Timestamp.now(),
         });
       });
     } else if (productId === PRODUCT_EXTRA_20) {
       // ── One-time extra pack ───────────────────────────────────────
-      const res = await publisher.purchases.products.get({
-        packageName: ANDROID_PACKAGE_NAME,
-        productId,
-        token: purchaseToken,
-      });
+      const res = await withPlayDiagnostics("products.get", () =>
+        publisher.purchases.products.get({
+          packageName: ANDROID_PACKAGE_NAME,
+          productId,
+          token: purchaseToken,
+        })
+      );
       // purchaseState: 0 = purchased, 1 = canceled, 2 = pending.
       if (res.data.purchaseState !== 0) {
         throw new HttpsError(
@@ -144,6 +150,7 @@ export const verifyPurchase = onCall(
         tx.set(ledgerRef, {
           uid,
           productId,
+          appInstanceId: analyticsId,
           createdAt: Timestamp.now(),
         });
       });

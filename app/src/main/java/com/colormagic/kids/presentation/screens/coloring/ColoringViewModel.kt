@@ -1,5 +1,7 @@
 package com.colormagic.kids.presentation.screens.coloring
 
+import com.colormagic.kids.data.telemetry.AnalyticsEvent
+import com.colormagic.kids.data.telemetry.AppTelemetry
 import android.content.Context
 import android.graphics.drawable.BitmapDrawable
 import androidx.compose.ui.geometry.Offset
@@ -75,7 +77,8 @@ class ColoringViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val sketchSession: SketchSession,
     private val galleryRepository: GalleryRepository,
-    private val rewardsPreferences: RewardsPreferences
+    private val rewardsPreferences: RewardsPreferences,
+    private val telemetry: AppTelemetry
 ) : ViewModel() {
 
     private val challengePrefs by lazy { ChallengePreferences(context) }
@@ -85,6 +88,10 @@ class ColoringViewModel @Inject constructor(
 
     init {
         loadSketch()
+        telemetry.logEvent(
+            AnalyticsEvent.COLORING_STARTED,
+            mapOf("is_challenge" to sketchSession.isChallenge)
+        )
     }
 
     private fun loadSketch() {
@@ -528,6 +535,14 @@ class ColoringViewModel @Inject constructor(
                     .distinct()
                     .size
                 val stickersPlaced = state.strokes.count { it.tool == ColoringTool.StickerTool }
+                telemetry.logEvent(
+                    AnalyticsEvent.ARTWORK_SAVED,
+                    mapOf(
+                        "colors_used" to colorsUsed,
+                        "stickers_used" to stickersPlaced,
+                        "strokes" to state.strokes.size
+                    )
+                )
                 val newBadges = rewardsPreferences.recordArtworkSaved(
                     colorsUsed = colorsUsed,
                     stickersPlaced = stickersPlaced,

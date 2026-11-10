@@ -1,5 +1,6 @@
 package com.colormagic.kids.presentation.screens.subscription
 
+import com.colormagic.kids.data.telemetry.AnalyticsEvent
 import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -79,7 +80,7 @@ class SubscriptionViewModel @Inject constructor(
                 }
             }
         }
-        telemetry.logCreditEvent("premium_screen_opened")
+        telemetry.logEvent(AnalyticsEvent.SUBSCRIPTION_SCREEN_VIEWED)
 
         // Reflect the user's ACTUAL plan on the cards (so a premium user sees
         // "Current Plan" on Premium, not on Free). Driven by the live quota.
@@ -131,7 +132,11 @@ class SubscriptionViewModel @Inject constructor(
             _uiState.update { it.copy(isProcessing = true, errorMessage = null) }
             when (val result = billingRepository.purchase(activity, productId)) {
                 is PurchaseResult.Success -> {
-                    telemetry.logCreditEvent("subscription_started")
+                    telemetry.logEvent(
+                        if (productId == BillingProducts.MONTHLY_PRO) AnalyticsEvent.SUBSCRIPTION_STARTED
+                        else AnalyticsEvent.CREDIT_PACK_PURCHASED,
+                        mapOf("product_id" to productId)
+                    )
                     // Refresh the shared quota so every screen (Home pill, Parent
                     // area, Get Credits) instantly reflects premium: 30 credits/day,
                     // no ads, "Magic Pro" plan label.

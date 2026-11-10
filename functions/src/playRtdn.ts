@@ -23,6 +23,7 @@ import {PLAY_RTDN_TOPIC, REGION, DEFAULT_MAX_INSTANCES} from "./config";
 import {setSubscriptionState} from "./credits";
 import {Collections, db} from "./firebase";
 import {fetchSubscriptionState} from "./playApi";
+import {logServerEvent} from "./analytics";
 
 interface DeveloperNotification {
   subscriptionNotification?: {
@@ -32,6 +33,18 @@ interface DeveloperNotification {
   };
   testNotification?: {version: string};
 }
+
+/** Play RTDN subscription notificationType → analytics event name. */
+const RTDN_EVENT_NAMES: Record<number, string> = {
+  1: "subscription_recovered",   // back from account hold
+  2: "subscription_renewed",
+  3: "subscription_cancelled",   // auto-renew turned off (still paid-through)
+  5: "subscription_on_hold",     // payment failed, access paused
+  6: "subscription_in_grace_period",
+  7: "subscription_restarted",   // user re-enabled auto-renew
+  12: "subscription_revoked",    // refunded / revoked
+  13: "subscription_expired",
+};
 
 export const playRtdnHandler = onMessagePublished(
   {region: REGION, maxInstances: DEFAULT_MAX_INSTANCES, topic: PLAY_RTDN_TOPIC},
@@ -69,6 +82,15 @@ export const playRtdnHandler = onMessagePublished(
     }
     const uid = ledger.data()?.uid as string | undefined;
     if (!uid) return;
+
+    // Analytics: renewals / cancellations etc. happen only here, server-side.
+    const eventName = RTDN_EVENT_NAMES[sub.notificationType];
+    if (eventName) {
+      await logServerEvent(eventName, uid, ledger.data()?.appInstanceId, {
+        product_id: sub.subscriptionId,
+        notification_type: sub.notificationType,
+      });
+    }
 
     // Authoritative re-check against the Play API (never trust the payload).
     // fetchSubscriptionState keeps a CANCELED-but-not-yet-expired subscription

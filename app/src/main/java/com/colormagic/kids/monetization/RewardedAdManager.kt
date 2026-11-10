@@ -1,5 +1,6 @@
 package com.colormagic.kids.monetization
 
+import com.colormagic.kids.data.telemetry.AnalyticsEvent
 import android.app.Activity
 import android.content.Context
 import android.util.Log
@@ -167,7 +168,10 @@ class RewardedAdManager @Inject constructor(
             // The SDK fires this only when the reward condition is met
             Log.d(TAG, "Reward earned (${it.amount} ${it.type})")
             rewardEarned = true
-            telemetry.logCreditEvent("rewarded_ad_completed")
+            telemetry.logEvent(
+                AnalyticsEvent.REWARDED_AD_WATCHED,
+                mapOf("reward_amount" to it.amount)
+            )
             onAdEarned()
         }
     }

@@ -6,6 +6,7 @@ import com.google.firebase.analytics.analytics
 import com.google.firebase.analytics.logEvent
 import com.google.firebase.crashlytics.FirebaseCrashlytics
 import com.google.firebase.crashlytics.crashlytics
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -78,4 +79,44 @@ class AppTelemetry @Inject constructor() {
     fun logAppEvent(eventName: String) {
         analytics.logEvent(eventName) {}
     }
+
+    /**
+     * Core funnel event (see [AnalyticsEvent]). Param values must be counts,
+     * flags or short stable codes — NEVER prompts, names or other free text.
+     */
+    fun logEvent(eventName: String, params: Map<String, Any> = emptyMap()) {
+        analytics.logEvent(eventName) {
+            params.forEach { (key, value) ->
+                when (value) {
+                    is Int -> param(key, value.toLong())
+                    is Long -> param(key, value)
+                    is Double -> param(key, value)
+                    is Boolean -> param(key, if (value) 1L else 0L)
+                    else -> param(key, value.toString())
+                }
+            }
+        }
+    }
+
+    /** Firebase Analytics instance id — sent with purchases so the server can
+     *  attribute subscription renew/cancel events (Measurement Protocol). */
+    suspend fun appInstanceId(): String? =
+        runCatching { analytics.appInstanceId.await() }.getOrNull()
+}
+
+/** The core funnel / retention events, in one place so names never drift. */
+object AnalyticsEvent {
+    const val APP_OPEN = "app_open"
+    const val ONBOARDING_COMPLETED = "onboarding_completed"
+    const val SKETCH_GENERATION_STARTED = "sketch_generation_started"
+    const val SKETCH_GENERATED = "sketch_generated"
+    const val SKETCH_GENERATION_FAILED = "sketch_generation_failed"
+    const val COLORING_STARTED = "coloring_started"
+    const val ARTWORK_SAVED = "artwork_saved"
+    const val REWARDED_AD_WATCHED = "rewarded_ad_watched"
+    const val SUBSCRIPTION_SCREEN_VIEWED = "subscription_screen_viewed"
+    const val SUBSCRIPTION_STARTED = "subscription_started"
+    const val CREDIT_PACK_PURCHASED = "credit_pack_purchased"
+    // subscription_renewed / subscription_cancelled are sent by the SERVER
+    // (Play RTDN → Measurement Protocol) — the app never sees those moments.
 }

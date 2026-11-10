@@ -49,6 +49,10 @@ export const ACCOUNT_RESTORE_DAYS = 60;
 /** Cap for every other (cheap) callable/HTTP function. */
 export const DEFAULT_MAX_INSTANCES = 10;
 
+/** Firebase Android app id (google-services.json → mobilesdk_app_id) — used
+ *  to send server-side events to Firebase Analytics (analytics.ts). */
+export const FIREBASE_ANDROID_APP_ID = "1:1038007846379:android:f87be31f9423af749a85ae";
+
 /** Must match the Android app's applicationId (release variant, no suffix). */
 export const ANDROID_PACKAGE_NAME = "com.colormagic.kids";
 

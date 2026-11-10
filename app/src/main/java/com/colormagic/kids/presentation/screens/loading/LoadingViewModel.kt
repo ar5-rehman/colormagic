@@ -1,5 +1,7 @@
 package com.colormagic.kids.presentation.screens.loading
 
+import com.colormagic.kids.data.telemetry.AnalyticsEvent
+import com.colormagic.kids.data.telemetry.AppTelemetry
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -34,7 +36,8 @@ class LoadingViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val sketchRepository: SketchRepository,
     private val sketchSession: SketchSession,
-    private val parentControls: ParentControlsStore
+    private val parentControls: ParentControlsStore,
+    private val telemetry: AppTelemetry
 ) : ViewModel() {
 
     private val prompt: String =
@@ -56,8 +59,22 @@ class LoadingViewModel @Inject constructor(
             return
         }
         _uiState.value = LoadingUiState.Generating
+        // Never log the prompt itself — only its length and the flow.
+        val params = mapOf("is_challenge" to isChallenge, "prompt_length" to prompt.length)
+        telemetry.logEvent(AnalyticsEvent.SKETCH_GENERATION_STARTED, params)
         viewModelScope.launch {
-            _uiState.value = when (val result = sketchRepository.generateSketch(prompt, isChallenge)) {
+            val result = sketchRepository.generateSketch(prompt, isChallenge)
+            telemetry.logEvent(
+                if (result is SketchGenerationResult.Success) AnalyticsEvent.SKETCH_GENERATED
+                else AnalyticsEvent.SKETCH_GENERATION_FAILED,
+                params + ("outcome" to when (result) {
+                    is SketchGenerationResult.Success -> "success"
+                    SketchGenerationResult.NoCredits -> "no_credits"
+                    is SketchGenerationResult.Rejected -> "rejected"
+                    is SketchGenerationResult.Failed -> "failed"
+                })
+            )
+            _uiState.value = when (result) {
                 is SketchGenerationResult.Success -> {
                     // Hand the sketch to the session so SketchPreview / Coloring
                     // can pick it up after navigation.
