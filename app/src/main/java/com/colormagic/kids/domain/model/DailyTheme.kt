@@ -40,11 +40,25 @@ object DailyTheme {
         "a friendly shark with sunglasses"
     )
 
-    /** The idea for the current local day. */
+    private val christmasIdeas: List<String> = listOf(
+        "Santa riding a sleigh with reindeer",
+        "a snowman family having a snowball fight",
+        "a reindeer decorating a Christmas tree",
+        "an elf workshop full of toys",
+        "a gingerbread house in the snow",
+        "a puppy unwrapping a Christmas present",
+        "a penguin ice-skating with a Santa hat",
+        "a Christmas tree with a big shining star",
+        "a polar bear and a penguin sharing hot cocoa",
+        "Santa's cat sleeping by the fireplace"
+    )
+
+    /** The idea for the current local day (festive during Christmas season). */
     fun todaysIdea(): String {
+        val pool = if (Season.isChristmas()) christmasIdeas else ideas
         val day = (System.currentTimeMillis() / DAY_MS).toInt()
-        val index = ((day % ideas.size) + ideas.size) % ideas.size
-        return ideas[index]
+        val index = ((day % pool.size) + pool.size) % pool.size
+        return pool[index]
     }
 
     private const val DAY_MS = 24L * 60L * 60L * 1000L

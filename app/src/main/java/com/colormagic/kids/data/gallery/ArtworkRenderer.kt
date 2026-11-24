@@ -138,7 +138,19 @@ object ArtworkRenderer {
             ColoringTool.Eraser ->
                 segmented(canvas, stroke, w * 1.6f, PorterDuff.Mode.CLEAR) { base }
 
-            ColoringTool.Fill -> stroke.points.firstOrNull()?.let { p ->
+            ColoringTool.Fill -> stroke.fillRegion?.let { region ->
+                val bmp = region.asAndroidBitmap()
+                val paint = Paint().apply {
+                    isFilterBitmap = true
+                    color = withAlpha(base, alpha)
+                }
+                canvas.drawBitmap(
+                    bmp,
+                    android.graphics.Rect(0, 0, bmp.width, bmp.height),
+                    android.graphics.Rect(0, 0, canvas.width, canvas.height),
+                    paint
+                )
+            } ?: stroke.points.firstOrNull()?.let { p ->
                 val paint = Paint().apply {
                     isAntiAlias = true
                     style = Paint.Style.FILL

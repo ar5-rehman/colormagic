@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.colormagic.kids.presentation.util.AppReview
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -67,6 +68,9 @@ fun PurchaseSuccessScreen(
     onCreateSketch: () -> Unit,
     @Suppress("UNUSED_PARAMETER") viewModel: PurchaseSuccessViewModel = hiltViewModel()
 ) {
+    // A parent just bought something: a good moment for the Play review card (see AppReview)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) { AppReview.maybeAsk(context) }
     PurchaseSuccessContent(
         onBackToHome = onBackToHome,
         onCreateSketch = onCreateSketch

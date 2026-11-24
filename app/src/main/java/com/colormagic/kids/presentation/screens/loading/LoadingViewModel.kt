@@ -1,5 +1,8 @@
 package com.colormagic.kids.presentation.screens.loading
 
+import android.content.Context
+import com.colormagic.kids.presentation.util.AppReview
+import dagger.hilt.android.qualifiers.ApplicationContext
 import com.colormagic.kids.data.telemetry.AnalyticsEvent
 import com.colormagic.kids.data.telemetry.AppTelemetry
 import androidx.lifecycle.SavedStateHandle
@@ -37,7 +40,8 @@ class LoadingViewModel @Inject constructor(
     private val sketchRepository: SketchRepository,
     private val sketchSession: SketchSession,
     private val parentControls: ParentControlsStore,
-    private val telemetry: AppTelemetry
+    private val telemetry: AppTelemetry,
+    @ApplicationContext private val appContext: Context
 ) : ViewModel() {
 
     private val prompt: String =
@@ -76,6 +80,8 @@ class LoadingViewModel @Inject constructor(
             )
             _uiState.value = when (result) {
                 is SketchGenerationResult.Success -> {
+                    // Counted for the parent-facing review prompt (see AppReview)
+                    AppReview.recordSketch(appContext)
                     // Hand the sketch to the session so SketchPreview / Coloring
                     // can pick it up after navigation.
                     sketchSession.setCurrentSketch(result.sketch, challenge = isChallenge)

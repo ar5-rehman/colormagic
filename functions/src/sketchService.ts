@@ -10,6 +10,7 @@
 import {randomUUID} from "crypto";
 import {storage} from "./firebase";
 import type {ImageProvider} from "./credits";
+import {cleanLineArt} from "./lineArtCleanup";
 
 /**
  * Wraps the child's idea in a strict 3D-STYLE coloring-page template.
@@ -35,15 +36,14 @@ import type {ImageProvider} from "./credits";
  *   • Negative constraints repeated — image models weight repeats more strongly
  */
 export function buildColoringPrompt(childPrompt: string): string {
-  // Pushes hard toward a 3D LOOK while staying colorable. The tension: real 3D
-  // needs shading, but a coloring page must stay blank inside — so we lean on
-  // the depth cues that DON'T fill the regions (perspective, three-quarter
-  // angle, volumetric rounded forms, interior contour lines, a ground shadow).
-  return `A cute 3D-style cartoon ${childPrompt}, drawn as a coloring page for kids (ages 4-10).
-Make it clearly THREE-DIMENSIONAL: a chunky, rounded, VOLUMETRIC character shown from a slightly angled three-quarter view with strong depth and perspective — like a 3D-rendered Pixar-style character turned into a coloring outline.
-Use bold clean BLACK outlines on a PURE WHITE background, with thin interior CONTOUR lines along curved edges to show roundness and form, and a simple oval outline shadow on the ground beneath a single centered subject.
-Keep big open white areas inside the shapes so a child can still color it in.
-Avoid: solid color, heavy gray shading, gradients, tiny details, text, logos, branded characters, real people, and anything scary or unsafe for young children.`;
+  // Describe ONLY what we want. FLUX tends to ADD things it is told to avoid
+  // ("no shading" -> shading), and words like "scary" / "real people" were
+  // tripping Cloudflare's input safety filter, so they're gone. Prompt safety
+  // is enforced before this point by promptSafety.ts.
+  return `Children's coloring book page: ${childPrompt}, cute and friendly cartoon style, smiling.
+Thick, smooth, even black outlines. Large, simple, fully closed shapes. Every shape is flat and pure white inside.
+One subject centered on the page, filling most of the page, on a plain pure white background.
+Clean black-and-white line art, like a printed kids' coloring book.`;
 }
 
 /**
@@ -61,7 +61,7 @@ export async function generateColoringImage(
       `Image provider "${provider}" is disabled; only Cloudflare is active.`
     );
   }
-  return generateWithCloudflare(coloringPrompt);
+  return cleanLineArt(await generateWithCloudflare(coloringPrompt));
 }
 
 /**
@@ -101,7 +101,7 @@ async function generateWithCloudflare(prompt: string): Promise<Buffer> {
           Authorization: `Bearer ${apiToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({prompt, steps: 6}),
+        body: JSON.stringify({prompt, steps: 4}),
         signal: controller.signal,
       });
 
@@ -144,12 +144,23 @@ async function generateWithCloudflare(prompt: string): Promise<Buffer> {
     }
   };
 
-  try {
-    return await attempt();
-  } catch (first) {
-    // eslint-disable-next-line no-console
-    console.warn("Cloudflare attempt 1 failed, retrying once:", first);
-    return await attempt();
+  // Cloudflare's input safety filter gives RANDOM false positives on harmless
+  // ideas (measured: "dinosaur" / "t-rex" blocked ~50% of the time, the same
+  // prompt passing on the next try). The idea already passed our own
+  // promptSafety check, so retry those up to 4 times in total. A blocked
+  // request produces no image. Any other error is retried once.
+  const MAX_FILTER_ATTEMPTS = 4;
+  let otherFailures = 0;
+  for (let n = 1; ; n++) {
+    try {
+      return await attempt();
+    } catch (err) {
+      const falseFlag = String(err).includes("NSFW");
+      if (!falseFlag) otherFailures++;
+      const giveUp = falseFlag ? n >= MAX_FILTER_ATTEMPTS : otherFailures >= 2;
+      if (giveUp) throw err;
+      console.warn(`Cloudflare attempt ${n} failed (${falseFlag ? "safety false-flag" : "error"}), retrying`);
+    }
   }
 }
 

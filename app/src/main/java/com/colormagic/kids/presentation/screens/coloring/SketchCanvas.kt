@@ -22,6 +22,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.ImageBitmap
@@ -40,10 +41,17 @@ import androidx.compose.ui.unit.dp
 import com.colormagic.kids.R
 import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColoringTool
+import com.colormagic.kids.domain.model.isBrush
 import com.colormagic.kids.domain.model.PaintColor
 import kotlin.math.roundToInt
 
-private val FINGER_LIFT_OFFSET = 56.dp
+// Brushes (pencil, crayon, marker…) paint a little ABOVE the finger, where the
+// pencil cursor's tip is drawn, so the child can see the tip and the line
+// instead of hiding it under their fingertip — like holding a real pencil.
+// Fill / eraser / picker act exactly under the finger (a tap target).
+private val BRUSH_LIFT_OFFSET = 76.dp
+private fun liftFor(tool: ColoringTool, brushLiftPx: Float): Float =
+    if (tool.isBrush) brushLiftPx else 0f
 private val EDGE_PADDING = 6.dp
 
 @Composable
@@ -70,13 +78,13 @@ fun SketchCanvas(
     onStickerDragStart: (Float, Float) -> Boolean = { _, _ -> false },
     onStickerDragMove: (Float, Float) -> Unit = { _, _ -> },
     onStickerDragEnd: () -> Unit = {},
-    strokeWidthBase: Float = 18f,
+    strokeWidthBase: Float = 10f,
     opacity: Float = 1f
 ) {
     var inProgress by remember { mutableStateOf<List<StrokePoint>>(emptyList()) }
     var cursor by remember { mutableStateOf<Offset?>(null) }
     val density = LocalDensity.current
-    val liftPx = with(density) { FINGER_LIFT_OFFSET.toPx() }
+    val liftPx = liftFor(tool, with(density) { BRUSH_LIFT_OFFSET.toPx() })
     val edgePadPx = with(density) { EDGE_PADDING.toPx() }
 
     Box(
@@ -206,7 +214,8 @@ fun SketchCanvas(
                     }
             ) {
                 strokes.forEach { drawStroke(it, density.density) }
-                if (inProgress.isNotEmpty()) {
+                // Fill shows its result on release (the whole area), not a dot.
+                if (inProgress.isNotEmpty() && tool != ColoringTool.Fill) {
                     drawStroke(
                         stroke = Stroke(
                             tool = tool,
@@ -361,7 +370,7 @@ private fun ColoringTool.brushIconRes(): Int? = when (this) {
 
 private const val BRUSH_TIP_X = 0.38f
 private const val BRUSH_TIP_Y = 0.17f
-private val BRUSH_CURSOR_SIZE = 84.dp
+private val BRUSH_CURSOR_SIZE = 72.dp
 
 @Composable
 private fun BrushCursor(
@@ -471,7 +480,18 @@ private fun DrawScope.drawStroke(stroke: Stroke, densityScale: Float) {
         ) { Color.Transparent }
 
         ColoringTool.Fill -> {
-            stroke.points.firstOrNull()?.let { p ->
+            val region = stroke.fillRegion
+            if (region != null) {
+                drawImage(
+                    image = region,
+                    srcOffset = IntOffset.Zero,
+                    srcSize = IntSize(region.width, region.height),
+                    dstOffset = IntOffset.Zero,
+                    dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+                    colorFilter = ColorFilter.tint(baseColor.copy(alpha = alpha)),
+                    filterQuality = FilterQuality.Low
+                )
+            } else stroke.points.firstOrNull()?.let { p ->
                 drawCircle(
                     color = baseColor.copy(alpha = alpha),
                     radius = w * 5.5f,

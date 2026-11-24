@@ -21,6 +21,10 @@
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28" />
 
+    <uses-feature
+        android:name="android.hardware.screen.portrait"
+        android:required="false" />
+
     <application
         android:name=".ColorMagicKidsApp"
         android:allowBackup="true"
@@ -39,7 +43,7 @@
              Google Play Families policy. -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3327131790118517~9954835424" />
+            android:value="ca-app-pub-3327131790118517~7479241513" />
 
         <!-- Disable Ad ID collection — required for child-directed apps. -->
         <meta-data

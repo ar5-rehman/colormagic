@@ -54,9 +54,21 @@ const BLOCKLIST: Record<string, string[]> = {
   ],
 };
 
+/**
+ * Harmless kid phrases that CONTAIN a blocked word (the scan is substring-
+ * based: "fire" also matched "fire truck"). They're removed before scanning,
+ * so "a fire truck" passes while "fire" on its own is still blocked.
+ */
+const SAFE_PHRASES = [
+  "fire truck", "fire engine", "firetruck", "firefighter", "fireman",
+  "fire station", "fireplace", "firefly", "fireflies",
+  "snowball fight", "pillow fight",
+];
+
 /** Layer 1 — keyword scan. */
 export function keywordCheck(prompt: string): SafetyResult {
-  const text = prompt.toLowerCase();
+  let text = prompt.toLowerCase();
+  for (const phrase of SAFE_PHRASES) text = text.split(phrase).join(" ");
   for (const [category, words] of Object.entries(BLOCKLIST)) {
     for (const word of words) {
       if (text.includes(word)) {

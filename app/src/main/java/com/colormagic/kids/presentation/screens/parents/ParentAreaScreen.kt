@@ -90,6 +90,12 @@ fun ParentAreaScreen(
     val onTerms = { context.openUrl(AppLinks.TERMS_URL) }
     val onPrivacy = { context.openUrl(AppLinks.PRIVACY_URL) }
 
+    // The parent has passed the gate and is holding the phone: if the child has made pictures,
+    // this is when the Play review card may be shown (see AppReview). Never shown to the child.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.colormagic.kids.presentation.util.AppReview.maybeAsk(context)
+    }
+
     // Account-deletion result.
     androidx.compose.runtime.LaunchedEffect(state.accountMessage) {
         state.accountMessage?.let {

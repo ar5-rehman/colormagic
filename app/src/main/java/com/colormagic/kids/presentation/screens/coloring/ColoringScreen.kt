@@ -639,6 +639,12 @@ private fun ColoringTabletContent(
                         )
                     }
                     Spacer(Modifier.height(16.dp))
+                    // Sketches are square: keep the canvas square (largest that
+                    // fits) so the drawing is never stretched on wide screens.
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
                     SketchCanvas(
                         tool = state.tool,
                         selectedColor = selectedColor,
@@ -664,10 +670,10 @@ private fun ColoringTabletContent(
                         strokeWidthBase = state.strokeWidthBase,
                         opacity = state.opacity,
                         modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth()
+                            .aspectRatio(1f, matchHeightConstraintsFirst = true)
                             .onSizeChanged(onCanvasSizeChanged)
                     )
+                    }
                     Spacer(Modifier.height(12.dp))
                     UndoRedoRow(
                         canUndo = state.canUndo,
@@ -833,7 +839,7 @@ private fun ColoringContent(
             Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
                 Spacer(Modifier.height(4.dp))
 
-                Box(modifier = Modifier.padding(horizontal = 10.dp).fillMaxWidth()) {
+                Box(modifier = Modifier.padding(horizontal = 8.dp).fillMaxWidth()) {
                     SketchCanvasCard(
                         state = state,
                         onStrokeFinished = onStrokeFinished,
@@ -944,7 +950,9 @@ private fun SketchCanvasCard(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.88f)
+            // Square, like the sketch itself — 0.88 stretched every drawing
+            // vertically (the canvas draws the image with FillBounds).
+            .aspectRatio(1f)
             .shadow(14.dp, RoundedCornerShape(28.dp), ambientColor = Color(0x14000000), spotColor = Color(0x14000000)),
         color = Color.White,
         shape = RoundedCornerShape(28.dp)
@@ -974,7 +982,7 @@ private fun SketchCanvasCard(
             strokeWidthBase = state.strokeWidthBase,
             opacity = state.opacity,
             modifier = Modifier
-                .padding(10.dp)
+                .padding(6.dp)
                 .onSizeChanged(onCanvasSizeChanged)
         )
     }

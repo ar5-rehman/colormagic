@@ -17,11 +17,11 @@ object CreditConfig {
     const val WELCOME_CREDITS_PER_DAY = 1
     const val REWARDED_AD_CREDITS = 2
     const val MAX_REWARDED_ADS_PER_DAY = 3
-    const val PREMIUM_DAILY_CREDITS = 30
+    const val PREMIUM_DAILY_CREDITS = 15
     const val PREMIUM_MONTHLY_PRICE_USD = 7.99
 
     /** Real AdMob rewarded ad unit (release builds). */
-    private const val REWARDED_AD_UNIT_ID_LIVE = "ca-app-pub-3327131790118517/1980142489"
+    private const val REWARDED_AD_UNIT_ID_LIVE = "ca-app-pub-3327131790118517/9162364980"
 
     /** Google's public test rewarded unit — debug builds use it so we never
      *  tap our own live ads (AdMob suspends accounts for that). */

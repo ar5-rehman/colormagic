@@ -8,6 +8,7 @@ import com.colormagic.kids.data.util.NetworkMonitor
 import com.colormagic.kids.domain.model.CategoryIdeas
 import com.colormagic.kids.domain.model.ColoringIdea
 import com.colormagic.kids.domain.model.SketchLimit
+import com.colormagic.kids.domain.model.Season
 import com.colormagic.kids.domain.repository.SketchRepository
 import com.colormagic.kids.presentation.navigation.Screen
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -24,7 +25,7 @@ data class CreateSketchUiState(
     /** "Need ideas?" pool — reshuffled every time the screen resumes. */
     val ideas: List<ColoringIdea> = emptyList(),
     /** Stable list of category keys shown as the chip row. */
-    val categories: List<String> = CategoryIdeas.keys,
+    val categories: List<String> = CategoryIdeas.createKeys(),
     /** Total credits left; null until the first quota fetch resolves. */
     val creditsLeft: Int? = null,
     /** Whether the parent is subscribed — drives the premium-aware low-credits
@@ -166,8 +167,16 @@ class CreateSketchViewModel @Inject constructor(
 
 /** Picks 10 random prompts (from a pool of 60+), each carrying its category's
  *  emoji + pastel color, to populate the colorful "Need ideas?" cards. */
-private fun freshIdeas(): List<ColoringIdea> =
-    CategoryIdeas.allIdeaItems.shuffled().take(10).mapIndexed { i, item ->
+private fun freshIdeas(): List<ColoringIdea> {
+    val pool = CategoryIdeas.currentIdeaItems()
+    // In season, about half the cards are Christmas ideas.
+    val picks = if (Season.isChristmas()) {
+        val (xmas, rest) = pool.partition { it.category == CategoryIdeas.CHRISTMAS }
+        (xmas.shuffled().take(5) + rest.shuffled().take(5)).shuffled()
+    } else {
+        pool.shuffled().take(10)
+    }
+    return picks.mapIndexed { i, item ->
         ColoringIdea(
             id = "idea-$i-${item.text.hashCode()}",
             title = item.text,
@@ -175,3 +184,4 @@ private fun freshIdeas(): List<ColoringIdea> =
             previewTint = CategoryIdeas.tint[item.category] ?: 0xFFEDE7F6
         )
     }
+}

@@ -5,7 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.colormagic.kids.data.local.preferences.Badge
 import com.colormagic.kids.data.local.preferences.RewardsPreferences
 import com.colormagic.kids.data.local.preferences.RewardsState
+import com.colormagic.kids.domain.model.CategoryIdeas
 import com.colormagic.kids.domain.model.DailyTheme
+import com.colormagic.kids.domain.model.Season
 import com.colormagic.kids.domain.model.UserQuota
 import com.colormagic.kids.domain.repository.BillingRepository
 import com.colormagic.kids.domain.repository.CreditRepository
@@ -45,7 +47,10 @@ data class HomeCategory(
     val tone: CategoryTone
 ) {
     companion object {
-        fun defaults(): List<HomeCategory> = listOf(
+        fun defaults(): List<HomeCategory> = listOfNotNull(
+            if (Season.isChristmas()) {
+                HomeCategory(CategoryIdeas.CHRISTMAS, "🎄 Christmas", CategoryTone.GreenDeep)
+            } else null,
             HomeCategory("animals", "Animals", CategoryTone.Blue),
             HomeCategory("space", "Space", CategoryTone.GreenDeep),
             HomeCategory("dinosaurs", "Dinosaurs", CategoryTone.Lavender),

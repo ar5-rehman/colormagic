@@ -7,7 +7,22 @@ data class StickerItem(
 )
 
 object StickerPack {
-    val all: List<StickerItem> = listOf(
+    private val christmas: List<StickerItem> = listOf(
+        StickerItem("xmas_tree", "🎄", "Christmas tree"),
+        StickerItem("santa", "🎅", "Santa"),
+        StickerItem("snowman", "⛄", "Snowman"),
+        StickerItem("gift", "🎁", "Present"),
+        StickerItem("snowflake", "❄️", "Snowflake"),
+        StickerItem("reindeer", "🦌", "Reindeer"),
+        StickerItem("bell", "🔔", "Bell"),
+        StickerItem("cookie", "🍪", "Cookie")
+    )
+
+    /** Stickers to offer right now — Christmas ones first while in season. */
+    val all: List<StickerItem>
+        get() = if (Season.isChristmas()) christmas + everyday else everyday
+
+    private val everyday: List<StickerItem> = listOf(
         StickerItem("star", "⭐", "Star"),
         StickerItem("heart", "❤️", "Heart"),
         StickerItem("rainbow", "🌈", "Rainbow"),

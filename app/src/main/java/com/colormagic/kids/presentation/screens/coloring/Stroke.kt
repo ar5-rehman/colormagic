@@ -1,5 +1,6 @@
 package com.colormagic.kids.presentation.screens.coloring
 
+import androidx.compose.ui.graphics.ImageBitmap
 import com.colormagic.kids.domain.model.BrushSize
 import com.colormagic.kids.domain.model.ColoringTool
 
@@ -33,7 +34,9 @@ data class Stroke(
     val textSizeSp: Float = 28f,
     val textFont: TextFont = TextFont.Normal,
     val stickerEmoji: String? = null,
-    val stickerScale: Float = 1f
+    val stickerScale: Float = 1f,
+    /** Fill tool: the tapped area (ALPHA_8, mask resolution), tinted when drawn. */
+    val fillRegion: ImageBitmap? = null
 )
 
 fun Stroke.effectiveWidthPx(densityScale: Float): Float {

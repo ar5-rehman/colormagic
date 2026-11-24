@@ -373,10 +373,16 @@ export async function grantRewardedAdCreditsForUser(
   uid: string,
   offsetMinutes = 0,
   dedupKey?: string
-): Promise<{error: string | null; newBalance: number; rewardedAdsToday: number}> {
+): Promise<{
+  error: string | null;
+  newBalance: number;
+  rewardedAdsToday: number;
+  alreadyGranted: boolean;
+}> {
   let newBalance = 0;
   let newAdsToday = 0;
   let error: string | null = null;
+  let alreadyGranted = false;
   let grantedDay: string | null = null;
 
   await db.runTransaction(async (tx) => {
@@ -394,6 +400,7 @@ export async function grantRewardedAdCreditsForUser(
 
     // Idempotency: this reward was already granted (SSV retry / replay).
     if (ledgerSnap?.exists) {
+      alreadyGranted = true;
       newBalance = computeQuota(user).totalAvailableCredits;
       newAdsToday = user.rewardedAdsToday ?? 0;
       return;
@@ -438,7 +445,7 @@ export async function grantRewardedAdCreditsForUser(
   // Keep the PHONE's ad count in step, so a new account on it continues it.
   if (grantedDay) await noteAdsWatched(uid, grantedDay, newAdsToday);
 
-  return {error, newBalance, rewardedAdsToday: newAdsToday};
+  return {error, newBalance, rewardedAdsToday: newAdsToday, alreadyGranted};
 }
 
 /**

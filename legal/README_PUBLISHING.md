@@ -16,6 +16,10 @@ python3 legal/build_html.py      # writes hosting/public/*.html
 firebase deploy --only hosting
 ```
 
+Both https://colormagic.web.app (use this one in the Play listing) and
+https://colormagic-555.web.app serve the same site, including `/app-ads.txt` for AdMob.
+The landing page `hosting/public/index.html` is hand-written; the script builds only the legal pages.
+
 Public URLs (already used by the app in `AppLinks.kt`):
 
 - Privacy:        https://colormagic-555.web.app/privacy

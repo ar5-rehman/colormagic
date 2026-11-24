@@ -38,8 +38,10 @@ data class ColoringUiState(
     val selectedPaletteId: String = ColorPalettes.default.id,
     val palette: List<PaintColor> = ColorPalettes.default.colors,
     val selectedColorId: String = ColorPalettes.default.colors.first().id,
-    val tool: ColoringTool = ColoringTool.Crayon,
-    val brushSize: BrushSize = BrushSize.Medium,
+    // Tap-to-fill is the easiest way for young kids to color, so it's the
+    // starting tool; brushes are one tap away.
+    val tool: ColoringTool = ColoringTool.Fill,
+    val brushSize: BrushSize = BrushSize.Small,
     val strokes: List<Stroke> = emptyList(),
     val redoStack: List<Stroke> = emptyList(),
     val sketchImage: ImageBitmap? = null,
@@ -50,7 +52,7 @@ data class ColoringUiState(
     val colorRegions: List<ColorRegion> = emptyList(),
     val canvasWidthPx: Int = 0,
     val canvasHeightPx: Int = 0,
-    val strokeWidthBase: Float = 18f,
+    val strokeWidthBase: Float = 10f,
     val opacity: Float = 1f,
     val zoomScale: Float = 1f,
     val zoomOffset: Offset = Offset.Zero,
@@ -458,6 +460,10 @@ class ColoringViewModel @Inject constructor(
 
     fun onStrokeFinished(stroke: Stroke) {
         if (stroke.points.isEmpty()) return
+        if (stroke.tool == ColoringTool.Fill) {
+            fillAt(stroke)
+            return
+        }
         val enriched = stroke.copy(
             strokeWidthBase = _uiState.value.strokeWidthBase,
             opacity = _uiState.value.opacity
@@ -471,6 +477,35 @@ class ColoringViewModel @Inject constructor(
                 }
             }
             state.copy(strokes = newStrokes, redoStack = emptyList())
+        }
+    }
+
+    /** Paint-bucket: colors the whole area enclosed by lines around the tap. */
+    private fun fillAt(stroke: Stroke) {
+        val state = _uiState.value
+        val mask = state.fillableMask ?: return
+        val w = state.canvasWidthPx
+        val h = state.canvasHeightPx
+        if (w <= 0 || h <= 0) return
+        val p = stroke.points.first()
+        viewModelScope.launch {
+            val taps = buildList {
+                add(p)
+                if (state.symmetryEnabled) add(StrokePoint(w - p.x, p.y))
+            }
+            val fills = taps.mapNotNull { t ->
+                floodFillRegion(mask, t.x, t.y, w, h)?.let { region ->
+                    stroke.copy(
+                        points = listOf(t),
+                        opacity = _uiState.value.opacity,
+                        fillRegion = region
+                    )
+                }
+            }
+            if (fills.isEmpty()) return@launch // tapped exactly on a line
+            _uiState.update { s ->
+                s.copy(strokes = s.strokes + fills, redoStack = emptyList())
+            }
         }
     }
 

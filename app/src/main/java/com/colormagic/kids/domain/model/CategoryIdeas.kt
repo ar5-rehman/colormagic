@@ -22,6 +22,8 @@ object CategoryIdeas {
     const val NATURE = "nature"
     const val VEHICLES = "vehicles"
     const val MAGIC = "magic"
+    /** Seasonal — shown on the create/home screens only while [Season.isChristmas]. */
+    const val CHRISTMAS = "christmas"
 
     /** Display label for a key. Keep the key→label mapping in one place. */
     val labels: Map<String, String> = mapOf(
@@ -32,7 +34,8 @@ object CategoryIdeas {
         PRINCESS to "Princess",
         NATURE to "Nature",
         VEHICLES to "Vehicles",
-        MAGIC to "Magic"
+        MAGIC to "Magic",
+        CHRISTMAS to "Christmas"
     )
 
     /** Playful emoji per category — used as the idea card's "illustration"
@@ -45,7 +48,8 @@ object CategoryIdeas {
         PRINCESS to "👑",
         NATURE to "🌻",
         VEHICLES to "🚒",
-        MAGIC to "🦄"
+        MAGIC to "🦄",
+        CHRISTMAS to "🎄"
     )
 
     /** Distinct pastel background per category so the idea cards feel colorful
@@ -58,10 +62,29 @@ object CategoryIdeas {
         PRINCESS to 0xFFFCE4EC,   // pink
         NATURE to 0xFFF1F8E9,     // light green
         VEHICLES to 0xFFFFF8E1,   // soft yellow
-        MAGIC to 0xFFEDE7F6       // lavender
+        MAGIC to 0xFFEDE7F6,      // lavender
+        CHRISTMAS to 0xFFFFEBEE   // candy-cane pink
     )
 
     private val pools: Map<String, List<String>> = mapOf(
+        CHRISTMAS to listOf(
+            "Santa Claus waving with a sack of presents",
+            "A cute reindeer with a shiny red nose",
+            "A happy snowman with a scarf and top hat",
+            "A Christmas tree with stars and ornaments",
+            "A gingerbread man with candy buttons",
+            "A gingerbread house with candy canes",
+            "A friendly elf wrapping a present",
+            "Santa's sleigh flying over snowy rooftops",
+            "A penguin in a Santa hat building a snowman",
+            "A Christmas stocking full of toys",
+            "A teddy bear opening a big present",
+            "A cozy fireplace with stockings and a cat",
+            "A polar bear drinking hot cocoa",
+            "Kids making a snow angel",
+            "A Christmas wreath with a big bow",
+            "Jingle bells with a ribbon and holly"
+        ),
         ANIMALS to listOf(
             "A friendly elephant holding a balloon",
             "A sleepy puppy in a basket",
@@ -166,12 +189,29 @@ object CategoryIdeas {
     fun randomIdeaFor(category: String): String? =
         pools[category]?.randomOrNull()
 
-    /** All known category keys, stable order. */
+    /** All known category keys, stable order (the gallery filters by these,
+     *  so Christmas art stays findable after the season). */
     val keys: List<String> = labels.keys.toList()
+
+    /** Categories offered for creating right now: Christmas first during the
+     *  season, hidden the rest of the year. */
+    fun createKeys(): List<String> =
+        if (Season.isChristmas()) listOf(CHRISTMAS) + keys.filter { it != CHRISTMAS }
+        else keys.filter { it != CHRISTMAS }
+
+    /** "Need ideas?" pool for right now — no Christmas ideas out of season. */
+    fun currentIdeaItems(): List<IdeaItem> =
+        if (Season.isChristmas()) allIdeaItems
+        else allIdeaItems.filter { it.category != CHRISTMAS }
 
     /** Keywords per category, checked in this order so the more specific
      *  category wins a tie (a "robot dog" is Robots, a "space cat" is Space). */
     private val keywords: List<Pair<String, Set<String>>> = listOf(
+        CHRISTMAS to setOf(
+            "christmas", "xmas", "santa", "reindeer", "snowman", "gingerbread",
+            "sleigh", "stocking", "ornament", "wreath", "mistletoe", "candy cane",
+            "elf", "jingle", "present", "presents", "holly", "north pole"
+        ),
         DINOSAURS to setOf(
             "dinosaur", "dino", "rex", "trex", "triceratops", "stegosaurus",
             "pteranodon", "raptor", "brontosaurus", "brachiosaurus", "velociraptor"

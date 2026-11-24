@@ -19,7 +19,7 @@ PAGES = {
     "PRIVACY_POLICY.md": "privacy.html",
     "TERMS_AND_CONDITIONS.md": "terms.html",
     "DELETE_ACCOUNT.md": "delete-account.html",
-    "HOME.md": "index.html",
+    # index.html (the landing page) is hand-written in hosting/public; not generated
 }
 
 CSS = """

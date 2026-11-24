@@ -28,8 +28,8 @@ android {
         applicationId = "com.colormagic.kids"
         minSdk = 24
         targetSdk = 36
-        versionCode = 7
-        versionName = "1.0.5"
+        versionCode = 10
+        versionName = "1.0.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -150,6 +150,7 @@ dependencies {
 
     // Google Play Billing — Pro subscription + extra-credit pack.
     implementation(libs.billing.ktx)
+    implementation(libs.play.review)
 
     // Google Mobile Ads — rewarded video ads for the credit economy.
     // Note: this app is child-directed (COPPA). Rewarded ads must only be

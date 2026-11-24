@@ -15,12 +15,24 @@
   "storage": {
     "rules": "storage.rules"
   },
-  "hosting": {
-    "public": "hosting/public",
-    "cleanUrls": true,
-    "ignore": [
-      "firebase.json",
-      "**/.*"
-    ]
-  }
+  "hosting": [
+    {
+      "site": "colormagic",
+      "public": "hosting/public",
+      "cleanUrls": true,
+      "ignore": [
+        "firebase.json",
+        "**/.*"
+      ]
+    },
+    {
+      "site": "colormagic-555",
+      "public": "hosting/public",
+      "cleanUrls": true,
+      "ignore": [
+        "firebase.json",
+        "**/.*"
+      ]
+    }
+  ]
 }

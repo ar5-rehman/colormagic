@@ -25,9 +25,11 @@ import {
   ADMOB_VERIFIER_KEYS_URL,
   DEFAULT_MAX_INSTANCES,
   REGION,
+  REWARDED_AD_CREDITS,
   USE_ADMOB_SSV,
 } from "./config";
 import {ensureUserDoc, grantRewardedAdCreditsForUser} from "./credits";
+import {recordAdReward} from "./adStats";
 
 interface VerifierKey {
   keyId: number;
@@ -137,6 +139,16 @@ export const admobSsvCallback = onRequest(
       // Idempotent on transaction_id — AdMob may retry the callback.
       const grant = await grantRewardedAdCreditsForUser(uid, 0, `ssv_${transactionId}`);
       console.log(`admobSsvCallback: uid=${uid} tx=${transactionId} → ${grant.error ?? "granted"}`);
+      const status = grant.alreadyGranted ? "already_granted" :
+        grant.error === "daily_ad_limit_reached" ? "limit_reached" : "granted";
+      await recordAdReward({
+        uid,
+        status,
+        source: "ssv",
+        creditsGranted: status === "granted" ? REWARDED_AD_CREDITS : 0,
+        adsToday: grant.rewardedAdsToday,
+        balanceAfter: grant.newBalance,
+      });
 
       res.status(200).send("OK");
     } catch (err) {

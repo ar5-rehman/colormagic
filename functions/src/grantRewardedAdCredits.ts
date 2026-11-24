@@ -30,6 +30,7 @@ import {
   grantDailyCreditsIfNeeded,
   grantRewardedAdCreditsForUser,
 } from "./credits";
+import {recordAdReward} from "./adStats";
 
 interface GrantRewardedAdResponse {
   success: boolean;
@@ -59,6 +60,10 @@ export const grantRewardedAdCredits = onCall(
     if (USE_ADMOB_SSV) {
       const user = await grantDailyCreditsIfNeeded(uid, offset);
       const q = computeQuota(user);
+      await recordAdReward({
+        uid, status: "ssv_mode", source: "callable", creditsGranted: 0,
+        adsToday: q.rewardedAdsToday, balanceAfter: q.totalAvailableCredits,
+      });
       return {
         success: false,
         creditsGranted: 0,
@@ -69,7 +74,25 @@ export const grantRewardedAdCredits = onCall(
       };
     }
 
-    const result = await grantRewardedAdCreditsForUser(uid, offset);
+    let result: Awaited<ReturnType<typeof grantRewardedAdCreditsForUser>>;
+    try {
+      result = await grantRewardedAdCreditsForUser(uid, offset);
+    } catch (err) {
+      await recordAdReward({
+        uid, status: "error", source: "callable", creditsGranted: 0,
+        adsToday: 0, balanceAfter: null, errorMessage: String(err).slice(0, 300),
+      });
+      throw err;
+    }
+
+    await recordAdReward({
+      uid,
+      status: result.error === "daily_ad_limit_reached" ? "limit_reached" : "granted",
+      source: "callable",
+      creditsGranted: result.error ? 0 : REWARDED_AD_CREDITS,
+      adsToday: result.rewardedAdsToday,
+      balanceAfter: result.newBalance,
+    });
 
     if (result.error === "daily_ad_limit_reached") {
       return {

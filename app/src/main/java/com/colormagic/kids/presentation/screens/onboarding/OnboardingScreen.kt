@@ -375,7 +375,7 @@ private fun CreditsPage() {
         CreditSourceCard(
             emoji = "👑",
             title = "Go Pro — Unlimited Fun",
-            body = "Pro members get 30 credits every day + 50 bonus monthly credits. No ads needed!",
+            body = "Pro members get ${CreditConfig.PREMIUM_DAILY_CREDITS} credits every day + 50 bonus monthly credits. No ads needed!",
             accent = Color(0xFFC62828),
             bg = Color(0xFFFFEBEE),
             border = Color(0xFFEF9A9A)

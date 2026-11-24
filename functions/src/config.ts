@@ -71,7 +71,7 @@ export const FREE_DAILY_CREDITS = 0;          // no ongoing free daily credit (s
 // credits come from rewarded ads or purchases only.
 export const WELCOME_DAYS = 3;
 export const WELCOME_CREDITS_PER_DAY = 1;
-export const PREMIUM_DAILY_CREDITS = 30;      // premium-tier daily grant
+export const PREMIUM_DAILY_CREDITS = 15;      // premium-tier daily grant
 export const REWARDED_AD_CREDITS = 2;         // credits per completed rewarded ad
 export const MAX_REWARDED_ADS_PER_DAY = 3;    // cap per calendar day
 

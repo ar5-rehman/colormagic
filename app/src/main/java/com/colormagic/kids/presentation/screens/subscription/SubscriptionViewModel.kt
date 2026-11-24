@@ -138,7 +138,7 @@ class SubscriptionViewModel @Inject constructor(
                         mapOf("product_id" to productId)
                     )
                     // Refresh the shared quota so every screen (Home pill, Parent
-                    // area, Get Credits) instantly reflects premium: 30 credits/day,
+                    // area, Get Credits) instantly reflects premium: PREMIUM_DAILY_CREDITS credits/day,
                     // no ads, "Magic Pro" plan label.
                     creditRepository.refreshQuota()
                     _uiState.update { it.copy(isProcessing = false) }
@@ -215,7 +215,7 @@ private val defaultPlans = listOf(
         price = "$7.99",
         priceSuffix = "per month",
         features = listOf(
-            "30 credits every day",
+            "${CreditConfig.PREMIUM_DAILY_CREDITS} credits every day",
             "No ads — ever",
             "All premium coloring tools",
             "Priority generation"
